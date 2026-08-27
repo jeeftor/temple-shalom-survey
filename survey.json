@@ -794,6 +794,7 @@
           "type": "matrix",
           "name": "q23_leaders",
           "title": "How are Temple Shalom leaders doing — big picture?",
+          "description": "Only fill out what applies to you — leave blank any leader you don't have enough experience with to evaluate.",
           "alternateRows": true,
           "rows": [
             {
@@ -829,10 +830,6 @@
             {
               "value": "very_satisfied",
               "text": "Very Satisfied"
-            },
-            {
-              "value": "na",
-              "text": "N/A — can't evaluate"
             }
           ]
         },

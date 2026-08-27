@@ -234,6 +234,9 @@
     }
     /* Matrix wrapper scrolls horizontally if needed */
     .sd-matrix {
+      max-width: 100% !important;
+    }
+    .sd-matrix table {
       width: 100% !important;
       max-width: 100% !important;
       table-layout: fixed !important;
@@ -393,9 +396,12 @@
       /* ── Matrix → stacked card layout on mobile ─────────────── */
       /* Each row becomes a card; columns become vertical options */
       .sd-matrix {
+        overflow-x: visible !important;
+        display: block !important;
+      }
+      .sd-matrix table {
         min-width: 0 !important;
         width: 100% !important;
-        overflow-x: visible !important;
         display: block !important;
       }
       /* Hide the thead — we'll label each option inline */
@@ -448,6 +454,7 @@
       }
       /* Show column label text before each radio (injected via JS) */
       .sd-matrix__cell .mobile-col-label {
+        display: none !important;
         font-size: 0.82rem !important;
         color: var(--text-muted) !important;
         margin-left: 0.4rem !important;

@@ -365,9 +365,120 @@
 
     /* ── Responsive ──────────────────────────────────────────── */
     @media (max-width: 600px) {
+      header { padding: 1rem; }
       header h1 { font-size: 1.2rem; }
-      #sectionNav { padding: 0.5rem; gap: 0.35rem; }
-      .nav-pill { font-size: 0.75rem; padding: 0.3rem 0.65rem; }
+      header p  { font-size: 0.78rem; }
+      #printBtn { font-size: 0.75rem; padding: 0.35rem 0.8rem; }
+
+      /* Nav: horizontal scroll instead of wrapping */
+      #sectionNav {
+        padding: 0.5rem 0.75rem;
+        gap: 0.35rem;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+      }
+      #sectionNav::-webkit-scrollbar { display: none; }
+      .nav-pill { font-size: 0.75rem; padding: 0.3rem 0.65rem; flex-shrink: 0; }
+
+      #main { padding: 0 0.75rem; margin-top: 1rem; }
+
+      /* ── Matrix → stacked card layout on mobile ─────────────── */
+      /* Each row becomes a card; columns become vertical options */
+      .sd-matrix {
+        overflow-x: visible !important;
+        display: block !important;
+      }
+      .sd-matrix table {
+        min-width: 0 !important;
+        width: 100% !important;
+        display: block !important;
+      }
+      /* Hide the thead — we'll label each option inline */
+      .sd-matrix thead { display: none !important; }
+
+      /* Each <tbody> is a container; each <tr> is a card */
+      .sd-matrix tbody,
+      .sd-matrix > tr {
+        display: block !important;
+      }
+      .sd-matrix tr {
+        display: block !important;
+        border: 1px solid var(--border) !important;
+        border-radius: var(--radius) !important;
+        margin-bottom: 0.6rem !important;
+        padding: 0 !important;
+        background: var(--white) !important;
+      }
+      .sd-matrix tr:nth-child(even) { background: var(--white) !important; }
+
+      /* Row label = card header */
+      .sd-matrix td:first-child,
+      .sd-matrix__cell:first-child {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        padding: 0.6rem 0.75rem !important;
+        background: var(--blue-faint) !important;
+        border-bottom: 1px solid var(--border) !important;
+        border-radius: var(--radius) var(--radius) 0 0 !important;
+        font-weight: 600 !important;
+        font-size: 0.9rem !important;
+        text-align: left !important;
+      }
+
+      /* Remaining cells = vertical option list */
+      .sd-matrix td:not(:first-child),
+      .sd-matrix__cell:not(:first-child) {
+        display: flex !important;
+        align-items: center !important;
+        width: auto !important;
+        padding: 0.4rem 0.75rem !important;
+        border: none !important;
+        text-align: left !important;
+      }
+      .sd-matrix td:not(:first-child) .sd-radio,
+      .sd-matrix__cell:not(:first-child) .sd-radio {
+        justify-content: flex-start !important;
+      }
+      /* Show column label text before each radio (injected via JS) */
+      .sd-matrix__cell .mobile-col-label {
+        font-size: 0.82rem !important;
+        color: var(--text-muted) !important;
+        margin-left: 0.4rem !important;
+      }
+
+      /* SurveyJS progress bar dots — smaller, scrollable */
+      .sd-progress-buttons__list {
+        overflow-x: auto;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+      }
+      .sd-progress-buttons__list::-webkit-scrollbar { display: none; }
+      .sd-progress-buttons__page-title {
+        font-size: 0.6rem !important;
+        max-width: 50px !important;
+      }
+
+      /* Bigger touch targets for radio/checkbox */
+      .sd-selectbase__item { padding: 0.5rem 0 !important; }
+      .sd-radio__decorator, .sd-checkbox__decorator {
+        width: 24px !important; height: 24px !important;
+      }
+
+      /* Comment boxes — full width, comfortable height */
+      .sd-comment { min-height: 100px !important; }
+
+      /* Buttons — full width on mobile */
+      .sd-btn {
+        width: 100% !important;
+        padding: 0.8rem !important;
+        font-size: 1rem !important;
+        margin-top: 0.5rem !important;
+      }
+      .sd-navigation__complete { margin-top: 1rem !important; }
     }
   </style>
 </head>
@@ -521,13 +632,19 @@
     }
     survey.onAfterRenderPage.add(() => setTimeout(bindProgressNav, 80));
 
-    // Make every matrix scrollable — inline styles beat any SurveyJS CSS
+    // Make every matrix scrollable on desktop; on mobile, inject column labels
+    // for the stacked card layout (header is hidden via CSS on narrow screens)
     function wrapMatrixTables() {
+      const isMobile = window.matchMedia("(max-width: 600px)").matches;
+
       document.querySelectorAll(".sd-matrix").forEach(el => {
-        el.style.overflowX = "auto";
-        el.style.display   = "block";
-        el.style.webkitOverflowScrolling = "touch";
+        if (!isMobile) {
+          el.style.overflowX = "auto";
+          el.style.display   = "block";
+          el.style.webkitOverflowScrolling = "touch";
+        }
       });
+
       // Ensure no ancestor clips the matrix
       document.querySelectorAll(
         ".sd-question__content, .sd-panel__content, .sd-element__content"
@@ -535,12 +652,49 @@
         const cur = getComputedStyle(el).overflow;
         if (cur === "hidden") el.style.overflow = "visible";
       });
+
+      // Mobile: inject column label text next to each radio so users know
+      // what each option means (since the <thead> is hidden on mobile)
+      if (isMobile) {
+        document.querySelectorAll(".sd-matrix").forEach(matrix => {
+          const table = matrix.querySelector("table");
+          if (!table) return;
+          const headerCells = table.querySelectorAll("thead th");
+          if (headerCells.length === 0) return;
+          const colLabels = [...headerCells].map(th => th.textContent.trim());
+
+          table.querySelectorAll("tr").forEach(tr => {
+            const cells = tr.querySelectorAll("td");
+            cells.forEach((cell, i) => {
+              if (i === 0) return; // skip row label
+              if (!colLabels[i]) return;
+              // Remove stale label if re-rendered
+              const existing = cell.querySelector(".mobile-col-label");
+              if (existing) existing.remove();
+              const radio = cell.querySelector(".sd-radio");
+              if (radio) {
+                const label = document.createElement("span");
+                label.className = "mobile-col-label";
+                label.textContent = colLabels[i];
+                radio.appendChild(label);
+              }
+            });
+          });
+        });
+      }
     }
 
     // Initialise
     updateNav(0);
     updateSkip(0);
     setTimeout(wrapMatrixTables, 200);
+
+    // Re-run on orientation change / resize so mobile↔desktop layout adapts
+    let resizeTimer;
+    window.addEventListener("resize", () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(wrapMatrixTables, 150);
+    });
 
     // ── Submit ─────────────────────────────────────────────────
     const statusEl = document.getElementById("submitStatus");

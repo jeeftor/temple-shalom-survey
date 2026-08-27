@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Temple Shalom Survey — Admin</title>
+  <style>
+    :root {
+      --blue:      #0038b8;
+      --blue-dark: #00277d;
+      --blue-pale: #dce8ff;
+      --green:     #1a7f3c;
+      --red:       #c0392b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Georgia', serif;
+      background: #f4f6fb;
+      color: #111;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--blue);
+      color: white;
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    header h1 { margin: 0; font-size: 18pt; }
+    header p  { margin: 0; font-size: 9pt; opacity: 0.75; }
+
+    /* ── Auth screen ── */
+    #authScreen {
+      max-width: 420px;
+      margin: 6rem auto;
+      background: white;
+      border-radius: 10px;
+      padding: 2rem;
+      box-shadow: 0 2px 16px rgba(0,56,184,0.12);
+      text-align: center;
+    }
+    #authScreen h2 { color: var(--blue-dark); margin-top: 0; }
+    #authScreen input {
+      width: 100%;
+      padding: 0.6rem 0.8rem;
+      font-size: 11pt;
+      border: 1.5px solid #ccc;
+      border-radius: 6px;
+      margin: 0.5rem 0 1rem;
+    }
+    #authScreen button {
+      background: var(--blue);
+      color: white;
+      border: none;
+      padding: 0.6rem 2rem;
+      border-radius: 6px;
+      font-size: 11pt;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    #authScreen button:hover { background: var(--blue-dark); }
+    #authError { color: var(--red); font-size: 9pt; margin-top: 0.5rem; }
+
+    /* ── Dashboard ── */
+    #dashboard { display: none; padding: 1.5rem 2rem; max-width: 1200px; margin: 0 auto; }
+
+    /* Stats cards */
+    .stat-row {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+    }
+    .stat-card {
+      background: white;
+      border-radius: 8px;
+      padding: 1rem 1.5rem;
+      flex: 1;
+      min-width: 150px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+      border-top: 4px solid var(--blue);
+    }
+    .stat-card .val  { font-size: 26pt; font-weight: bold; color: var(--blue-dark); line-height: 1.1; }
+    .stat-card .lbl  { font-size: 9pt; color: #666; margin-top: 0.2rem; }
+
+    /* NPS gauge */
+    .nps-bar-wrap { margin-top: 0.4rem; display: flex; gap: 2px; height: 8px; }
+    .nps-bar-wrap .seg { flex: 1; border-radius: 2px; }
+    .seg.detract { background: var(--red); }
+    .seg.passive { background: #e0a800; }
+    .seg.promote { background: var(--green); }
+
+    /* Section ── */
+    .panel {
+      background: white;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+      overflow: hidden;
+    }
+    .panel-hdr {
+      background: var(--blue);
+      color: white;
+      padding: 0.6rem 1rem;
+      font-weight: bold;
+      font-size: 11pt;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .panel-hdr a {
+      color: #b8d0ff;
+      font-size: 9pt;
+      font-weight: normal;
+      text-decoration: none;
+    }
+    .panel-hdr a:hover { color: white; }
+    .panel-body { padding: 1rem; }
+
+    /* Bar charts */
+    .bar-item { margin: 0.4rem 0; display: flex; align-items: center; gap: 0.5rem; font-size: 10pt; }
+    .bar-item .bar-lbl { width: 200px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bar-item .bar-track { flex: 1; background: var(--blue-pale); border-radius: 4px; height: 16px; position: relative; }
+    .bar-item .bar-fill  { background: var(--blue); border-radius: 4px; height: 100%; transition: width 0.4s; }
+    .bar-item .bar-count { width: 50px; text-align: right; color: #555; flex-shrink: 0; }
+
+    /* Responses table */
+    .tbl-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
+    th {
+      background: var(--blue);
+      color: white;
+      padding: 0.4rem 0.6rem;
+      text-align: left;
+      white-space: nowrap;
+    }
+    td { border-bottom: 1px solid #e8ecf5; padding: 0.35rem 0.6rem; vertical-align: top; }
+    tr:hover td { background: #f0f5ff; }
+    .badge {
+      display: inline-block;
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      font-size: 8pt;
+      font-weight: bold;
+    }
+    .badge-us  { background: #dce8ff; color: var(--blue-dark); }
+    .badge-ok  { background: #d4edda; color: #155724; }
+    .badge-dupe { background: #fff3cd; color: #856404; }
+
+    /* Expandable row */
+    .expand-btn { cursor: pointer; color: var(--blue); font-size: 9pt; background: none; border: none; padding: 0; }
+    .detail-row td { background: #f8faff; padding: 0.5rem 1rem; font-size: 9pt; }
+    .detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.3rem 1rem; }
+    .detail-grid .dk { color: #888; }
+    .detail-grid .dv { font-weight: 500; word-break: break-word; }
+
+    /* Toolbar */
+    .toolbar { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; }
+    .toolbar input {
+      padding: 0.4rem 0.7rem;
+      border: 1.5px solid #ccc;
+      border-radius: 6px;
+      font-size: 10pt;
+      flex: 1;
+      min-width: 180px;
+    }
+    .toolbar button {
+      padding: 0.4rem 1rem;
+      background: var(--blue);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 10pt;
+    }
+    .toolbar button:hover { background: var(--blue-dark); }
+    .toolbar .btn-outline {
+      background: white;
+      color: var(--blue);
+      border: 1.5px solid var(--blue);
+    }
+    .toolbar .btn-outline:hover { background: var(--blue-pale); }
+
+    .empty { color: #888; font-style: italic; padding: 1rem; text-align: center; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Temple Shalom Survey — Admin</h1>
+    <p id="hdrSub">Loading…</p>
+  </div>
+</header>
+
+<!-- Auth gate -->
+<div id="authScreen">
+  <h2>Admin Access</h2>
+  <p style="color:#555;font-size:10pt;">Enter your export key to view survey results.</p>
+  <input type="password" id="keyInput" placeholder="Export key…" />
+  <br/>
+  <button onclick="doAuth()">Sign In</button>
+  <div id="authError"></div>
+</div>
+
+<!-- Dashboard -->
+<div id="dashboard">
+
+  <!-- Stats row -->
+  <div class="stat-row" id="statRow"></div>
+
+  <!-- Aggregations -->
+  <div id="charts"></div>
+
+  <!-- Response table -->
+  <div class="panel">
+    <div class="panel-hdr">
+      Individual Responses
+      <a href="#" id="csvLink">Download CSV ↓</a>
+    </div>
+    <div class="panel-body">
+      <div class="toolbar">
+        <input type="text" id="searchBox" placeholder="Search responses…" oninput="filterTable()" />
+        <button class="btn-outline" onclick="clearSearch()">Clear</button>
+      </div>
+      <div class="tbl-wrap">
+        <table id="respTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Date</th>
+              <th>Country</th>
+              <th>Time (min)</th>
+              <th>Sections</th>
+              <th>NPS</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="respBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const WORKER = "https://temple-shalom-survey.jeffstein.workers.dev";
+let allResponses = [];
+let exportKey    = "";
+
+// ── Auth ─────────────────────────────────────────────────────────────────────
+
+// Pre-fill key from URL param ?key=X for bookmark-ability
+const urlKey = new URLSearchParams(location.search).get("key");
+if (urlKey) {
+  document.getElementById("keyInput").value = urlKey;
+  setTimeout(doAuth, 0);
+}
+
+function doAuth() {
+  const key = document.getElementById("keyInput").value.trim();
+  if (!key) return;
+  exportKey = key;
+  document.getElementById("authError").textContent = "";
+  loadData(key);
+}
+
+document.getElementById("keyInput").addEventListener("keydown", e => {
+  if (e.key === "Enter") doAuth();
+});
+
+// ── Load data ─────────────────────────────────────────────────────────────────
+
+async function loadData(key) {
+  try {
+    const res = await fetch(`${WORKER}/results?key=${encodeURIComponent(key)}`);
+    if (res.status === 401) {
+      document.getElementById("authError").textContent = "Invalid key. Try again.";
+      return;
+    }
+    const data = await res.json();
+    allResponses = data.responses || [];
+
+    document.getElementById("authScreen").style.display = "none";
+    document.getElementById("dashboard").style.display  = "block";
+    document.getElementById("hdrSub").textContent =
+      `${allResponses.length} response${allResponses.length !== 1 ? "s" : ""} · as of ${new Date().toLocaleString()}`;
+
+    document.getElementById("csvLink").href =
+      `${WORKER}/export?key=${encodeURIComponent(key)}`;
+    document.getElementById("csvLink").download = "responses.csv";
+
+    renderStats();
+    renderCharts();
+    renderTable(allResponses);
+  } catch (e) {
+    document.getElementById("authError").textContent = "Error: " + e.message;
+  }
+}
+
+// ── Stats cards ───────────────────────────────────────────────────────────────
+
+function renderStats() {
+  const r = allResponses;
+  const npsVals = r.map(x => x.answers?.q_nps).filter(v => v != null);
+  const nps = calcNPS(npsVals);
+  const avgMin = r.filter(x => x.completion_seconds)
+    .reduce((s, x, _, a) => s + x.completion_seconds / a.length, 0) / 60;
+
+  const cards = [
+    { val: r.length,                           lbl: "Total Responses" },
+    { val: nps != null ? nps : "—",           lbl: "NPS Score",       extra: npsBar(npsVals) },
+    { val: avgMin ? avgMin.toFixed(1) + "m" : "—", lbl: "Avg Completion" },
+    { val: new Set(r.map(x => x.ip_country).filter(Boolean)).size, lbl: "Countries" },
+  ];
+
+  document.getElementById("statRow").innerHTML = cards.map(c => `
+    <div class="stat-card">
+      <div class="val">${c.val}</div>
+      <div class="lbl">${c.lbl}</div>
+      ${c.extra || ""}
+    </div>
+  `).join("");
+}
+
+function calcNPS(vals) {
+  if (!vals.length) return null;
+  const promoters  = vals.filter(v => v >= 9).length;
+  const detractors = vals.filter(v => v <= 6).length;
+  return Math.round((promoters - detractors) / vals.length * 100);
+}
+
+function npsBar(vals) {
+  if (!vals.length) return "";
+  const n = vals.length;
+  const p = vals.filter(v => v >= 9).length / n * 100;
+  const pa = vals.filter(v => v === 7 || v === 8).length / n * 100;
+  const d = vals.filter(v => v <= 6).length / n * 100;
+  return `<div class="nps-bar-wrap">
+    <div class="seg detract" style="flex:${d}"></div>
+    <div class="seg passive" style="flex:${pa}"></div>
+    <div class="seg promote" style="flex:${p}"></div>
+  </div><div style="font-size:8pt;color:#888;margin-top:2px">${Math.round(d)}% detractors · ${Math.round(pa)}% passives · ${Math.round(p)}% promoters</div>`;
+}
+
+// ── Aggregate charts ──────────────────────────────────────────────────────────
+
+const CHART_QUESTIONS = [
+  { key: "q1_member_type",         label: "Membership Type" },
+  { key: "q5_religious_identity",  label: "Religious Identity" },
+  { key: "q6_engagement",          label: "Engagement Level" },
+  { key: "q12_children",           label: "Children in household?" },
+  { key: "q16_barriers",           label: "Barriers to Participation" },
+  { key: "q18_dues_fairness",      label: "Dues Fairness" },
+  { key: "q23_comm_channels",      label: "Preferred Communication Channels" },
+];
+
+function renderCharts() {
+  const wrap = document.getElementById("charts");
+  wrap.innerHTML = "";
+
+  // Add 2-column layout
+  const grid = document.createElement("div");
+  grid.style.cssText = "display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:1rem;margin-bottom:1.5rem;";
+
+  CHART_QUESTIONS.forEach(q => {
+    const counts = {};
+    allResponses.forEach(r => {
+      const v = r.answers?.[q.key];
+      if (v == null || v === "") return;
+      const vals = Array.isArray(v) ? v : [v];
+      vals.forEach(x => { counts[x] = (counts[x] || 0) + 1; });
+    });
+
+    if (!Object.keys(counts).length) return;
+    const total = allResponses.length;
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+
+    const panel = document.createElement("div");
+    panel.className = "panel";
+    panel.innerHTML = `
+      <div class="panel-hdr">${q.label}</div>
+      <div class="panel-body">
+        ${sorted.map(([lbl, cnt]) => `
+          <div class="bar-item">
+            <div class="bar-lbl" title="${lbl}">${lbl}</div>
+            <div class="bar-track"><div class="bar-fill" style="width:${Math.round(cnt/total*100)}%"></div></div>
+            <div class="bar-count">${cnt} (${Math.round(cnt/total*100)}%)</div>
+          </div>`).join("")}
+      </div>`;
+    grid.appendChild(panel);
+  });
+
+  wrap.appendChild(grid);
+}
+
+// ── Response table ────────────────────────────────────────────────────────────
+
+function renderTable(rows) {
+  const tbody = document.getElementById("respBody");
+  tbody.innerHTML = "";
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="7" class="empty">No responses yet.</td></tr>`;
+    return;
+  }
+
+  rows.forEach((r, idx) => {
+    const date    = r.timestamp ? new Date(r.timestamp).toLocaleString() : "—";
+    const mins    = r.completion_seconds ? (r.completion_seconds / 60).toFixed(1) + " min" : "—";
+    const secs    = Array.isArray(r.sections_answered) ? r.sections_answered.length : "—";
+    const nps     = r.answers?.q_nps ?? "—";
+    const country = r.ip_country || "—";
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td style="color:#888">${r.id}</td>
+      <td>${date}</td>
+      <td><span class="badge badge-us">${country}</span></td>
+      <td>${mins}</td>
+      <td>${secs}</td>
+      <td>${nps !== "—" ? nps + "/10" : "—"}</td>
+      <td><button class="expand-btn" data-idx="${idx}" onclick="toggleDetail(this)">▶ Details</button></td>`;
+
+    tbody.appendChild(tr);
+
+    // Detail row (hidden by default)
+    const det = document.createElement("tr");
+    det.className = "detail-row";
+    det.style.display = "none";
+    det.dataset.for = idx;
+
+    const answers = r.answers || {};
+    const pairs = Object.entries(answers);
+    det.innerHTML = `<td colspan="7">
+      <div class="detail-grid">
+        ${pairs.length ? pairs.map(([k, v]) => `
+          <div><span class="dk">${k}</span><br/><span class="dv">${Array.isArray(v) ? v.join(", ") : v}</span></div>
+        `).join("") : "<em>No answers recorded.</em>"}
+      </div>
+    </td>`;
+    tbody.appendChild(det);
+  });
+}
+
+function toggleDetail(btn) {
+  const idx    = btn.dataset.idx;
+  const detRow = document.querySelector(`.detail-row[data-for="${idx}"]`);
+  const open   = detRow.style.display !== "none";
+  detRow.style.display = open ? "none" : "table-row";
+  btn.textContent = open ? "▶ Details" : "▼ Hide";
+}
+
+function filterTable() {
+  const q = document.getElementById("searchBox").value.toLowerCase();
+  if (!q) { renderTable(allResponses); return; }
+  const filtered = allResponses.filter(r =>
+    JSON.stringify(r).toLowerCase().includes(q)
+  );
+  renderTable(filtered);
+}
+
+function clearSearch() {
+  document.getElementById("searchBox").value = "";
+  renderTable(allResponses);
+}
+</script>
+</body>
+</html>

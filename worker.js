@@ -1,8 +1,9 @@
 /**
  * Temple Shalom Survey — Cloudflare Worker
  *
- * POST /submit        — receive survey response, write to D1
+ * POST /submit         — receive survey response, write to D1
  * GET  /export?key=X  — download all responses as CSV (protected)
+ * GET  /results?key=X — all responses as JSON (protected)
  * GET  /health        — sanity check + response count
  */
 
@@ -40,6 +41,9 @@ export default {
     }
     if (url.pathname === "/health") {
       return handleHealth(env);
+    }
+    if (url.pathname === "/results" && method === "GET") {
+      return handleResults(request, env);
     }
 
     return new Response("Not found", { status: 404 });
@@ -163,6 +167,38 @@ async function handleExport(request, env) {
       "Content-Disposition": `attachment; filename="survey-${new Date().toISOString().slice(0,10)}.csv"`,
     }
   });
+}
+
+// ── Results (JSON) ────────────────────────────────────────────────────────────
+
+async function handleResults(request, env) {
+  const url = new URL(request.url);
+  if (!env.EXPORT_KEY || url.searchParams.get("key") !== env.EXPORT_KEY) {
+    return json({ error: "Unauthorized" }, 401);
+  }
+
+  const rows = await env.DB.prepare(`
+    SELECT id, response_id, timestamp, session_id, survey_version,
+           ip_country, completion_seconds, sections_answered, payload
+    FROM responses ORDER BY id DESC
+  `).all();
+
+  const responses = (rows.results || []).map(row => ({
+    id:                 row.id,
+    response_id:        row.response_id,
+    timestamp:          row.timestamp,
+    session_id:         row.session_id,
+    survey_version:     row.survey_version,
+    ip_country:         row.ip_country,
+    completion_seconds: row.completion_seconds,
+    sections_answered:  row.sections_answered ? JSON.parse(row.sections_answered) : null,
+    answers:            (() => {
+      const d = JSON.parse(row.payload || "{}");
+      return Object.fromEntries(Object.entries(d).filter(([k]) => !k.startsWith("_") && k !== "timestamp"));
+    })(),
+  }));
+
+  return json({ count: responses.length, responses });
 }
 
 // ── Health ────────────────────────────────────────────────────────────────────

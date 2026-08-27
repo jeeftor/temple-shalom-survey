@@ -26,6 +26,8 @@ jobs:
           filters: |
             site:
               - 'index.html'
+              - 'print.html'
+              - 'admin.html'
               - 'survey.json'
               - '.github/workflows/deploy.yml'
             worker:

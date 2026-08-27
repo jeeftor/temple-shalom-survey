@@ -134,26 +134,133 @@
       color: var(--text) !important;
     }
 
+    /* ── Progress bar (buttons style with labels) ───────────── */
+    /* Container */
+    .sd-progress-buttons__list {
+      gap: 0 !important;
+    }
+    .sd-progress-buttons__list-element {
+      flex: 1 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      position: relative !important;
+      cursor: pointer !important;
+    }
+    /* The dot button */
+    .sd-progress-buttons__button {
+      width: 16px !important;
+      height: 16px !important;
+      border-radius: 50% !important;
+      border: 2px solid #ccc !important;
+      background: white !important;
+      position: relative !important;
+      z-index: 1 !important;
+      transition: all 0.2s !important;
+    }
+    .sd-progress-buttons__button--passed {
+      background: var(--blue) !important;
+      border-color: var(--blue) !important;
+    }
+    .sd-progress-buttons__button--current {
+      border-color: var(--blue) !important;
+      box-shadow: 0 0 0 3px var(--blue-light) !important;
+      background: white !important;
+    }
+    .sd-progress-buttons__list-element:hover .sd-progress-buttons__button {
+      border-color: var(--blue) !important;
+    }
+    /* Connector line */
+    .sd-progress-buttons__connector {
+      background: #ccc !important;
+      height: 2px !important;
+    }
+    .sd-progress-buttons__connector--passed {
+      background: var(--blue) !important;
+    }
+    /* Page title label under the dot */
+    .sd-progress-buttons__page-title {
+      font-size: 0.65rem !important;
+      color: #888 !important;
+      text-align: center !important;
+      margin-top: 5px !important;
+      max-width: 72px !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      font-family: -apple-system, sans-serif !important;
+      font-weight: 500 !important;
+    }
+    .sd-progress-buttons__list-element--current .sd-progress-buttons__page-title {
+      color: var(--blue-dark) !important;
+      font-weight: 700 !important;
+    }
+    .sd-progress-buttons__list-element--passed .sd-progress-buttons__page-title {
+      color: var(--blue) !important;
+    }
+    /* Hide the verbose "Page X of N" text since the dots show this */
+    .sd-progress-buttons__page-description { display: none !important; }
+    .sd-progress__text { font-size: 0.72rem !important; color: #999 !important; }
+
+    /* Matrix — let parent containers pass overflow through */
+    .sd-question__content,
+    .sd-panel__content,
+    .sd-body__page {
+      overflow: visible !important;
+    }
+    /* Matrix wrapper scrolls horizontally */
+    .sd-matrix {
+      overflow-x: auto !important;
+      -webkit-overflow-scrolling: touch;
+      display: block !important;
+    }
+    .sd-matrix table {
+      min-width: 500px !important;
+      width: 100% !important;
+      table-layout: auto !important;
+    }
+    /* Row label: capped at 35% so radio columns always fit */
+    .sd-matrix thead th:first-child,
+    .sd-matrix td:first-child {
+      max-width: 200px !important;
+      min-width: 110px !important;
+      width: 28% !important;
+    }
     /* Matrix rows — better contrast */
     .sd-matrix tr:nth-child(even),
     .sd-matrix__row:nth-child(even) {
       background: var(--blue-faint) !important;
     }
     .sd-matrix__cell, .sd-matrix th {
-      padding: 0.6rem 0.5rem !important;
+      padding: 0.5rem 0.4rem !important;
       vertical-align: middle !important;
+      text-align: center !important;
+    }
+    /* Row label left-aligned */
+    .sd-matrix__cell:first-child {
+      text-align: left !important;
+      padding-left: 0.6rem !important;
     }
     .sd-matrix__row-text {
-      font-size: 0.95rem !important;
+      font-size: 0.88rem !important;
       font-weight: 500 !important;
       color: var(--text) !important;
+      line-height: 1.3 !important;
     }
     .sd-matrix thead th {
       background: var(--blue) !important;
       color: var(--white) !important;
-      font-size: 0.82rem !important;
+      font-size: 0.78rem !important;
       font-weight: 600 !important;
-      padding: 0.6rem 0.5rem !important;
+      padding: 0.5rem 0.3rem !important;
+      text-align: center !important;
+      word-break: break-word !important;
+      white-space: normal !important;
+      line-height: 1.2 !important;
+    }
+    /* Center the radio inside matrix cells */
+    .sd-matrix__cell .sd-radio {
+      justify-content: center !important;
     }
 
     /* Radio / checkbox items — bigger hit targets */
@@ -374,11 +481,42 @@
       updateNav(cur);
       updateSkip(cur);
       window.scrollTo({ top: 0, behavior: "smooth" });
+      setTimeout(wrapMatrixTables, 50);
     });
+
+    survey.onAfterRenderQuestion.add(() => setTimeout(wrapMatrixTables, 30));
+
+    // Make progress bar buttons navigable by click
+    function bindProgressNav() {
+      document.querySelectorAll(".sd-progress-buttons__list-element").forEach((el, i) => {
+        if (el.dataset.navBound) return;
+        el.dataset.navBound = "1";
+        el.style.cursor = "pointer";
+        el.addEventListener("click", () => { survey.currentPageNo = i; });
+      });
+    }
+    survey.onAfterRenderPage.add(() => setTimeout(bindProgressNav, 80));
+
+    // Make every matrix scrollable — inline styles beat any SurveyJS CSS
+    function wrapMatrixTables() {
+      document.querySelectorAll(".sd-matrix").forEach(el => {
+        el.style.overflowX = "auto";
+        el.style.display   = "block";
+        el.style.webkitOverflowScrolling = "touch";
+      });
+      // Ensure no ancestor clips the matrix
+      document.querySelectorAll(
+        ".sd-question__content, .sd-panel__content, .sd-element__content"
+      ).forEach(el => {
+        const cur = getComputedStyle(el).overflow;
+        if (cur === "hidden") el.style.overflow = "visible";
+      });
+    }
 
     // Initialise
     updateNav(0);
     updateSkip(0);
+    setTimeout(wrapMatrixTables, 200);
 
     // ── Submit ─────────────────────────────────────────────────
     const statusEl = document.getElementById("submitStatus");

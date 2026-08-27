@@ -2,7 +2,9 @@
   "title": "Temple Shalom Member Survey 2026",
   "description": "Thank you for sharing your thoughts with us. This survey is confidential unless you choose to identify yourself in an open-ended response.\n\nThis survey has 6 sections. All sections except the final page are optional — complete as many or as few as you like. Simply click 'Skip Section' to move past any section you prefer not to answer.\n\nEach adult member of the household should complete a separate survey.",
   "showProgressBar": "top",
-  "progressBarType": "pages",
+  "progressBarType": "buttons",
+  "progressBarShowPageTitles": true,
+  "progressBarShowPageNumbers": false,
   "showQuestionNumbers": "on",
   "questionErrorLocation": "bottom",
   "checkErrorsMode": "onComplete",
@@ -20,17 +22,44 @@
           "title": "How long have you:",
           "alternateRows": true,
           "rows": [
-            { "value": "lived_in_cs", "text": "Lived in Colorado Springs" },
-            { "value": "been_member",  "text": "Been a Member of Temple Shalom" }
+            {
+              "value": "lived_in_cs",
+              "text": "Lived in Colorado Springs"
+            },
+            {
+              "value": "been_member",
+              "text": "Been a Member of Temple Shalom"
+            }
           ],
           "columns": [
-            { "value": "less_1yr",   "text": "Less than 1 year" },
-            { "value": "1_5yr",      "text": "1–5 Years" },
-            { "value": "6_10yr",     "text": "6–10 Years" },
-            { "value": "11_15yr",    "text": "11–15 Years" },
-            { "value": "16_20yr",    "text": "16–20 Years" },
-            { "value": "over_20yr",  "text": "Over 20 Years" },
-            { "value": "dont_know",  "text": "Don't Know" }
+            {
+              "value": "less_1yr",
+              "text": "Less than 1 year"
+            },
+            {
+              "value": "1_5yr",
+              "text": "1–5 Years"
+            },
+            {
+              "value": "6_10yr",
+              "text": "6–10 Years"
+            },
+            {
+              "value": "11_15yr",
+              "text": "11–15 Years"
+            },
+            {
+              "value": "16_20yr",
+              "text": "16–20 Years"
+            },
+            {
+              "value": "over_20yr",
+              "text": "Over 20 Years"
+            },
+            {
+              "value": "dont_know",
+              "text": "Don't Know"
+            }
           ]
         },
         {
@@ -40,21 +69,60 @@
           "description": "Participation includes any Temple Shalom activity (Education, Worship, Lifecycle, Counseling, Social Outreach, Events and Programs, Auxiliary, Chavurot, Committees, Board, etc.).",
           "alternateRows": true,
           "rows": [
-            { "value": "age_0_5",     "text": "0–5 years old" },
-            { "value": "age_6_9",     "text": "6–9 years old" },
-            { "value": "age_10_13",   "text": "10–13 years old" },
-            { "value": "age_14_18",   "text": "14–18 years old" },
-            { "value": "age_19_25",   "text": "19–25 years old" },
-            { "value": "age_26_50",   "text": "26–50 years old" },
-            { "value": "age_51_65",   "text": "51–65 years old" },
-            { "value": "age_66_80",   "text": "66–80 years old" },
-            { "value": "age_over_80", "text": "Over 80 years old" }
+            {
+              "value": "age_0_5",
+              "text": "0–5 years old"
+            },
+            {
+              "value": "age_6_9",
+              "text": "6–9 years old"
+            },
+            {
+              "value": "age_10_13",
+              "text": "10–13 years old"
+            },
+            {
+              "value": "age_14_18",
+              "text": "14–18 years old"
+            },
+            {
+              "value": "age_19_25",
+              "text": "19–25 years old"
+            },
+            {
+              "value": "age_26_50",
+              "text": "26–50 years old"
+            },
+            {
+              "value": "age_51_65",
+              "text": "51–65 years old"
+            },
+            {
+              "value": "age_66_80",
+              "text": "66–80 years old"
+            },
+            {
+              "value": "age_over_80",
+              "text": "Over 80 years old"
+            }
           ],
           "columns": [
-            { "value": "none_in_hh",       "text": "Not in our household" },
-            { "value": "no_participation", "text": "No participation" },
-            { "value": "some",             "text": "Some participation" },
-            { "value": "monthly",          "text": "Regular (1x/month+)" }
+            {
+              "value": "none_in_hh",
+              "text": "Not in our household"
+            },
+            {
+              "value": "no_participation",
+              "text": "No participation"
+            },
+            {
+              "value": "some",
+              "text": "Some participation"
+            },
+            {
+              "value": "monthly",
+              "text": "Regular (1x/month+)"
+            }
           ]
         },
         {
@@ -63,9 +131,18 @@
           "title": "Do you have household members that require ADA accessibility?",
           "description": "Understanding mobility needs helps us plan for our future facility.",
           "choices": [
-            { "value": "none",        "text": "Not at this time" },
-            { "value": "sometimes",   "text": "Yes — from time to time" },
-            { "value": "permanently", "text": "Yes — permanently" }
+            {
+              "value": "none",
+              "text": "Not at this time"
+            },
+            {
+              "value": "sometimes",
+              "text": "Yes — from time to time"
+            },
+            {
+              "value": "permanently",
+              "text": "Yes — permanently"
+            }
           ]
         },
         {
@@ -74,11 +151,18 @@
           "title": "Does the lack of ADA accessibility limit your ability to participate in Temple Shalom activities?",
           "visibleIf": "{q3_ada} <> 'none' and {q3_ada} notempty",
           "choices": [
-            { "value": "no",  "text": "No" },
-            { "value": "yes", "text": "Yes" }
+            {
+              "value": "no",
+              "text": "No"
+            },
+            {
+              "value": "yes",
+              "text": "Yes"
+            }
           ]
         }
-      ]
+      ],
+      "navigationTitle": "Demographics"
     },
     {
       "name": "page_jewish_journey",
@@ -90,12 +174,30 @@
           "name": "q5_religious_identity",
           "title": "How do you identify religiously?",
           "choices": [
-            { "value": "reform",       "text": "Jewish — Reform" },
-            { "value": "conservative", "text": "Jewish — Conservative" },
-            { "value": "orthodox",     "text": "Jewish — Orthodox" },
-            { "value": "just_jewish",  "text": "Just Jewish" },
-            { "value": "not_jewish",   "text": "Not Jewish" },
-            { "value": "conversion",   "text": "In Process of Conversion" }
+            {
+              "value": "reform",
+              "text": "Jewish — Reform"
+            },
+            {
+              "value": "conservative",
+              "text": "Jewish — Conservative"
+            },
+            {
+              "value": "orthodox",
+              "text": "Jewish — Orthodox"
+            },
+            {
+              "value": "just_jewish",
+              "text": "Just Jewish"
+            },
+            {
+              "value": "not_jewish",
+              "text": "Not Jewish"
+            },
+            {
+              "value": "conversion",
+              "text": "In Process of Conversion"
+            }
           ],
           "hasOther": true,
           "otherText": "Other"
@@ -106,14 +208,32 @@
           "title": "What is your level of satisfaction/comfort with the following prayer books?",
           "alternateRows": true,
           "rows": [
-            { "value": "mishkan",    "text": "Mishkan T'filah (Friday Nights)" },
-            { "value": "sim_shalom", "text": "Sim Shalom (Saturday Morning)" },
-            { "value": "machzor",    "text": "Machzor (High Holidays)" }
+            {
+              "value": "mishkan",
+              "text": "Mishkan T'filah (Friday Nights)"
+            },
+            {
+              "value": "sim_shalom",
+              "text": "Sim Shalom (Saturday Morning)"
+            },
+            {
+              "value": "machzor",
+              "text": "Machzor (High Holidays)"
+            }
           ],
           "columns": [
-            { "value": "meets_needs",  "text": "Meets My Needs" },
-            { "value": "does_not_meet","text": "Does Not Meet My Needs" },
-            { "value": "no_opinion",   "text": "N/A — No Opinion" }
+            {
+              "value": "meets_needs",
+              "text": "Meets My Needs"
+            },
+            {
+              "value": "does_not_meet",
+              "text": "Does Not Meet My Needs"
+            },
+            {
+              "value": "no_opinion",
+              "text": "N/A — No Opinion"
+            }
           ]
         },
         {
@@ -124,7 +244,8 @@
           "maxLength": 1000,
           "rows": 5
         }
-      ]
+      ],
+      "navigationTitle": "Jewish Journey"
     },
     {
       "name": "page_engagement",
@@ -136,10 +257,22 @@
           "name": "q8_how_learned",
           "title": "How did you first learn about Temple Shalom?",
           "choices": [
-            { "value": "grew_up",      "text": "I grew up in Colorado Springs and my family was a member" },
-            { "value": "self_sought",  "text": "I sought out Temple options on my own when moving to Colorado Springs" },
-            { "value": "member_contact","text": "I was contacted by a member" },
-            { "value": "email_invite", "text": "I received an email invitation" }
+            {
+              "value": "grew_up",
+              "text": "I grew up in Colorado Springs and my family was a member"
+            },
+            {
+              "value": "self_sought",
+              "text": "I sought out Temple options on my own when moving to Colorado Springs"
+            },
+            {
+              "value": "member_contact",
+              "text": "I was contacted by a member"
+            },
+            {
+              "value": "email_invite",
+              "text": "I received an email invitation"
+            }
           ],
           "hasOther": true,
           "otherText": "Other"
@@ -150,15 +283,42 @@
           "title": "What drove your initial decision to become a member of Temple Shalom? (select up to 3)",
           "maxSelectedChoices": 3,
           "choices": [
-            { "value": "preschool",       "text": "For the Preschool" },
-            { "value": "religious_school","text": "For the Religious School" },
-            { "value": "worship",         "text": "For Worship Services" },
-            { "value": "lifecycle",       "text": "For a Lifecycle Event" },
-            { "value": "social",          "text": "For Social and Programming Aspects" },
-            { "value": "conversion",      "text": "For the Conversion Program" },
-            { "value": "rabbi",           "text": "Because of the Rabbi" },
-            { "value": "community",       "text": "To belong to a Jewish Community" },
-            { "value": "dont_recall",     "text": "I don't recall" }
+            {
+              "value": "preschool",
+              "text": "For the Preschool"
+            },
+            {
+              "value": "religious_school",
+              "text": "For the Religious School"
+            },
+            {
+              "value": "worship",
+              "text": "For Worship Services"
+            },
+            {
+              "value": "lifecycle",
+              "text": "For a Lifecycle Event"
+            },
+            {
+              "value": "social",
+              "text": "For Social and Programming Aspects"
+            },
+            {
+              "value": "conversion",
+              "text": "For the Conversion Program"
+            },
+            {
+              "value": "rabbi",
+              "text": "Because of the Rabbi"
+            },
+            {
+              "value": "community",
+              "text": "To belong to a Jewish Community"
+            },
+            {
+              "value": "dont_recall",
+              "text": "I don't recall"
+            }
           ],
           "hasOther": true,
           "otherText": "Other"
@@ -169,21 +329,60 @@
           "title": "In the past year or in the coming year, have you or do you expect to take advantage of the following religious/worship activities?",
           "alternateRows": true,
           "rows": [
-            { "value": "friday_services",  "text": "Friday Night Services" },
-            { "value": "friday_oneg",      "text": "Friday Night Oneg Maven Program" },
-            { "value": "saturday_services","text": "Saturday Morning Services" },
-            { "value": "saturday_bagel",   "text": "Saturday Morning Bagel Brigade Program" },
-            { "value": "high_holiday",     "text": "High Holiday Services" },
-            { "value": "festival_holiday", "text": "Festival & Other Holiday" },
-            { "value": "conversion_prog",  "text": "Conversion Program" },
-            { "value": "support_group",    "text": "Support Group (Grief, Marriage Counseling)" },
-            { "value": "lifecycle",        "text": "Lifecycle Events" }
+            {
+              "value": "friday_services",
+              "text": "Friday Night Services"
+            },
+            {
+              "value": "friday_oneg",
+              "text": "Friday Night Oneg Maven Program"
+            },
+            {
+              "value": "saturday_services",
+              "text": "Saturday Morning Services"
+            },
+            {
+              "value": "saturday_bagel",
+              "text": "Saturday Morning Bagel Brigade Program"
+            },
+            {
+              "value": "high_holiday",
+              "text": "High Holiday Services"
+            },
+            {
+              "value": "festival_holiday",
+              "text": "Festival & Other Holiday"
+            },
+            {
+              "value": "conversion_prog",
+              "text": "Conversion Program"
+            },
+            {
+              "value": "support_group",
+              "text": "Support Group (Grief, Marriage Counseling)"
+            },
+            {
+              "value": "lifecycle",
+              "text": "Lifecycle Events"
+            }
           ],
           "columns": [
-            { "value": "no",         "text": "No" },
-            { "value": "want_to",    "text": "No — but want to explore" },
-            { "value": "occasionally","text": "Occasionally" },
-            { "value": "regularly",  "text": "Regularly" }
+            {
+              "value": "no",
+              "text": "No"
+            },
+            {
+              "value": "want_to",
+              "text": "No — but want to explore"
+            },
+            {
+              "value": "occasionally",
+              "text": "Occasionally"
+            },
+            {
+              "value": "regularly",
+              "text": "Regularly"
+            }
           ]
         },
         {
@@ -192,25 +391,76 @@
           "title": "In the past year or in the coming year, have you or do you expect to take advantage of the following program or social activities?",
           "alternateRows": true,
           "rows": [
-            { "value": "adult_ed",            "text": "Adult Education Programs" },
-            { "value": "movie_series",         "text": "Jewish Movie Series" },
-            { "value": "concerts",             "text": "Concerts or Music Programs" },
-            { "value": "social_action",        "text": "Social Action Events/Programs" },
-            { "value": "boker_tov",            "text": "Boker Tov Sunday Club" },
-            { "value": "speaker_series",       "text": "Speaker Series" },
-            { "value": "committee",            "text": "Participation on Temple Committee" },
-            { "value": "committee_chair",      "text": "Serve as Committee Chair or Event Coordinator" },
-            { "value": "board_member",         "text": "Serve as Member of Board of Directors" },
-            { "value": "board_meeting",        "text": "Attend a Board Meeting" },
-            { "value": "town_hall",            "text": "Attend a Town Hall" },
-            { "value": "congregational_mtg",   "text": "Attend Congregational Meeting" },
-            { "value": "chavurah",             "text": "A Temple Chavurah" }
+            {
+              "value": "adult_ed",
+              "text": "Adult Education Programs"
+            },
+            {
+              "value": "movie_series",
+              "text": "Jewish Movie Series"
+            },
+            {
+              "value": "concerts",
+              "text": "Concerts or Music Programs"
+            },
+            {
+              "value": "social_action",
+              "text": "Social Action Events/Programs"
+            },
+            {
+              "value": "boker_tov",
+              "text": "Boker Tov Sunday Club"
+            },
+            {
+              "value": "speaker_series",
+              "text": "Speaker Series"
+            },
+            {
+              "value": "committee",
+              "text": "Participation on Temple Committee"
+            },
+            {
+              "value": "committee_chair",
+              "text": "Serve as Committee Chair or Event Coordinator"
+            },
+            {
+              "value": "board_member",
+              "text": "Serve as Member of Board of Directors"
+            },
+            {
+              "value": "board_meeting",
+              "text": "Attend a Board Meeting"
+            },
+            {
+              "value": "town_hall",
+              "text": "Attend a Town Hall"
+            },
+            {
+              "value": "congregational_mtg",
+              "text": "Attend Congregational Meeting"
+            },
+            {
+              "value": "chavurah",
+              "text": "A Temple Chavurah"
+            }
           ],
           "columns": [
-            { "value": "no",          "text": "No" },
-            { "value": "want_to",     "text": "No — but want to explore" },
-            { "value": "occasionally","text": "Occasionally" },
-            { "value": "regularly",   "text": "Regularly" }
+            {
+              "value": "no",
+              "text": "No"
+            },
+            {
+              "value": "want_to",
+              "text": "No — but want to explore"
+            },
+            {
+              "value": "occasionally",
+              "text": "Occasionally"
+            },
+            {
+              "value": "regularly",
+              "text": "Regularly"
+            }
           ]
         },
         {
@@ -218,8 +468,14 @@
           "name": "q12_children",
           "title": "Do you currently have children in your household?",
           "choices": [
-            { "value": "no",  "text": "No" },
-            { "value": "yes", "text": "Yes" }
+            {
+              "value": "no",
+              "text": "No"
+            },
+            {
+              "value": "yes",
+              "text": "Yes"
+            }
           ]
         },
         {
@@ -229,22 +485,64 @@
           "visibleIf": "{q12_children} = 'yes'",
           "alternateRows": true,
           "rows": [
-            { "value": "nevatim",       "text": "Nevatim (Infants to age 5)" },
-            { "value": "preschool",     "text": "Temple Preschool (Ages 2–5)" },
-            { "value": "ha_merkaz",     "text": "Ha'Merkaz (Religious School Ages 5–13)" },
-            { "value": "sichot",        "text": "Sichot (Teens — Grades 8–12)" },
-            { "value": "pj_library",    "text": "PJ Library (birth to 6th grade)" },
-            { "value": "marichim",      "text": "Marichim (post B'nai Mitzvah teaching assistants)" },
-            { "value": "bbyo",          "text": "BBYO" },
-            { "value": "summer_camp",   "text": "Jewish Summer Camp connections" },
-            { "value": "venture_crew",  "text": "Jewish Venture Crew (Co-ed Ages 14–18)" }
+            {
+              "value": "nevatim",
+              "text": "Nevatim (Infants to age 5)"
+            },
+            {
+              "value": "preschool",
+              "text": "Temple Preschool (Ages 2–5)"
+            },
+            {
+              "value": "ha_merkaz",
+              "text": "Ha'Merkaz (Religious School Ages 5–13)"
+            },
+            {
+              "value": "sichot",
+              "text": "Sichot (Teens — Grades 8–12)"
+            },
+            {
+              "value": "pj_library",
+              "text": "PJ Library (birth to 6th grade)"
+            },
+            {
+              "value": "marichim",
+              "text": "Marichim (post B'nai Mitzvah teaching assistants)"
+            },
+            {
+              "value": "bbyo",
+              "text": "BBYO"
+            },
+            {
+              "value": "summer_camp",
+              "text": "Jewish Summer Camp connections"
+            },
+            {
+              "value": "venture_crew",
+              "text": "Jewish Venture Crew (Co-ed Ages 14–18)"
+            }
           ],
           "columns": [
-            { "value": "no_age",       "text": "No children this age" },
-            { "value": "no",           "text": "No" },
-            { "value": "want_to",      "text": "No — but want to explore" },
-            { "value": "occasionally", "text": "Occasionally" },
-            { "value": "regularly",    "text": "Regularly" }
+            {
+              "value": "no_age",
+              "text": "No children this age"
+            },
+            {
+              "value": "no",
+              "text": "No"
+            },
+            {
+              "value": "want_to",
+              "text": "No — but want to explore"
+            },
+            {
+              "value": "occasionally",
+              "text": "Occasionally"
+            },
+            {
+              "value": "regularly",
+              "text": "Regularly"
+            }
           ]
         },
         {
@@ -252,10 +550,22 @@
           "name": "q16_social_engagement",
           "title": "How often do you engage with other Temple members socially outside of Temple-sponsored events?",
           "choices": [
-            { "value": "never",       "text": "Never" },
-            { "value": "rarely",      "text": "Rarely (a couple of times per year)" },
-            { "value": "occasionally","text": "Occasionally (3–6 times per year)" },
-            { "value": "frequently",  "text": "Frequently (at least monthly)" }
+            {
+              "value": "never",
+              "text": "Never"
+            },
+            {
+              "value": "rarely",
+              "text": "Rarely (a couple of times per year)"
+            },
+            {
+              "value": "occasionally",
+              "text": "Occasionally (3–6 times per year)"
+            },
+            {
+              "value": "frequently",
+              "text": "Frequently (at least monthly)"
+            }
           ]
         },
         {
@@ -263,14 +573,38 @@
           "name": "q_barriers",
           "title": "What are the main reasons you don't participate more? (check all that apply)",
           "choices": [
-            { "value": "cost",         "text": "Cost / financial reasons" },
-            { "value": "schedule",     "text": "Schedule conflicts" },
-            { "value": "distance",     "text": "Distance / transportation" },
-            { "value": "awareness",    "text": "Not aware of programs or events" },
-            { "value": "alone",        "text": "No one to go with" },
-            { "value": "health",       "text": "Health or mobility limitations" },
-            { "value": "not_relevant", "text": "Programs don't feel relevant to me" },
-            { "value": "fully_engaged","text": "I'm already as engaged as I want to be" }
+            {
+              "value": "cost",
+              "text": "Cost / financial reasons"
+            },
+            {
+              "value": "schedule",
+              "text": "Schedule conflicts"
+            },
+            {
+              "value": "distance",
+              "text": "Distance / transportation"
+            },
+            {
+              "value": "awareness",
+              "text": "Not aware of programs or events"
+            },
+            {
+              "value": "alone",
+              "text": "No one to go with"
+            },
+            {
+              "value": "health",
+              "text": "Health or mobility limitations"
+            },
+            {
+              "value": "not_relevant",
+              "text": "Programs don't feel relevant to me"
+            },
+            {
+              "value": "fully_engaged",
+              "text": "I'm already as engaged as I want to be"
+            }
           ],
           "hasOther": true,
           "otherText": "Other"
@@ -280,24 +614,78 @@
           "name": "q19_engagement_opportunities",
           "title": "I'm interested in the following engagement opportunities if offered (check all that apply):",
           "choices": [
-            { "value": "adult_ed",     "text": "Adult Education Classes" },
-            { "value": "committee",    "text": "Board Committee Member Opportunities" },
-            { "value": "board",        "text": "Board Member Opportunities" },
-            { "value": "nextgen",      "text": "NextGen (20s and 30s)" },
-            { "value": "social_40_60", "text": "Social Gatherings (Ages 40–60s)" },
-            { "value": "social_70plus","text": "Social Gatherings (Ages 70+)" },
-            { "value": "cemetery",     "text": "Friends of the Cemetery" },
-            { "value": "film",         "text": "Jewish Film Society" },
-            { "value": "social_action","text": "Social Action & Outreach" },
-            { "value": "greeter",      "text": "Shabbat Greeter Opportunities" },
-            { "value": "torah_reading","text": "Torah/Haftarah Reading" },
-            { "value": "torah_study",  "text": "Torah Study" },
-            { "value": "oneg_maven",   "text": "Friday Oneg Maven Program" },
-            { "value": "bagel_brigade","text": "Bagel Brigade (Saturdays)" },
-            { "value": "boker_tov",    "text": "Boker Tov Sunday Club (speaker series)" },
-            { "value": "pto",          "text": "PTO" },
-            { "value": "israel_trip",  "text": "Israel Trip with Temple Shalom" },
-            { "value": "retreat",      "text": "Temple Retreat (Singles, Families, Adults, Children)" }
+            {
+              "value": "adult_ed",
+              "text": "Adult Education Classes"
+            },
+            {
+              "value": "committee",
+              "text": "Board Committee Member Opportunities"
+            },
+            {
+              "value": "board",
+              "text": "Board Member Opportunities"
+            },
+            {
+              "value": "nextgen",
+              "text": "NextGen (20s and 30s)"
+            },
+            {
+              "value": "social_40_60",
+              "text": "Social Gatherings (Ages 40–60s)"
+            },
+            {
+              "value": "social_70plus",
+              "text": "Social Gatherings (Ages 70+)"
+            },
+            {
+              "value": "cemetery",
+              "text": "Friends of the Cemetery"
+            },
+            {
+              "value": "film",
+              "text": "Jewish Film Society"
+            },
+            {
+              "value": "social_action",
+              "text": "Social Action & Outreach"
+            },
+            {
+              "value": "greeter",
+              "text": "Shabbat Greeter Opportunities"
+            },
+            {
+              "value": "torah_reading",
+              "text": "Torah/Haftarah Reading"
+            },
+            {
+              "value": "torah_study",
+              "text": "Torah Study"
+            },
+            {
+              "value": "oneg_maven",
+              "text": "Friday Oneg Maven Program"
+            },
+            {
+              "value": "bagel_brigade",
+              "text": "Bagel Brigade (Saturdays)"
+            },
+            {
+              "value": "boker_tov",
+              "text": "Boker Tov Sunday Club (speaker series)"
+            },
+            {
+              "value": "pto",
+              "text": "PTO"
+            },
+            {
+              "value": "israel_trip",
+              "text": "Israel Trip with Temple Shalom"
+            },
+            {
+              "value": "retreat",
+              "text": "Temple Retreat (Singles, Families, Adults, Children)"
+            }
           ],
           "hasOther": true,
           "otherText": "Other"
@@ -308,15 +696,42 @@
           "title": "I'm interested in the following Chavurot (communities of interest) if offered (check all that apply):",
           "description": "Our ability to offer these depends on the availability of volunteer leaders.",
           "choices": [
-            { "value": "biking",          "text": "Biking" },
-            { "value": "bookclub",        "text": "Book Club" },
-            { "value": "fiber",           "text": "Creative Fiber and Fun" },
-            { "value": "entrepreneurship","text": "Entrepreneurship and Business Owners" },
-            { "value": "genealogy",       "text": "Genealogy" },
-            { "value": "hiking",          "text": "Hiking" },
-            { "value": "mahjong",         "text": "Mahjong" },
-            { "value": "pickleball",      "text": "Pickleball" },
-            { "value": "supper_club",     "text": "Supper Club" }
+            {
+              "value": "biking",
+              "text": "Biking"
+            },
+            {
+              "value": "bookclub",
+              "text": "Book Club"
+            },
+            {
+              "value": "fiber",
+              "text": "Creative Fiber and Fun"
+            },
+            {
+              "value": "entrepreneurship",
+              "text": "Entrepreneurship and Business Owners"
+            },
+            {
+              "value": "genealogy",
+              "text": "Genealogy"
+            },
+            {
+              "value": "hiking",
+              "text": "Hiking"
+            },
+            {
+              "value": "mahjong",
+              "text": "Mahjong"
+            },
+            {
+              "value": "pickleball",
+              "text": "Pickleball"
+            },
+            {
+              "value": "supper_club",
+              "text": "Supper Club"
+            }
           ],
           "hasOther": true,
           "otherText": "Other"
@@ -329,7 +744,8 @@
           "maxLength": 1000,
           "rows": 4
         }
-      ]
+      ],
+      "navigationTitle": "Engagement"
     },
     {
       "name": "page_satisfaction",
@@ -342,15 +758,36 @@
           "title": "How is Temple Shalom doing — big picture — in the following areas?",
           "alternateRows": true,
           "rows": [
-            { "value": "beit_tfillah",  "text": "House of Prayer (Worship) — Beit T'Fillah" },
-            { "value": "beit_midrash",  "text": "House of Study (Education) — Beit Midrash" },
-            { "value": "beit_knesset",  "text": "House of Gathering (Social/Community) — Beit Knesset" }
+            {
+              "value": "beit_tfillah",
+              "text": "House of Prayer (Worship) — Beit T'Fillah"
+            },
+            {
+              "value": "beit_midrash",
+              "text": "House of Study (Education) — Beit Midrash"
+            },
+            {
+              "value": "beit_knesset",
+              "text": "House of Gathering (Social/Community) — Beit Knesset"
+            }
           ],
           "columns": [
-            { "value": "needs_improvement",   "text": "Needs Improvement" },
-            { "value": "meeting_expectations","text": "Meeting Expectations" },
-            { "value": "very_satisfied",       "text": "Very Satisfied" },
-            { "value": "na",                   "text": "N/A — can't evaluate" }
+            {
+              "value": "needs_improvement",
+              "text": "Needs Improvement"
+            },
+            {
+              "value": "meeting_expectations",
+              "text": "Meeting Expectations"
+            },
+            {
+              "value": "very_satisfied",
+              "text": "Very Satisfied"
+            },
+            {
+              "value": "na",
+              "text": "N/A — can't evaluate"
+            }
           ]
         },
         {
@@ -359,17 +796,44 @@
           "title": "How are Temple Shalom leaders doing — big picture?",
           "alternateRows": true,
           "rows": [
-            { "value": "board",         "text": "Board of Directors" },
-            { "value": "rabbi",         "text": "Rabbi (Rabbi Jay)" },
-            { "value": "exec_director", "text": "Executive Director (Kobi Chumash)" },
-            { "value": "ed_director",   "text": "Education Director (Rabbi Jay)" },
-            { "value": "preschool_head","text": "Preschool Head Teacher (Ellie Emerich Hart)" }
+            {
+              "value": "board",
+              "text": "Board of Directors"
+            },
+            {
+              "value": "rabbi",
+              "text": "Rabbi (Rabbi Jay)"
+            },
+            {
+              "value": "exec_director",
+              "text": "Executive Director (Kobi Chumash)"
+            },
+            {
+              "value": "ed_director",
+              "text": "Education Director (Rabbi Jay)"
+            },
+            {
+              "value": "preschool_head",
+              "text": "Preschool Head Teacher (Ellie Emerich Hart)"
+            }
           ],
           "columns": [
-            { "value": "needs_improvement",    "text": "Needs Improvement" },
-            { "value": "meeting_expectations", "text": "Meeting Expectations" },
-            { "value": "very_satisfied",        "text": "Very Satisfied" },
-            { "value": "na",                    "text": "N/A — can't evaluate" }
+            {
+              "value": "needs_improvement",
+              "text": "Needs Improvement"
+            },
+            {
+              "value": "meeting_expectations",
+              "text": "Meeting Expectations"
+            },
+            {
+              "value": "very_satisfied",
+              "text": "Very Satisfied"
+            },
+            {
+              "value": "na",
+              "text": "N/A — can't evaluate"
+            }
           ]
         },
         {
@@ -378,21 +842,60 @@
           "title": "Rate your agreement with the following statements:",
           "alternateRows": true,
           "rows": [
-            { "value": "non_jewish_spouse","text": "I am a non-Jewish spouse/partner, and I feel comfortable participating in events and services" },
-            { "value": "lgbtq",            "text": "I am a member of the LGBTQ+ community, and I feel comfortable participating in events and services" },
-            { "value": "conversion",       "text": "I am in the process of conversion to Judaism, and I feel comfortable participating in events and services" },
-            { "value": "new_member",       "text": "I am relatively new to Temple Shalom and feel welcome" },
-            { "value": "value",            "text": "I believe that I get value for my Temple membership" },
-            { "value": "board_responsive", "text": "The Board of Directors is responsive to my needs" },
-            { "value": "rabbi_responsive", "text": "The Rabbi is responsive to my needs" },
-            { "value": "ed_responsive",    "text": "The Executive Director is responsive to my needs" }
+            {
+              "value": "non_jewish_spouse",
+              "text": "I am a non-Jewish spouse/partner, and I feel comfortable participating in events and services"
+            },
+            {
+              "value": "lgbtq",
+              "text": "I am a member of the LGBTQ+ community, and I feel comfortable participating in events and services"
+            },
+            {
+              "value": "conversion",
+              "text": "I am in the process of conversion to Judaism, and I feel comfortable participating in events and services"
+            },
+            {
+              "value": "new_member",
+              "text": "I am relatively new to Temple Shalom and feel welcome"
+            },
+            {
+              "value": "value",
+              "text": "I believe that I get value for my Temple membership"
+            },
+            {
+              "value": "board_responsive",
+              "text": "The Board of Directors is responsive to my needs"
+            },
+            {
+              "value": "rabbi_responsive",
+              "text": "The Rabbi is responsive to my needs"
+            },
+            {
+              "value": "ed_responsive",
+              "text": "The Executive Director is responsive to my needs"
+            }
           ],
           "columns": [
-            { "value": "strongly_disagree","text": "Strongly Disagree" },
-            { "value": "disagree",         "text": "Disagree" },
-            { "value": "agree",            "text": "Agree" },
-            { "value": "strongly_agree",   "text": "Strongly Agree" },
-            { "value": "na",               "text": "N/A" }
+            {
+              "value": "strongly_disagree",
+              "text": "Strongly Disagree"
+            },
+            {
+              "value": "disagree",
+              "text": "Disagree"
+            },
+            {
+              "value": "agree",
+              "text": "Agree"
+            },
+            {
+              "value": "strongly_agree",
+              "text": "Strongly Agree"
+            },
+            {
+              "value": "na",
+              "text": "N/A"
+            }
           ]
         },
         {
@@ -401,29 +904,92 @@
           "title": "What do you believe are Temple Shalom's greatest Strengths and Weaknesses?",
           "alternateRows": true,
           "rows": [
-            { "value": "preschool",       "text": "Preschool" },
-            { "value": "ha_merkaz",       "text": "Ha'Merkaz (Religious School)" },
-            { "value": "sichot",          "text": "Sichot (Teen Scene)" },
-            { "value": "friday_services", "text": "Friday Night Erev Shabbat Services" },
-            { "value": "saturday_svc",    "text": "Saturday Morning Shabbat Services" },
-            { "value": "programs",        "text": "Programs (concerts, movies, speakers)" },
-            { "value": "adult_ed",        "text": "Adult Education" },
-            { "value": "community",       "text": "Connection to the Community at Large" },
-            { "value": "board",           "text": "Board of Directors" },
-            { "value": "rabbi",           "text": "Rabbi" },
-            { "value": "exec_director",   "text": "Executive Director" },
-            { "value": "volunteers",      "text": "Volunteers" },
-            { "value": "cemetery",        "text": "Cemetery" },
-            { "value": "boker_tov",       "text": "Boker Tov Sunday Club" },
-            { "value": "pto",             "text": "PTO" },
-            { "value": "chavurot",        "text": "Chavurot" },
-            { "value": "foundation",      "text": "Temple Shalom Foundation" }
+            {
+              "value": "preschool",
+              "text": "Preschool"
+            },
+            {
+              "value": "ha_merkaz",
+              "text": "Ha'Merkaz (Religious School)"
+            },
+            {
+              "value": "sichot",
+              "text": "Sichot (Teen Scene)"
+            },
+            {
+              "value": "friday_services",
+              "text": "Friday Night Erev Shabbat Services"
+            },
+            {
+              "value": "saturday_svc",
+              "text": "Saturday Morning Shabbat Services"
+            },
+            {
+              "value": "programs",
+              "text": "Programs (concerts, movies, speakers)"
+            },
+            {
+              "value": "adult_ed",
+              "text": "Adult Education"
+            },
+            {
+              "value": "community",
+              "text": "Connection to the Community at Large"
+            },
+            {
+              "value": "board",
+              "text": "Board of Directors"
+            },
+            {
+              "value": "rabbi",
+              "text": "Rabbi"
+            },
+            {
+              "value": "exec_director",
+              "text": "Executive Director"
+            },
+            {
+              "value": "volunteers",
+              "text": "Volunteers"
+            },
+            {
+              "value": "cemetery",
+              "text": "Cemetery"
+            },
+            {
+              "value": "boker_tov",
+              "text": "Boker Tov Sunday Club"
+            },
+            {
+              "value": "pto",
+              "text": "PTO"
+            },
+            {
+              "value": "chavurot",
+              "text": "Chavurot"
+            },
+            {
+              "value": "foundation",
+              "text": "Temple Shalom Foundation"
+            }
           ],
           "columns": [
-            { "value": "weakness",             "text": "Weakness" },
-            { "value": "meeting_expectations", "text": "Meeting Expectations" },
-            { "value": "strength",             "text": "Strength" },
-            { "value": "na",                   "text": "N/A — can't evaluate" }
+            {
+              "value": "weakness",
+              "text": "Weakness"
+            },
+            {
+              "value": "meeting_expectations",
+              "text": "Meeting Expectations"
+            },
+            {
+              "value": "strength",
+              "text": "Strength"
+            },
+            {
+              "value": "na",
+              "text": "N/A — can't evaluate"
+            }
           ]
         },
         {
@@ -441,12 +1007,30 @@
           "name": "q_facility",
           "title": "How satisfied are you with Temple Shalom's physical facility and location?",
           "choices": [
-            { "value": "very_satisfied",     "text": "Very satisfied" },
-            { "value": "satisfied",          "text": "Satisfied" },
-            { "value": "neutral",            "text": "Neutral" },
-            { "value": "dissatisfied",       "text": "Dissatisfied" },
-            { "value": "very_dissatisfied",  "text": "Very dissatisfied" },
-            { "value": "na",                 "text": "I don't have an opinion" }
+            {
+              "value": "very_satisfied",
+              "text": "Very satisfied"
+            },
+            {
+              "value": "satisfied",
+              "text": "Satisfied"
+            },
+            {
+              "value": "neutral",
+              "text": "Neutral"
+            },
+            {
+              "value": "dissatisfied",
+              "text": "Dissatisfied"
+            },
+            {
+              "value": "very_dissatisfied",
+              "text": "Very dissatisfied"
+            },
+            {
+              "value": "na",
+              "text": "I don't have an opinion"
+            }
           ]
         },
         {
@@ -464,7 +1048,8 @@
           "maxLength": 1000,
           "rows": 4
         }
-      ]
+      ],
+      "navigationTitle": "Satisfaction"
     },
     {
       "name": "page_financial",
@@ -477,15 +1062,36 @@
           "title": "Rate your familiarity with:",
           "alternateRows": true,
           "rows": [
-            { "value": "financial_health","text": "Temple Shalom's overall financial health" },
-            { "value": "foundation",      "text": "The Temple Shalom Foundation" },
-            { "value": "funds",           "text": "The various Temple funds that can be donated to" },
-            { "value": "planned_giving",  "text": "Planned Giving Options" }
+            {
+              "value": "financial_health",
+              "text": "Temple Shalom's overall financial health"
+            },
+            {
+              "value": "foundation",
+              "text": "The Temple Shalom Foundation"
+            },
+            {
+              "value": "funds",
+              "text": "The various Temple funds that can be donated to"
+            },
+            {
+              "value": "planned_giving",
+              "text": "Planned Giving Options"
+            }
           ],
           "columns": [
-            { "value": "not_familiar",  "text": "Not Familiar" },
-            { "value": "slightly",      "text": "Slightly Familiar" },
-            { "value": "reasonably",    "text": "Reasonably Familiar" }
+            {
+              "value": "not_familiar",
+              "text": "Not Familiar"
+            },
+            {
+              "value": "slightly",
+              "text": "Slightly Familiar"
+            },
+            {
+              "value": "reasonably",
+              "text": "Reasonably Familiar"
+            }
           ]
         },
         {
@@ -494,16 +1100,46 @@
           "title": "If you were to consider additional financial support to Temple Shalom, what categories most interest you? (select up to 3)",
           "maxSelectedChoices": 3,
           "choices": [
-            { "value": "general",            "text": "General Fund (annual operating needs)" },
-            { "value": "foundation",         "text": "Temple Shalom Foundation (long-term endowment)" },
-            { "value": "building",           "text": "Building Improvements" },
-            { "value": "cemetery",           "text": "Cemetery" },
-            { "value": "education",          "text": "Education" },
-            { "value": "music",              "text": "Music" },
-            { "value": "rabbi_discretionary","text": "Rabbi's Discretionary Fund" },
-            { "value": "security",           "text": "Security" },
-            { "value": "seniors",            "text": "Seniors Programming" },
-            { "value": "social_action",      "text": "Social Action" }
+            {
+              "value": "general",
+              "text": "General Fund (annual operating needs)"
+            },
+            {
+              "value": "foundation",
+              "text": "Temple Shalom Foundation (long-term endowment)"
+            },
+            {
+              "value": "building",
+              "text": "Building Improvements"
+            },
+            {
+              "value": "cemetery",
+              "text": "Cemetery"
+            },
+            {
+              "value": "education",
+              "text": "Education"
+            },
+            {
+              "value": "music",
+              "text": "Music"
+            },
+            {
+              "value": "rabbi_discretionary",
+              "text": "Rabbi's Discretionary Fund"
+            },
+            {
+              "value": "security",
+              "text": "Security"
+            },
+            {
+              "value": "seniors",
+              "text": "Seniors Programming"
+            },
+            {
+              "value": "social_action",
+              "text": "Social Action"
+            }
           ],
           "hasOther": true,
           "otherText": "Other"
@@ -513,11 +1149,26 @@
           "name": "q_dues_fairness",
           "title": "Do you feel our membership dues structure is fair and accessible?",
           "choices": [
-            { "value": "very_fair",      "text": "Yes, very fair" },
-            { "value": "somewhat_fair",  "text": "Somewhat fair" },
-            { "value": "somewhat_unfair","text": "Not very fair" },
-            { "value": "unfair",         "text": "Not fair at all" },
-            { "value": "unaware",        "text": "I'm not aware of the dues structure" }
+            {
+              "value": "very_fair",
+              "text": "Yes, very fair"
+            },
+            {
+              "value": "somewhat_fair",
+              "text": "Somewhat fair"
+            },
+            {
+              "value": "somewhat_unfair",
+              "text": "Not very fair"
+            },
+            {
+              "value": "unfair",
+              "text": "Not fair at all"
+            },
+            {
+              "value": "unaware",
+              "text": "I'm not aware of the dues structure"
+            }
           ]
         },
         {
@@ -525,18 +1176,40 @@
           "name": "q_priority",
           "title": "If Temple Shalom had additional resources, what should be the top priority?",
           "choices": [
-            { "value": "youth_ed",    "text": "Youth Education & Programs" },
-            { "value": "adult_ed",    "text": "Adult Education & Programs" },
-            { "value": "facility",    "text": "Facility Improvements" },
-            { "value": "security",    "text": "Security" },
-            { "value": "outreach",    "text": "Community Outreach & Membership Growth" },
-            { "value": "clergy",      "text": "Clergy & Staff" },
-            { "value": "technology",  "text": "Technology & Communications" }
+            {
+              "value": "youth_ed",
+              "text": "Youth Education & Programs"
+            },
+            {
+              "value": "adult_ed",
+              "text": "Adult Education & Programs"
+            },
+            {
+              "value": "facility",
+              "text": "Facility Improvements"
+            },
+            {
+              "value": "security",
+              "text": "Security"
+            },
+            {
+              "value": "outreach",
+              "text": "Community Outreach & Membership Growth"
+            },
+            {
+              "value": "clergy",
+              "text": "Clergy & Staff"
+            },
+            {
+              "value": "technology",
+              "text": "Technology & Communications"
+            }
           ],
           "hasOther": true,
           "otherText": "Other"
         }
-      ]
+      ],
+      "navigationTitle": "Financial"
     },
     {
       "name": "page_communications",
@@ -549,21 +1222,60 @@
           "title": "The following modes of communication from Temple Shalom are useful and meet my needs:",
           "alternateRows": true,
           "rows": [
-            { "value": "weekly_email",        "text": "Weekly Email (This Week at Temple Shalom)" },
-            { "value": "monthly_bulletin",    "text": "Monthly Emailed Bulletin" },
-            { "value": "event_emails",        "text": "Event-specific Emails" },
-            { "value": "website_calendar",    "text": "Temple Shalom Website Calendar" },
-            { "value": "website_announcements","text": "Website Announcements" },
-            { "value": "facebook",            "text": "Facebook Posting" },
-            { "value": "postcards",           "text": "Physical Mailed Postcards for Individual Events" },
-            { "value": "direct_mail",         "text": "Other direct mail to my home" }
+            {
+              "value": "weekly_email",
+              "text": "Weekly Email (This Week at Temple Shalom)"
+            },
+            {
+              "value": "monthly_bulletin",
+              "text": "Monthly Emailed Bulletin"
+            },
+            {
+              "value": "event_emails",
+              "text": "Event-specific Emails"
+            },
+            {
+              "value": "website_calendar",
+              "text": "Temple Shalom Website Calendar"
+            },
+            {
+              "value": "website_announcements",
+              "text": "Website Announcements"
+            },
+            {
+              "value": "facebook",
+              "text": "Facebook Posting"
+            },
+            {
+              "value": "postcards",
+              "text": "Physical Mailed Postcards for Individual Events"
+            },
+            {
+              "value": "direct_mail",
+              "text": "Other direct mail to my home"
+            }
           ],
           "columns": [
-            { "value": "strongly_disagree","text": "Strongly Disagree" },
-            { "value": "disagree",         "text": "Disagree" },
-            { "value": "agree",            "text": "Agree" },
-            { "value": "strongly_agree",   "text": "Strongly Agree" },
-            { "value": "not_aware",        "text": "Not Aware" }
+            {
+              "value": "strongly_disagree",
+              "text": "Strongly Disagree"
+            },
+            {
+              "value": "disagree",
+              "text": "Disagree"
+            },
+            {
+              "value": "agree",
+              "text": "Agree"
+            },
+            {
+              "value": "strongly_agree",
+              "text": "Strongly Agree"
+            },
+            {
+              "value": "not_aware",
+              "text": "Not Aware"
+            }
           ]
         },
         {
@@ -571,13 +1283,34 @@
           "name": "q_comm_channels",
           "title": "Which channels would you like Temple Shalom to use to reach you? (check all that apply)",
           "choices": [
-            { "value": "sms",          "text": "SMS / Text messaging" },
-            { "value": "whatsapp",     "text": "iMessage / WhatsApp" },
-            { "value": "facebook",     "text": "Facebook / Facebook Groups" },
-            { "value": "email",        "text": "Email" },
-            { "value": "physical_mail","text": "Physical mail (postcards, letters)" },
-            { "value": "instagram",    "text": "Instagram" },
-            { "value": "website_push", "text": "Temple website / push notifications" }
+            {
+              "value": "sms",
+              "text": "SMS / Text messaging"
+            },
+            {
+              "value": "whatsapp",
+              "text": "iMessage / WhatsApp"
+            },
+            {
+              "value": "facebook",
+              "text": "Facebook / Facebook Groups"
+            },
+            {
+              "value": "email",
+              "text": "Email"
+            },
+            {
+              "value": "physical_mail",
+              "text": "Physical mail (postcards, letters)"
+            },
+            {
+              "value": "instagram",
+              "text": "Instagram"
+            },
+            {
+              "value": "website_push",
+              "text": "Temple website / push notifications"
+            }
           ],
           "hasOther": true,
           "otherText": "Other"
@@ -587,10 +1320,22 @@
           "name": "q_comm_frequency",
           "title": "How often would you like to hear from us?",
           "choices": [
-            { "value": "few_per_week","text": "A few times a week" },
-            { "value": "weekly",     "text": "Weekly" },
-            { "value": "monthly",    "text": "Monthly" },
-            { "value": "urgent_only","text": "Only for urgent or important announcements" }
+            {
+              "value": "few_per_week",
+              "text": "A few times a week"
+            },
+            {
+              "value": "weekly",
+              "text": "Weekly"
+            },
+            {
+              "value": "monthly",
+              "text": "Monthly"
+            },
+            {
+              "value": "urgent_only",
+              "text": "Only for urgent or important announcements"
+            }
           ]
         },
         {
@@ -598,12 +1343,30 @@
           "name": "q_comm_content",
           "title": "What content matters most to you? (check all that apply)",
           "choices": [
-            { "value": "shabbat_info","text": "Shabbat service times & info" },
-            { "value": "events",      "text": "Upcoming events & programs" },
-            { "value": "urgent",      "text": "Urgent or emergency announcements" },
-            { "value": "lifecycle",   "text": "Community news & lifecycle events (births, deaths, etc.)" },
-            { "value": "educational", "text": "Educational content" },
-            { "value": "financial",   "text": "Fundraising & financial updates" }
+            {
+              "value": "shabbat_info",
+              "text": "Shabbat service times & info"
+            },
+            {
+              "value": "events",
+              "text": "Upcoming events & programs"
+            },
+            {
+              "value": "urgent",
+              "text": "Urgent or emergency announcements"
+            },
+            {
+              "value": "lifecycle",
+              "text": "Community news & lifecycle events (births, deaths, etc.)"
+            },
+            {
+              "value": "educational",
+              "text": "Educational content"
+            },
+            {
+              "value": "financial",
+              "text": "Fundraising & financial updates"
+            }
           ]
         },
         {
@@ -613,7 +1376,8 @@
           "maxLength": 1000,
           "rows": 4
         }
-      ]
+      ],
+      "navigationTitle": "Communications"
     },
     {
       "name": "page_final",
@@ -634,7 +1398,8 @@
           "description": "Only provide this if you would like us to follow up with you.",
           "placeholder": "Name, email, and/or phone number"
         }
-      ]
+      ],
+      "navigationTitle": "Final"
     }
   ],
   "showCompletedPage": true,

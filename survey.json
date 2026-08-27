@@ -809,8 +809,8 @@
               "text": "Executive Director (Kobi Chumash)"
             },
             {
-              "value": "ed_director",
-              "text": "Education Director (Rabbi Jay)"
+              "value": "youth_ed_director",
+              "text": "Director of Youth Education (Doni Kaye)"
             },
             {
               "value": "preschool_head",
@@ -1091,6 +1091,14 @@
             {
               "value": "reasonably",
               "text": "Reasonably Familiar"
+            },
+            {
+              "value": "very_familiar",
+              "text": "Very Familiar"
+            },
+            {
+              "value": "na",
+              "text": "N/A"
             }
           ]
         },

@@ -95,6 +95,38 @@ async function handleSubmit(request, env) {
       userAgent, payload
     ).run();
 
+    // ── Dual-write to Google Sheets (best-effort, non-blocking) ────────────
+    // D1 is the source of truth. If Sheets fails, we log but still succeed.
+    if (env.GS_WEBHOOK_URL) {
+      const sheetPayload = {
+        response_id:        responseId,
+        timestamp:          timestamp,
+        session_id:         sessionId,
+        survey_version:     surveyVersion,
+        ip_country:         ipCountry,
+        cf_ray:             cfRay,
+        completion_seconds: completionSeconds,
+        sections_answered:  body._sections_answered || null,
+        user_agent:         userAgent,
+        ...body,
+      };
+      // Remove underscore-prefixed client metadata (already mapped above)
+      for (const k of Object.keys(sheetPayload)) {
+        if (k.startsWith("_")) delete sheetPayload[k];
+      }
+
+      try {
+        await fetch(env.GS_WEBHOOK_URL, {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify(sheetPayload),
+        });
+      } catch (gsErr) {
+        // Sheets write failed — log but don't fail the submission
+        console.error("Google Sheets write failed:", gsErr.message);
+      }
+    }
+
     return json({ success: true, response_id: responseId });
   } catch (err) {
     // Duplicate session within same day = likely dupe submission

@@ -1,6 +1,10 @@
 /**
- * Temple Shalom Member Survey 2025
- * Google Apps Script — Survey Submit Endpoint
+ * Temple Shalom Member Survey 2026
+ * Google Apps Script — Survey Submit Endpoint (dual-write from CF Worker)
+ *
+ * The Cloudflare Worker writes to D1, then POSTs the same payload here.
+ * This script appends a row to the Google Sheet with all metadata columns
+ * plus every question answer.
  *
  * SETUP INSTRUCTIONS:
  * 1. Go to https://script.google.com and create a new project.
@@ -10,14 +14,31 @@
  * 4. Click Deploy > New Deployment > Web App.
  *    - Execute as: Me
  *    - Who has access: Anyone
- * 5. Copy the deployment URL and paste it into index.html as SUBMIT_URL.
+ * 5. Copy the deployment URL and set it as a Cloudflare Worker secret:
+ *    npx wrangler secret put GS_WEBHOOK_URL
+ *    (paste the URL when prompted)
  */
 
 const SHEET_ID   = "YOUR_GOOGLE_SHEET_ID_HERE";
 const SHEET_NAME = "Responses";  // tab name inside the spreadsheet
 
+// Metadata columns that always come first (in this order).
+// These are sent by the Cloudflare Worker, not the browser.
+const META_COLUMNS = [
+  "response_id",
+  "timestamp",
+  "session_id",
+  "survey_version",
+  "ip_country",
+  "cf_ray",
+  "completion_seconds",
+  "sections_answered",
+  "user_agent",
+];
+
 /**
  * Handle incoming survey POST requests.
+ * The CF Worker sends the full payload including server-stamped metadata.
  */
 function doPost(e) {
   try {
@@ -28,10 +49,12 @@ function doPost(e) {
     let   sheet = ss.getSheetByName(SHEET_NAME);
     if (!sheet) sheet = ss.insertSheet(SHEET_NAME);
 
-    // Build ordered list of keys; timestamp always first
-    const reservedKeys = ["timestamp"];
-    const dataKeys     = Object.keys(data).filter(k => !reservedKeys.includes(k)).sort();
-    const allKeys      = [...reservedKeys, ...dataKeys];
+    // Reserved keys: metadata first, then sorted question keys
+    const reservedKeys = [...META_COLUMNS, "timestamp"];
+    const dataKeys     = Object.keys(data)
+      .filter(k => !reservedKeys.includes(k) && !k.startsWith("_"))
+      .sort();
+    const allKeys      = [...META_COLUMNS, ...dataKeys];
 
     // Write or update header row
     ensureHeaders(sheet, allKeys);
@@ -86,7 +109,7 @@ function ensureHeaders(sheet, keys) {
 }
 
 /**
- * Allow browser preflight CORS requests.
+ * Allow browser preflight CORS requests and health checks.
  */
 function doGet(e) {
   return jsonResponse({ status: "Temple Shalom Survey endpoint is running." });

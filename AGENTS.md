@@ -24,7 +24,7 @@ A static survey site for the Temple Shalom (Colorado Springs) member survey, dep
 | `wrangler.toml` | Worker config + D1 binding. `account_id` and `database_id` are committed (not secrets). |
 | `schema.sql` | Canonical D1 schema for the `responses` table. Applied by CI when changed. |
 | `migrate.sql` | Additive `ALTER TABLE` migration for older deployments. |
-| `submit.gs` | Legacy Google Apps Script submit endpoint. **Not used in production** — kept for reference only. The Worker replaced it. |
+| `submit.gs` | Google Apps Script web app — receives dual-write POSTs from the Worker and appends rows (with metadata) to a Google Sheet. Deploy via Apps Script; URL stored as `GS_WEBHOOK_URL` Worker secret. |
 | `build.sh` | CF Pages build script; stamps `version.json` with commit SHA/branch/date. |
 | `Makefile` | `make deploy` (Pages) and `make open`. Reads `CF_API_TOKEN` from `.env`. |
 | `test_submit.sh` | End-to-end smoke test: hits `/health`, POSTs a `_test:true` response, checks for `success:true`. Sources `.env` for `WORKER_URL`. |
@@ -39,6 +39,7 @@ A static survey site for the Temple Shalom (Colorado Springs) member survey, dep
 - **Dedup**: `response_id` is `crypto.randomUUID()` and `UNIQUE`. The worker returns `409 duplicate` on `UNIQUE` constraint violations.
 - **Rate limiting**: in-memory per-IP, max 5 submits/min. Note this resets on worker restart and is per-isolate — it's a guard, not a guarantee.
 - **Auth for `/export` and `/results`**: a single shared `EXPORT_KEY` Worker secret (query param `?key=`). Don't commit it; it lives as a Cloudflare secret.
+- **Google Sheets dual-write**: the Worker POSTs each submission to an Apps Script web app (`GS_WEBHOOK_URL` secret) which appends a row to a Google Sheet. This is best-effort — if Sheets is down, D1 still has the data and the submission succeeds. Metadata columns (`response_id`, `timestamp`, `session_id`, `survey_version`, `ip_country`, `cf_ray`, `completion_seconds`, `sections_answered`, `user_agent`) are sent by the Worker and appear as the first columns in the sheet.
 - **CORS is wide open** (`*`) — the survey is meant to be embedded/linked from anywhere. Don't tighten this without checking embed points.
 
 ## Common tasks

@@ -3,9 +3,19 @@ name: Deploy to Cloudflare Pages
 on:
   push:
     branches: [main, master]
+    paths:                       # only deploy when these files change
+      - 'index.html'
+      - 'survey.json'
+      - 'submit.gs'
+      - '.github/workflows/deploy.yml'
   create:
     tags:
       - 'v*'
+  workflow_dispatch:             # allow manual trigger from GitHub UI
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: true       # cancel queued deploy if a newer push arrives
 
 jobs:
   deploy:
@@ -21,7 +31,7 @@ jobs:
 
       - name: Stamp version
         run: |
-          cat > version.json <<EOF
+          cat > version.json << EOF
           {
             "sha":    "${{ github.sha }}",
             "branch": "${{ github.ref_name }}",
@@ -29,11 +39,11 @@ jobs:
             "date":   "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           }
           EOF
-          echo "Version: $(cat version.json)"
+          echo "Stamped: $(cat version.json)"
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CF_API_TOKEN }}
           accountId: ${{ secrets.CF_ACCOUNT_ID }}
-          command: pages deploy . --project-name=temple-shalom-survey --commit-dirty=true
+          command: pages deploy . --project-name=temple-shalom-survey --branch=master --commit-dirty=true

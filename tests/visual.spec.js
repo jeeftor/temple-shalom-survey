@@ -37,6 +37,17 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.clear());
 });
 
+async function captureVisual(page, testInfo, name) {
+  if (!process.env.CI) {
+    await expect(page).toHaveScreenshot(name, { fullPage: true });
+    return;
+  }
+
+  const path = testInfo.outputPath(name);
+  await page.screenshot({ path, fullPage: true, animations: "disabled" });
+  await testInfo.attach(name, { path, contentType: "image/png" });
+}
+
 test("survey sections render without clipping", async ({ page }, testInfo) => {
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));
@@ -52,9 +63,7 @@ test("survey sections render without clipping", async ({ page }, testInfo) => {
     await page.locator(".nav-pill").nth(index).click();
     await expect(page.locator(".sd-page__title")).toContainText(sections[index]);
     await expectNoRenderingErrors(page);
-    await expect(page).toHaveScreenshot(`survey-${index + 1}-${sections[index].toLowerCase().replace(/[^a-z]+/g, "-")}.png`, {
-      fullPage: true,
-    });
+    await captureVisual(page, testInfo, `survey-${index + 1}-${sections[index].toLowerCase().replace(/[^a-z]+/g, "-")}.png`);
   }
 
   expect(errors).toEqual([]);
@@ -74,7 +83,7 @@ test("print view renders every section", async ({ page }, testInfo) => {
   await expect(page.locator(".section")).toHaveCount(sections.length);
   await expect(page.locator(".question").first()).toBeVisible();
   await page.emulateMedia({ media: "print" });
-  await expect(page).toHaveScreenshot("survey-print.png", { fullPage: true });
+  await captureVisual(page, testInfo, "survey-print.png");
 
   const pdfPath = testInfo.outputPath("survey-print.pdf");
   await page.pdf({ path: pdfPath, format: "Letter", printBackground: true });

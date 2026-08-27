@@ -1,10 +1,15 @@
 name       = "temple-shalom-survey"
 account_id = "ab1a1103db401de7e9e722787fde9c0a"
+main       = "worker.js"
+compatibility_date = "2024-01-01"
 
-# Cloudflare Pages — static site deployment
-# Manual deploy: wrangler pages deploy . --project-name temple-shalom-survey
-# Auto deploy:   push to master branch (via GitHub integration or GH Actions)
-#
-# CF Pages build settings (set in dashboard or used by native integration):
-#   Build command:    bash build.sh
-#   Build output dir: /
+# ── D1 database ──────────────────────────────────────────────────────────────
+[[d1_databases]]
+binding      = "DB"
+database_name = "temple-shalom-responses"
+database_id  = "fa1a33e8-1b76-4b66-9b58-53f0e0b62096"
+
+# ── Static site (Pages) is deployed separately via:
+#    wrangler pages deploy . --project-name temple-shalom-survey
+# ── Worker is deployed via:
+#    wrangler deploy

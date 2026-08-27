@@ -1,46 +1,42 @@
 #!/usr/bin/env bash
-# Test that survey responses actually reach the Google Sheet.
-# Run this before publishing: ./test_submit.sh
+# Test that survey responses reach the Cloudflare Worker + D1 database.
+# Run before publishing: ./test_submit.sh
 
 set -euo pipefail
-
 source "$(dirname "$0")/.env"
 
+WORKER_URL="${WORKER_URL:-https://temple-shalom-survey.jeffstein.workers.dev}"
 TIMESTAMP="TEST-$(date -u +%Y%m%dT%H%M%S)"
 
-PAYLOAD=$(cat <<EOF
-{
-  "timestamp": "$TIMESTAMP",
-  "_test": true,
-  "q1_tenure": {"lived_in_cs": "1_5yr", "been_member": "less_1yr"},
-  "q5_religious_identity": "just_jewish",
-  "q_nps": 9,
-  "q28_final_comments": "Automated test submission — safe to delete this row."
-}
-EOF
-)
+echo "Checking worker health..."
+HEALTH=$(curl -sf "$WORKER_URL/health") && echo "  Health: $HEALTH" || { echo "  Worker unreachable!"; exit 1; }
 
-echo "Sending test submission to Apps Script..."
-echo "URL: $APPS_SCRIPT_URL"
 echo ""
+echo "Sending test submission..."
+RESPONSE=$(curl -s -X POST "$WORKER_URL/submit" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"timestamp\": \"$TIMESTAMP\",
+    \"_test\": true,
+    \"q5_religious_identity\": \"just_jewish\",
+    \"q_nps\": 9,
+    \"q28_final_comments\": \"Automated test — safe to delete.\"
+  }")
 
-HTTP_STATUS=$(curl -s -o /tmp/survey_test_response.txt -w "%{http_code}" \
-  -X POST \
-  -H "Content-Type: text/plain" \
-  -d "$PAYLOAD" \
-  "$APPS_SCRIPT_URL")
-
-RESPONSE=$(cat /tmp/survey_test_response.txt)
-
-echo "HTTP status: $HTTP_STATUS"
-echo "Response:    $RESPONSE"
-echo ""
+echo "  Response: $RESPONSE"
 
 if echo "$RESPONSE" | grep -q '"success":true'; then
-  echo "SUCCESS — check your Google Sheet for a row with timestamp: $TIMESTAMP"
-  echo "Sheet: https://docs.google.com/spreadsheets/d/1U4yxBRCslfJtbCOx--HwfagQd0pu8Ys4G8H1FCmrBk4/edit"
+  echo ""
+  echo "SUCCESS — response saved to D1."
+  echo ""
+  echo "To view all responses:"
+  echo "  CLOUDFLARE_API_TOKEN=\$CF_WORKER_TOKEN npx wrangler d1 execute temple-shalom-responses --remote --command 'SELECT id, timestamp, session_id FROM responses ORDER BY id DESC LIMIT 10'"
+  echo ""
+  echo "To export as CSV:"
+  echo "  curl '$WORKER_URL/export' -o responses.csv"
 else
-  echo "WARNING — response did not confirm success. Check the Apps Script logs."
-  echo "Tip: In script.google.com, go to Executions to see what happened."
+  echo ""
+  echo "FAILED — check worker logs:"
+  echo "  CLOUDFLARE_API_TOKEN=\$CF_WORKER_TOKEN npx wrangler tail temple-shalom-survey"
   exit 1
 fi

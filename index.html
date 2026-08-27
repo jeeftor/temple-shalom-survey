@@ -265,7 +265,7 @@
 
 <script>
   // ── Config ──────────────────────────────────────────────────
-  const SUBMIT_URL = "https://script.google.com/macros/s/AKfycbwq_NgHOq3fLQg4JF8UZUi-IORJsxG45EroFoo8oOWbrUnnN_noQOHNTpkkYL0DJ2Q6-Q/exec";
+  const SUBMIT_URL = "https://temple-shalom-survey.jeffstein.workers.dev/submit";
 
   // ── Version footer ───────────────────────────────────────────
   fetch("version.json")
@@ -381,10 +381,9 @@
       ...sender.data
     };
 
-      // no-cors avoids the CORS preflight error with Apps Script
       fetch(SUBMIT_URL, {
         method: "POST",
-        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       })
       .then(() => {

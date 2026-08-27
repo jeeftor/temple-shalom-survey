@@ -84,12 +84,14 @@ jobs:
 
       - name: Stamp version
         run: |
+          VERSION=$(git rev-list --count HEAD)
           cat > version.json << EOF
           {
-            "sha":    "${{ github.sha }}",
-            "branch": "${{ github.ref_name }}",
-            "url":    "https://temple-shalom-survey.pages.dev",
-            "date":   "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            "version": "${VERSION}",
+            "sha":     "${{ github.sha }}",
+            "branch":  "${{ github.ref_name }}",
+            "url":     "https://temple-shalom-survey.pages.dev",
+            "date":    "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           }
           EOF
 

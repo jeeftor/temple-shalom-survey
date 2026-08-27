@@ -534,18 +534,21 @@
     .then(r => r.json())
     .then(v => {
       surveyVersion = v.sha;
-      const sha   = v.sha.slice(0, 7);
-      const date  = new Date(v.date).toLocaleDateString("en-US", { year:"numeric", month:"short", day:"numeric" });
-      const url   = v.url && v.url !== "http://localhost" ? v.url : null;
-      const shaEl = url
-        ? `<a href="${url}" target="_blank">${sha}</a>`
-        : sha;
-      document.getElementById("versionFooter").innerHTML =
-        `Temple Shalom Member Survey 2026 &nbsp;·&nbsp; build ${shaEl} &nbsp;·&nbsp; ${date}`;
+      const ver    = v.version || "?";
+      const date   = new Date(v.date).toLocaleString("en-US", {
+        timeZone: "America/Denver",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+      document.getElementById("versionFooter").textContent =
+        `Survey version ${ver} — built on ${date} MT`;
     })
     .catch(() => {
       document.getElementById("versionFooter").textContent =
-        "Temple Shalom Member Survey 2026 · dev build";
+        "Survey version ? — dev build";
     });
 
   // ── Load survey ─────────────────────────────────────────────

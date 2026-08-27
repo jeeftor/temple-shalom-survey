@@ -3,7 +3,7 @@ name: Deploy to Cloudflare Pages
 on:
   push:
     branches: [main, master]
-  create:          # also fires on new tags like v1.0, v1.1-rc, etc.
+  create:
     tags:
       - 'v*'
 
@@ -19,8 +19,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Stamp version
+        run: |
+          cat > version.json <<EOF
+          {
+            "sha":    "${{ github.sha }}",
+            "branch": "${{ github.ref_name }}",
+            "url":    "https://temple-shalom-survey.pages.dev",
+            "date":   "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          EOF
+          echo "Version: $(cat version.json)"
+
       - name: Deploy to Cloudflare Pages
-        run: npx wrangler pages deploy . --project-name temple-shalom-survey --commit-dirty=true
-        env:
-          CLOUDFLARE_API_TOKEN:  ${{ secrets.CF_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          command: pages deploy . --project-name=temple-shalom-survey --commit-dirty=true

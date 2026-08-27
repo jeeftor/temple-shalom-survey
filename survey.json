@@ -34,10 +34,12 @@
           ]
         },
         {
-          "type": "checkbox",
-          "name": "q2a_household_ages",
-          "title": "Which age groups are represented in your household? (check all that apply)",
-          "choices": [
+          "type": "matrix",
+          "name": "q2_household_ages",
+          "title": "What age groups are represented in your household and what is their level of Temple Shalom participation?",
+          "description": "Participation includes any Temple Shalom activity (Education, Worship, Lifecycle, Counseling, Social Outreach, Events and Programs, Auxiliary, Chavurot, Committees, Board, etc.).",
+          "alternateRows": true,
+          "rows": [
             { "value": "age_0_5",     "text": "0–5 years old" },
             { "value": "age_6_9",     "text": "6–9 years old" },
             { "value": "age_10_13",   "text": "10–13 years old" },
@@ -47,17 +49,12 @@
             { "value": "age_51_65",   "text": "51–65 years old" },
             { "value": "age_66_80",   "text": "66–80 years old" },
             { "value": "age_over_80", "text": "Over 80 years old" }
-          ]
-        },
-        {
-          "type": "radiogroup",
-          "name": "q2b_participation_level",
-          "title": "Overall, what best describes your household's level of participation at Temple Shalom?",
-          "description": "Participation includes any Temple Shalom activity (Education, Worship, Lifecycle, Counseling, Social Outreach, Events and Programs, Auxiliary, Chavurot, Committees, Board, etc.).",
-          "choices": [
+          ],
+          "columns": [
+            { "value": "none_in_hh",       "text": "Not in our household" },
             { "value": "no_participation", "text": "No participation" },
             { "value": "some",             "text": "Some participation" },
-            { "value": "monthly",          "text": "Regular participation (at least monthly)" }
+            { "value": "monthly",          "text": "Regular (1x/month+)" }
           ]
         },
         {

@@ -107,6 +107,18 @@
       padding: 0 1rem;
       overflow-x: hidden !important;
     }
+    #surveyIntro {
+      white-space: pre-line;
+      background: var(--white);
+      border-left: 4px solid var(--blue);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      color: var(--text-muted);
+      line-height: 1.55;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 1px 4px rgba(0,56,184,0.08);
+    }
+    #surveyIntro[hidden] { display: none; }
 
     /* Skip / action bar */
     #actionBar {
@@ -159,6 +171,9 @@
 
     /* ── Progress bar (buttons style with labels) ───────────── */
     /* Container */
+    .sd-progress-buttons {
+      padding: 1rem 2rem 0.5rem !important;
+    }
     .sd-progress-buttons__list {
       gap: 0 !important;
     }
@@ -395,6 +410,8 @@
       .nav-pill { font-size: 0.75rem; padding: 0.3rem 0.65rem; flex-shrink: 0; }
 
       #main { padding: 0 0.75rem; margin-top: 1rem; }
+      #surveyIntro { font-size: 0.88rem; padding: 0.85rem 1rem; }
+      .sd-progress-buttons { padding: 0.75rem 0.5rem 0.25rem !important; }
 
       /* ── Matrix → stacked card layout on mobile ─────────────── */
       /* Each row becomes a card; columns become vertical options */
@@ -509,6 +526,7 @@
 <nav id="sectionNav" aria-label="Survey sections"></nav>
 
 <div id="main">
+  <div id="surveyIntro" hidden></div>
   <div id="actionBar">
     <button id="skipBtn" class="hidden">Skip this section &rarr;</button>
   </div>
@@ -575,6 +593,8 @@
 
   function initSurvey(surveyJson) {
     const survey = new Survey.Model(surveyJson);
+    const intro = document.getElementById("surveyIntro");
+    intro.textContent = surveyJson.description || "";
 
     // Section names for nav pills (one per page)
     const sectionLabels = (surveyJson.pages || []).map((p, i) => {
@@ -615,6 +635,7 @@
     const lastPage = (surveyJson.pages || []).length - 1;
 
     function updateSkip(pageNo) {
+      intro.hidden = pageNo !== 0;
       if (pageNo >= lastPage) {
         skipBtn.classList.add("hidden");
       } else {

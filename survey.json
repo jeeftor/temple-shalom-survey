@@ -1,6 +1,7 @@
 {
   "title": "Temple Shalom Member Survey 2026",
-  "description": "Thank you for sharing your thoughts with us. This survey is confidential unless you choose to identify yourself in an open-ended response.\n\nThis survey has 6 sections. All sections except the final page are optional — complete as many or as few as you like. Simply click 'Skip Section' to move past any section you prefer not to answer.\n\nEach adult member of the household should complete a separate survey.",
+  "description": "Thank you for sharing your thoughts with us. This survey is confidential unless you choose to identify yourself in an open-ended response.\n\nThis survey has 7 sections. All sections except the final page are optional — complete as many or as few as you like. Simply click 'Skip Section' to move past any section you prefer not to answer.\n\nEach adult member of the household should complete a separate survey.",
+  "showTitle": false,
   "showProgressBar": "top",
   "progressBarType": "buttons",
   "progressBarShowPageTitles": true,
@@ -8,7 +9,7 @@
   "showQuestionNumbers": "on",
   "questionErrorLocation": "bottom",
   "checkErrorsMode": "onComplete",
-  "showNavigationButtons": "both",
+  "showNavigationButtons": "bottom",
   "showPrevButton": true,
   "pages": [
     {

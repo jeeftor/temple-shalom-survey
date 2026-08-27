@@ -1,33 +1,84 @@
-name: Deploy to Cloudflare Pages
+name: Deploy
 
 on:
   push:
     branches: [main, master]
-    paths:                       # only deploy when these files change
-      - 'index.html'
-      - 'survey.json'
-      - 'submit.gs'
-      - '.github/workflows/deploy.yml'
-  create:
-    tags:
-      - 'v*'
-  workflow_dispatch:             # allow manual trigger from GitHub UI
+  workflow_dispatch:
 
 concurrency:
   group: deploy-production
-  cancel-in-progress: true       # cancel queued deploy if a newer push arrives
+  cancel-in-progress: true
 
 jobs:
-  deploy:
-    name: Deploy
+  # ── 1. Detect what changed ─────────────────────────────────────────────────
+  changes:
+    name: Detect changes
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      deployments: write
-
+    outputs:
+      site:   ${{ steps.filter.outputs.site }}
+      worker: ${{ steps.filter.outputs.worker }}
+      schema: ${{ steps.filter.outputs.schema }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            site:
+              - 'index.html'
+              - 'survey.json'
+              - '.github/workflows/deploy.yml'
+            worker:
+              - 'worker.js'
+              - 'wrangler.toml'
+              - '.github/workflows/deploy.yml'
+            schema:
+              - 'schema.sql'
+
+  # ── 2. Migrate D1 schema (if schema.sql changed) ───────────────────────────
+  migrate:
+    name: D1 schema migration
+    needs: changes
+    if: needs.changes.outputs.schema == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply schema
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_WORKER_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          command: d1 execute temple-shalom-responses --file=schema.sql --remote
+
+  # ── 3. Deploy Worker (if worker.js or wrangler.toml changed) ──────────────
+  deploy-worker:
+    name: Deploy Worker
+    needs: [changes, migrate]
+    if: |
+      always() &&
+      needs.changes.outputs.worker == 'true' &&
+      (needs.migrate.result == 'success' || needs.migrate.result == 'skipped')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_WORKER_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          command: deploy
+
+  # ── 4. Deploy static site (if HTML/survey changed) ────────────────────────
+  deploy-site:
+    name: Deploy Site
+    needs: [changes, migrate]
+    if: |
+      always() &&
+      needs.changes.outputs.site == 'true' &&
+      (needs.migrate.result == 'success' || needs.migrate.result == 'skipped')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
       - name: Stamp version
         run: |
@@ -39,11 +90,39 @@ jobs:
             "date":   "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           }
           EOF
-          echo "Stamped: $(cat version.json)"
 
-      - name: Deploy to Cloudflare Pages
+      - name: Deploy to CF Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CF_API_TOKEN }}
           accountId: ${{ secrets.CF_ACCOUNT_ID }}
           command: pages deploy . --project-name=temple-shalom-survey --branch=master --commit-dirty=true
+
+  # ── 5. Health check (always runs after deploys) ────────────────────────────
+  health-check:
+    name: Health check
+    needs: [deploy-worker, deploy-site]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Worker
+        run: |
+          echo "Checking Worker..."
+          STATUS=$(curl -sf https://temple-shalom-survey.jeffstein.workers.dev/health)
+          echo "Worker: $STATUS"
+          echo "$STATUS" | grep -q '"status":"ok"' || (echo "Worker health check FAILED" && exit 1)
+
+      - name: Check Site
+        run: |
+          echo "Checking Pages site..."
+          curl -sf https://temple-shalom-survey.pages.dev/ | grep -q "Temple Shalom" \
+            || (echo "Site check FAILED" && exit 1)
+          echo "Site: OK"
+
+      - name: Summary
+        run: |
+          echo "### Deployment complete" >> $GITHUB_STEP_SUMMARY
+          echo "- Worker: https://temple-shalom-survey.jeffstein.workers.dev/health" >> $GITHUB_STEP_SUMMARY
+          echo "- Site:   https://temple-shalom-survey.pages.dev" >> $GITHUB_STEP_SUMMARY
+          echo "- Export: https://temple-shalom-survey.jeffstein.workers.dev/export" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY

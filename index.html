@@ -267,10 +267,31 @@
   // ── Config ──────────────────────────────────────────────────
   const SUBMIT_URL = "https://temple-shalom-survey.jeffstein.workers.dev/submit";
 
+  // ── Already-submitted guard ──────────────────────────────────
+  const SUBMITTED_KEY = "ts_survey_submitted_2026";
+  if (localStorage.getItem(SUBMITTED_KEY)) {
+    document.getElementById("surveyContainer").innerHTML = `
+      <div style="max-width:600px;margin:4rem auto;padding:2rem;text-align:center;
+                  background:#f0faf0;border:2px solid #a5d6a7;border-radius:8px;">
+        <h2 style="color:#2e7d32">You've already submitted this survey</h2>
+        <p style="margin-top:1rem;color:#444">
+          Thank you! Your response has been recorded.<br>
+          If you believe this is an error, please contact the Temple office.
+        </p>
+      </div>`;
+    document.getElementById("skipBtn").style.display = "none";
+    document.getElementById("versionFooter").style.display = "none";
+  }
+
+  // Track survey start time for completion_seconds
+  const surveyStartTime = Date.now();
+  let surveyVersion = null;
+
   // ── Version footer ───────────────────────────────────────────
   fetch("version.json")
     .then(r => r.json())
     .then(v => {
+      surveyVersion = v.sha;
       const sha   = v.sha.slice(0, 7);
       const date  = new Date(v.date).toLocaleDateString("en-US", { year:"numeric", month:"short", day:"numeric" });
       const url   = v.url && v.url !== "http://localhost" ? v.url : null;
@@ -374,10 +395,21 @@
       localStorage.setItem("ts_survey_session", sessionId);
     }
 
+    // Which sections had any answers?
+    const sectionsAnswered = (surveyJson.pages || [])
+      .map(p => p.title)
+      .filter((_, i) => {
+        const page = survey.pages[i];
+        return page?.questions?.some(q => sender.data[q.name] !== undefined);
+      });
+
     const payload = {
-      timestamp:  new Date().toISOString(),
-      _session:   sessionId,
-      _userAgent: navigator.userAgent,
+      timestamp:            new Date().toISOString(),
+      _session:             sessionId,
+      _survey_version:      surveyVersion,
+      _userAgent:           navigator.userAgent,
+      _completion_seconds:  Math.round((Date.now() - surveyStartTime) / 1000),
+      _sections_answered:   sectionsAnswered,
       ...sender.data
     };
 
@@ -386,11 +418,19 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       })
-      .then(() => {
-        statusEl.className = "success";
-        statusEl.textContent = "Your response has been saved. Thank you for completing the survey!";
-        completedPages.add(lastPage);
-        updateNav(lastPage + 1);
+      .then(r => r.json())
+      .then(result => {
+        if (result.success || result.error === "duplicate") {
+          localStorage.setItem(SUBMITTED_KEY, "1");
+          statusEl.className = "success";
+          statusEl.textContent = result.error === "duplicate"
+            ? "It looks like we already received your response — thank you!"
+            : "Your response has been saved. Thank you for completing the survey!";
+          completedPages.add(lastPage);
+          updateNav(lastPage + 1);
+        } else {
+          throw new Error(result.error || "unknown");
+        }
       })
       .catch(err => {
         statusEl.className = "error";

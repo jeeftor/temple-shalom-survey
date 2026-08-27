@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Temple Shalom Member Survey 2026 — Print Version</title>
+  <style>
+    /* ── Screen styles ── */
+    body {
+      font-family: 'Georgia', serif;
+      max-width: 750px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+      color: #111;
+      font-size: 13pt;
+      line-height: 1.5;
+    }
+    header {
+      border-bottom: 3px solid #0038b8;
+      padding-bottom: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    header h1 { font-size: 20pt; margin: 0; color: #00277d; }
+    header p  { font-size: 10pt; color: #555; margin: 0.4rem 0 0; }
+
+    .section {
+      border: 1.5px solid #0038b8;
+      border-radius: 6px;
+      margin: 1.5rem 0;
+      page-break-inside: avoid;
+    }
+    .section-header {
+      background: #0038b8;
+      color: white;
+      padding: 0.5rem 1rem;
+      font-size: 12pt;
+      font-weight: bold;
+    }
+    .section-optional {
+      font-size: 9pt;
+      font-weight: normal;
+      opacity: 0.85;
+      margin-left: 0.5rem;
+    }
+    .section-skip {
+      background: #dce8ff;
+      border-bottom: 1px solid #0038b8;
+      padding: 0.3rem 1rem;
+      font-size: 9pt;
+      color: #00277d;
+      font-style: italic;
+    }
+    .section-body { padding: 0.75rem 1rem; }
+
+    .question { margin: 1rem 0; }
+    .question-text {
+      font-weight: bold;
+      font-size: 11pt;
+      margin-bottom: 0.4rem;
+    }
+    .question-num {
+      color: #0038b8;
+      margin-right: 0.4rem;
+    }
+    .question-desc {
+      font-size: 9pt;
+      color: #555;
+      margin-bottom: 0.5rem;
+      font-style: italic;
+    }
+    .branch-note {
+      font-size: 9pt;
+      color: #333;
+      background: #fffbe6;
+      border-left: 3px solid #f0a500;
+      padding: 0.2rem 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Choice lists */
+    .choices { list-style: none; padding: 0; margin: 0; }
+    .choices li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      margin: 0.25rem 0;
+      font-size: 11pt;
+    }
+    .box {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 1.5px solid #333;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .box.square { border-radius: 2px; }
+
+    /* Matrix tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10pt;
+      margin: 0.5rem 0;
+    }
+    th {
+      background: #0038b8;
+      color: white;
+      padding: 0.4rem 0.5rem;
+      text-align: center;
+      font-weight: 600;
+    }
+    td {
+      border: 1px solid #ccc;
+      padding: 0.35rem 0.5rem;
+      vertical-align: middle;
+    }
+    tr:nth-child(even) td { background: #f0f5ff; }
+    td.row-label { font-weight: 500; text-align: left; }
+    td.radio-cell { text-align: center; }
+
+    /* Text boxes */
+    .text-box {
+      border: 1px solid #aaa;
+      border-radius: 4px;
+      min-height: 60px;
+      width: 100%;
+      margin-top: 0.3rem;
+    }
+    .text-line {
+      border: none;
+      border-bottom: 1px solid #aaa;
+      width: 100%;
+      display: block;
+      margin: 0.3rem 0;
+    }
+
+    /* Print button */
+    #printBtn {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      background: #0038b8;
+      color: white;
+      border: none;
+      padding: 0.6rem 1.2rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 11pt;
+      font-weight: bold;
+    }
+    #printBtn:hover { background: #00277d; }
+
+    /* ── Print styles ── */
+    @media print {
+      body { margin: 0; max-width: 100%; font-size: 11pt; }
+      #printBtn { display: none; }
+      .section { page-break-inside: avoid; }
+      a { color: inherit; text-decoration: none; }
+    }
+  </style>
+</head>
+<body>
+
+<button id="printBtn" onclick="window.print()">Print / Save PDF</button>
+
+<header>
+  <h1>Temple Shalom Member Survey 2026</h1>
+  <p>
+    Colorado Springs, Colorado &nbsp;·&nbsp;
+    Confidential &nbsp;·&nbsp;
+    Responses due by 5pm on <strong>[DATE]</strong><br>
+    Each adult member of the household should complete a separate survey.
+    All sections marked OPTIONAL may be skipped.
+  </p>
+</header>
+
+<div id="surveyPrint">Loading survey…</div>
+
+<script>
+fetch("survey.json")
+  .then(r => r.json())
+  .then(renderPrint)
+  .catch(err => {
+    document.getElementById("surveyPrint").textContent = "Error loading survey: " + err.message;
+  });
+
+let qNum = 0;
+
+function renderPrint(survey) {
+  const container = document.getElementById("surveyPrint");
+  container.innerHTML = "";
+
+  // Build a page-to-question-number map for skip instructions
+  const pageStartQ = [];
+  let counter = 0;
+  survey.pages.forEach(page => {
+    pageStartQ.push(counter + 1);
+    counter += (page.elements || []).length;
+  });
+
+  qNum = 0;
+
+  survey.pages.forEach((page, pageIdx) => {
+    const isLast    = pageIdx === survey.pages.length - 1;
+    const isOptional = !isLast;
+    const nextPageQ  = pageStartQ[pageIdx + 1];
+
+    const section = document.createElement("div");
+    section.className = "section";
+
+    // Section header
+    const hdr = document.createElement("div");
+    hdr.className = "section-header";
+    hdr.innerHTML = (page.title || `Section ${pageIdx + 1}`)
+      + (isOptional ? `<span class="section-optional">— OPTIONAL</span>` : "");
+    section.appendChild(hdr);
+
+    // Skip instruction
+    if (isOptional && nextPageQ) {
+      const skip = document.createElement("div");
+      skip.className = "section-skip";
+      skip.textContent = `If you prefer to skip this section, go to Question ${nextPageQ}.`;
+      section.appendChild(skip);
+    }
+
+    const body = document.createElement("div");
+    body.className = "section-body";
+
+    (page.elements || []).forEach(el => {
+      body.appendChild(renderQuestion(el));
+    });
+
+    section.appendChild(body);
+    container.appendChild(section);
+  });
+}
+
+function renderQuestion(el) {
+  qNum++;
+  const div = document.createElement("div");
+  div.className = "question";
+
+  // Branch condition note
+  if (el.visibleIf) {
+    const note = document.createElement("div");
+    note.className = "branch-note";
+    note.textContent = "Only answer if: " + humanizeCondition(el.visibleIf);
+    div.appendChild(note);
+  }
+
+  // Question text
+  const title = document.createElement("div");
+  title.className = "question-text";
+  title.innerHTML = `<span class="question-num">${qNum}.</span> ${el.title || el.name}`;
+  div.appendChild(title);
+
+  // Description
+  if (el.description) {
+    const desc = document.createElement("div");
+    desc.className = "question-desc";
+    desc.textContent = el.description;
+    div.appendChild(desc);
+  }
+
+  // Render by type
+  switch (el.type) {
+    case "matrix":
+      div.appendChild(renderMatrix(el));
+      break;
+    case "checkbox":
+      div.appendChild(renderChoices(el, "square"));
+      break;
+    case "radiogroup":
+      div.appendChild(renderChoices(el, "circle"));
+      break;
+    case "comment":
+      div.appendChild(renderTextArea(el));
+      break;
+    case "text":
+      div.appendChild(renderTextLine());
+      break;
+    case "rating":
+      div.appendChild(renderRating(el));
+      break;
+    default:
+      div.appendChild(renderTextLine());
+  }
+
+  return div;
+}
+
+function renderMatrix(el) {
+  const table = document.createElement("table");
+  const thead = document.createElement("thead");
+  const headerRow = document.createElement("tr");
+
+  // First column header (empty)
+  const th0 = document.createElement("th");
+  th0.style.width = "35%";
+  headerRow.appendChild(th0);
+
+  (el.columns || []).forEach(col => {
+    const th = document.createElement("th");
+    th.textContent = col.text || col.value;
+    headerRow.appendChild(th);
+  });
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+  (el.rows || []).forEach(row => {
+    const tr = document.createElement("tr");
+    const tdLabel = document.createElement("td");
+    tdLabel.className = "row-label";
+    tdLabel.textContent = row.text || row.value;
+    tr.appendChild(tdLabel);
+
+    (el.columns || []).forEach(() => {
+      const td = document.createElement("td");
+      td.className = "radio-cell";
+      td.innerHTML = '<span class="box"></span>';
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  return table;
+}
+
+function renderChoices(el, shape) {
+  const ul = document.createElement("ul");
+  ul.className = "choices";
+  const choices = [...(el.choices || [])];
+  if (el.hasOther) choices.push({ value: "other", text: "Other: ___________________" });
+
+  choices.forEach(c => {
+    const li = document.createElement("li");
+    li.innerHTML = `<span class="box ${shape === 'square' ? 'square' : ''}"></span> ${c.text || c.value}`;
+    ul.appendChild(li);
+  });
+  return ul;
+}
+
+function renderTextArea(el) {
+  const lines = el.rows || 4;
+  const div = document.createElement("div");
+  div.className = "text-box";
+  div.style.minHeight = (lines * 1.6) + "rem";
+  return div;
+}
+
+function renderTextLine() {
+  const span = document.createElement("span");
+  span.className = "text-line";
+  span.innerHTML = "&nbsp;";
+  return span;
+}
+
+function renderRating(el) {
+  const min = el.rateMin ?? 0;
+  const max = el.rateMax ?? 10;
+  const ul = document.createElement("ul");
+  ul.className = "choices";
+  ul.style.flexDirection = "row";
+  ul.style.display = "flex";
+  ul.style.flexWrap = "wrap";
+  ul.style.gap = "0.5rem";
+
+  for (let i = min; i <= max; i++) {
+    const li = document.createElement("li");
+    li.innerHTML = `<span class="box"></span> ${i}`;
+    ul.appendChild(li);
+  }
+  const desc = document.createElement("div");
+  desc.style.fontSize = "9pt";
+  desc.style.color = "#555";
+  desc.textContent = `${min} = ${el.minRateDescription || "Low"}  ·  ${max} = ${el.maxRateDescription || "High"}`;
+  const wrap = document.createElement("div");
+  wrap.appendChild(ul);
+  wrap.appendChild(desc);
+  return wrap;
+}
+
+function humanizeCondition(expr) {
+  // e.g. {q3_ada} <> 'none' and {q3_ada} notempty
+  return expr
+    .replace(/\{(\w+)\}/g, "Q($1)")
+    .replace(/<>/g, "is not")
+    .replace(/notempty/g, "has been answered")
+    .replace(/= '/g, "= '");
+}
+</script>
+</body>
+</html>

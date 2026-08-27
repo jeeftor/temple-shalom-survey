@@ -225,6 +225,16 @@
     #submitStatus.success { display:block; background:#f0faf0; color: #2e7d32; border: 1px solid #a5d6a7; font-weight:600; }
     #submitStatus.error   { display:block; background:#fff0f0; color: #b00020; border: 1px solid #ffcdd2; font-weight:600; }
 
+    /* ── Version footer ──────────────────────────────────────── */
+    #versionFooter {
+      text-align: center;
+      font-size: 0.75rem;
+      color: #999;
+      padding: 1.5rem 1rem 2rem;
+    }
+    #versionFooter a { color: #aaa; text-decoration: none; }
+    #versionFooter a:hover { text-decoration: underline; }
+
     /* ── Responsive ──────────────────────────────────────────── */
     @media (max-width: 600px) {
       header h1 { font-size: 1.2rem; }
@@ -243,6 +253,8 @@
 <!-- Clickable section navigation -->
 <nav id="sectionNav" aria-label="Survey sections"></nav>
 
+<div id="versionFooter">Loading version…</div>
+
 <div id="main">
   <div id="actionBar">
     <button id="skipBtn" class="hidden">Skip this section &rarr;</button>
@@ -254,6 +266,24 @@
 <script>
   // ── Config ──────────────────────────────────────────────────
   const SUBMIT_URL = "https://script.google.com/macros/s/AKfycbwq_NgHOq3fLQg4JF8UZUi-IORJsxG45EroFoo8oOWbrUnnN_noQOHNTpkkYL0DJ2Q6-Q/exec";
+
+  // ── Version footer ───────────────────────────────────────────
+  fetch("version.json")
+    .then(r => r.json())
+    .then(v => {
+      const sha   = v.sha.slice(0, 7);
+      const date  = new Date(v.date).toLocaleDateString("en-US", { year:"numeric", month:"short", day:"numeric" });
+      const url   = v.url && v.url !== "http://localhost" ? v.url : null;
+      const shaEl = url
+        ? `<a href="${url}" target="_blank">${sha}</a>`
+        : sha;
+      document.getElementById("versionFooter").innerHTML =
+        `Temple Shalom Member Survey 2026 &nbsp;·&nbsp; build ${shaEl} &nbsp;·&nbsp; ${date}`;
+    })
+    .catch(() => {
+      document.getElementById("versionFooter").textContent =
+        "Temple Shalom Member Survey 2026 · dev build";
+    });
 
   // ── Load survey ─────────────────────────────────────────────
   fetch("survey.json")
@@ -336,7 +366,20 @@
       statusEl.className = "sending";
       statusEl.textContent = "Sending your response…";
 
-      const payload = { timestamp: new Date().toISOString(), ...sender.data };
+      // Persist a browser session ID so we can spot duplicate submissions in the sheet.
+    // This is a random UUID stored in localStorage — no PII, no tracking across sites.
+    let sessionId = localStorage.getItem("ts_survey_session");
+    if (!sessionId) {
+      sessionId = crypto.randomUUID();
+      localStorage.setItem("ts_survey_session", sessionId);
+    }
+
+    const payload = {
+      timestamp:  new Date().toISOString(),
+      _session:   sessionId,
+      _userAgent: navigator.userAgent,
+      ...sender.data
+    };
 
       // no-cors avoids the CORS preflight error with Apps Script
       fetch(SUBMIT_URL, {

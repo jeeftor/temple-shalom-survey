@@ -2,11 +2,9 @@ name       = "temple-shalom-survey"
 account_id = "ab1a1103db401de7e9e722787fde9c0a"
 
 # Cloudflare Pages — static site deployment
-# Deploy with: wrangler pages deploy . --project-name temple-shalom-survey
+# Manual deploy: wrangler pages deploy . --project-name temple-shalom-survey
+# Auto deploy:   push to master branch (via GitHub integration or GH Actions)
 #
-# First-time setup:
-#   wrangler pages project create temple-shalom-survey
-#   wrangler pages deploy . --project-name temple-shalom-survey
-#
-# Subsequent deploys:
-#   wrangler pages deploy . --project-name temple-shalom-survey
+# CF Pages build settings (set in dashboard or used by native integration):
+#   Build command:    bash build.sh
+#   Build output dir: /

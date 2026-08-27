@@ -40,9 +40,30 @@
       color: var(--white);
       padding: 1.4rem 2rem;
       border-bottom: 4px solid var(--blue);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
     }
     header h1 { font-size: 1.6rem; font-weight: 700; line-height: 1.2; }
     header p  { font-size: 0.88rem; opacity: 0.8; margin-top: 0.3rem; }
+    #printBtn {
+      background: rgba(255,255,255,0.15);
+      color: white;
+      border: 1.5px solid rgba(255,255,255,0.5);
+      padding: 0.5rem 1.1rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      text-decoration: none;
+      display: inline-block;
+      transition: background 0.15s;
+      flex-shrink: 0;
+    }
+    #printBtn:hover { background: rgba(255,255,255,0.28); }
 
     /* ── Section nav ─────────────────────────────────────────── */
     #sectionNav {
@@ -353,8 +374,11 @@
 <body>
 
 <header>
-  <h1>Temple Shalom Member Survey 2026</h1>
-  <p>Colorado Springs, Colorado &nbsp;·&nbsp; Confidential &nbsp;·&nbsp; Responses due by 5pm on <strong>[DATE]</strong></p>
+  <div>
+    <h1>Temple Shalom Member Survey 2026</h1>
+    <p>Colorado Springs, Colorado &nbsp;·&nbsp; Confidential &nbsp;·&nbsp; Responses due by 5pm on <strong>[DATE]</strong></p>
+  </div>
+  <a id="printBtn" href="print.html" target="_blank">🖨 Print Version</a>
 </header>
 
 <!-- Clickable section navigation -->

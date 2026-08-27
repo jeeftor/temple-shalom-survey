@@ -1,0 +1,25 @@
+{
+  "name": "temple-shalom-survey",
+  "version": "1.0.0",
+  "description": "Visual inspection tests for the Temple Shalom member survey",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:visual": "playwright test",
+    "test:visual:update": "playwright test --update-snapshots"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jeeftor/temple-shalom-survey.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jeeftor/temple-shalom-survey/issues"
+  },
+  "homepage": "https://github.com/jeeftor/temple-shalom-survey#readme",
+  "devDependencies": {
+    "@playwright/test": "1.62.1"
+  }
+}

@@ -234,12 +234,6 @@
     }
     /* Matrix wrapper scrolls horizontally if needed */
     .sd-matrix {
-      overflow-x: auto !important;
-      -webkit-overflow-scrolling: touch;
-      display: block !important;
-      max-width: 100% !important;
-    }
-    .sd-matrix table {
       width: 100% !important;
       max-width: 100% !important;
       table-layout: fixed !important;
@@ -250,6 +244,11 @@
       max-width: 200px !important;
       min-width: 110px !important;
       width: 28% !important;
+    }
+    .sd-matrix th:not(:first-child),
+    .sd-matrix td:not(:first-child) {
+      min-width: 0 !important;
+      width: auto !important;
     }
     /* Matrix rows — better contrast */
     .sd-matrix tr:nth-child(even),
@@ -394,12 +393,9 @@
       /* ── Matrix → stacked card layout on mobile ─────────────── */
       /* Each row becomes a card; columns become vertical options */
       .sd-matrix {
-        overflow-x: visible !important;
-        display: block !important;
-      }
-      .sd-matrix table {
         min-width: 0 !important;
         width: 100% !important;
+        overflow-x: visible !important;
         display: block !important;
       }
       /* Hide the thead — we'll label each option inline */
@@ -649,19 +645,17 @@
 
       document.querySelectorAll(".sd-matrix").forEach(el => {
         if (!isMobile) {
-          el.style.overflowX = "auto";
-          el.style.display   = "block";
-          el.style.maxWidth  = "100%";
-          el.style.webkitOverflowScrolling = "touch";
+          el.style.overflowX = "";
+          el.style.display   = "";
+          el.style.maxWidth  = "";
+          el.style.webkitOverflowScrolling = "";
         }
       });
 
       // Mobile: inject column label text next to each radio so users know
       // what each option means (since the <thead> is hidden on mobile)
       if (isMobile) {
-        document.querySelectorAll(".sd-matrix").forEach(matrix => {
-          const table = matrix.querySelector("table");
-          if (!table) return;
+        document.querySelectorAll(".sd-matrix").forEach(table => {
           const headerCells = table.querySelectorAll("thead th");
           if (headerCells.length === 0) return;
           const colLabels = [...headerCells].map(th => th.textContent.trim());

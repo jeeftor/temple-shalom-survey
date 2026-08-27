@@ -1284,6 +1284,37 @@
           ]
         },
         {
+          "type": "radiogroup",
+          "name": "q_comm_satisfaction",
+          "title": "Overall, how satisfied are you with Temple Shalom's current communications?",
+          "choices": [
+            {
+              "value": "very_dissatisfied",
+              "text": "Very dissatisfied"
+            },
+            {
+              "value": "dissatisfied",
+              "text": "Dissatisfied"
+            },
+            {
+              "value": "neutral",
+              "text": "Neither satisfied nor dissatisfied"
+            },
+            {
+              "value": "satisfied",
+              "text": "Satisfied"
+            },
+            {
+              "value": "very_satisfied",
+              "text": "Very satisfied"
+            },
+            {
+              "value": "not_familiar",
+              "text": "Not familiar enough to evaluate"
+            }
+          ]
+        },
+        {
           "type": "comment",
           "name": "q_comm_effectiveness",
           "title": "How effective are Temple Shalom's current communications? What's working well, and what needs improvement?",

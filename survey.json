@@ -1287,6 +1287,13 @@
           ]
         },
         {
+          "type": "comment",
+          "name": "q_comm_effectiveness",
+          "title": "How effective are Temple Shalom's current communications? What's working well, and what needs improvement?",
+          "maxLength": 1000,
+          "rows": 4
+        },
+        {
           "type": "checkbox",
           "name": "q_comm_channels",
           "title": "Which channels would you like Temple Shalom to use to reach you? (check all that apply)",

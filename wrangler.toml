@@ -1,0 +1,12 @@
+name       = "temple-shalom-survey"
+account_id = "ab1a1103db401de7e9e722787fde9c0a"
+
+# Cloudflare Pages — static site deployment
+# Deploy with: wrangler pages deploy . --project-name temple-shalom-survey
+#
+# First-time setup:
+#   wrangler pages project create temple-shalom-survey
+#   wrangler pages deploy . --project-name temple-shalom-survey
+#
+# Subsequent deploys:
+#   wrangler pages deploy . --project-name temple-shalom-survey

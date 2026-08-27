@@ -1407,11 +1407,27 @@
           "rows": 5
         },
         {
+          "type": "radiogroup",
+          "name": "q_contact_request",
+          "title": "Would you like someone from Temple Shalom to contact you about any of your responses?",
+          "choices": [
+            {
+              "value": "yes",
+              "text": "Yes, please contact me"
+            },
+            {
+              "value": "no",
+              "text": "No, thank you"
+            }
+          ]
+        },
+        {
           "type": "text",
           "name": "q_contact",
-          "title": "Contact information (optional):",
-          "description": "Only provide this if you would like us to follow up with you.",
-          "placeholder": "Name, email, and/or phone number"
+          "title": "Contact information:",
+          "description": "Please provide your name and preferred contact method (email and/or phone).",
+          "placeholder": "Name, email, and/or phone number",
+          "visibleIf": "{q_contact_request} = 'yes'"
         }
       ],
       "navigationTitle": "Final"

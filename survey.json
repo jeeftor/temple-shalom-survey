@@ -1041,7 +1041,7 @@
         {
           "type": "comment",
           "name": "q26_leadership_comments",
-          "title": "General comments or feedback on the Board of Directors, Rabbi, Executive Director, or Strategic Direction:",
+          "title": "General comments or feedback on the Board of Directors, Rabbi, Executive Director, Director of Youth Education, or Strategic Direction:",
           "maxLength": 1000,
           "rows": 4
         }

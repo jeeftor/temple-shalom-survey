@@ -2,7 +2,7 @@
   "title": "Temple Shalom Member Survey 2026",
   "description": "Thank you for sharing your thoughts with us. This survey is confidential unless you choose to identify yourself in an open-ended response.\n\nThis survey has 7 sections. All sections except the final page are optional — complete as many or as few as you like. Simply click 'Skip Section' to move past any section you prefer not to answer.\n\nEach adult member of the household should complete a separate survey.",
   "showTitle": false,
-  "showProgressBar": "top",
+  "showProgressBar": "off",
   "progressBarType": "buttons",
   "progressBarShowPageTitles": true,
   "progressBarShowPageNumbers": false,
@@ -753,6 +753,33 @@
       "title": "Section 4: Member Satisfaction",
       "description": "OPTIONAL — Help us understand how Temple Shalom is doing overall.",
       "elements": [
+        {
+          "type": "radiogroup",
+          "name": "q_connection",
+          "title": "Overall, how connected do you feel to the Temple Shalom community?",
+          "choices": [
+            {
+              "value": "not_at_all",
+              "text": "Not at all connected"
+            },
+            {
+              "value": "slightly",
+              "text": "Slightly connected"
+            },
+            {
+              "value": "moderately",
+              "text": "Moderately connected"
+            },
+            {
+              "value": "very",
+              "text": "Very connected"
+            },
+            {
+              "value": "extremely",
+              "text": "Extremely connected"
+            }
+          ]
+        },
         {
           "type": "matrix",
           "name": "q22_big_picture",

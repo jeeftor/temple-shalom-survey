@@ -37,6 +37,15 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.clear());
 });
 
+async function goToSection(page, index) {
+  const select = page.locator("#sectionSelect");
+  if (await select.isVisible()) {
+    await select.selectOption(String(index));
+  } else {
+    await page.locator(".nav-pill").nth(index).click();
+  }
+}
+
 async function captureVisual(page, testInfo, name) {
   if (!process.env.CI) {
     await expect(page).toHaveScreenshot(name, { fullPage: true });
@@ -47,6 +56,16 @@ async function captureVisual(page, testInfo, name) {
   await page.screenshot({ path, fullPage: true, animations: "disabled" });
   await testInfo.attach(name, { path, contentType: "image/png" });
 }
+
+test("section navigation adapts without duplicate progress dots", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator(".sd-root-modern")).toBeVisible();
+  await expect(page.locator(".sd-progress-buttons")).toHaveCount(0);
+  await expect(page.locator("#sectionSelect option")).toHaveCount(sections.length);
+  await expect(page.locator("#sectionSelect option").nth(5)).toContainText("Communications");
+  await goToSection(page, 5);
+  await expect(page.locator(".sd-page__title")).toContainText("Communications Preferences");
+});
 
 test("survey sections render without clipping", async ({ page }, testInfo) => {
   const errors = [];
@@ -60,7 +79,7 @@ test("survey sections render without clipping", async ({ page }, testInfo) => {
   await page.locator("#versionFooter").evaluate(element => { element.style.visibility = "hidden"; });
 
   for (let index = 0; index < sections.length; index++) {
-    await page.locator(".nav-pill").nth(index).click();
+    await goToSection(page, index);
     await expect(page.locator(".sd-page__title")).toContainText(sections[index]);
     await expectNoRenderingErrors(page);
     await captureVisual(page, testInfo, `survey-${index + 1}-${sections[index].toLowerCase().replace(/[^a-z]+/g, "-")}.png`);
@@ -73,7 +92,7 @@ test("survey sections render without clipping", async ({ page }, testInfo) => {
 test("contact request appears after identification", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator(".sd-root-modern")).toBeVisible();
-  await page.locator(".nav-pill").last().click();
+  await goToSection(page, sections.length - 1);
 
   const contact = page.locator('[data-name="q_contact"] input');
   const request = page.locator('[data-name="q_contact_request"]');

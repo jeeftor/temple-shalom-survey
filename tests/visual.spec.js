@@ -70,6 +70,21 @@ test("survey sections render without clipping", async ({ page }, testInfo) => {
   await testInfo.attach("survey-url", { body: Buffer.from(page.url()), contentType: "text/plain" });
 });
 
+test("contact request appears after identification", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator(".sd-root-modern")).toBeVisible();
+  await page.locator(".nav-pill").last().click();
+
+  const contact = page.locator('[data-name="q_contact"] input');
+  const request = page.locator('[data-name="q_contact_request"]');
+  await expect(contact).toBeVisible();
+  await expect(request).toBeHidden();
+  await contact.fill("Test Member, test@example.com");
+  await expect(request).toBeVisible();
+  await contact.fill("");
+  await expect(request).toBeHidden();
+});
+
 test("print view renders every section", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "Print inspection runs once in the desktop project");
 

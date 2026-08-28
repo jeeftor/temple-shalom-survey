@@ -1436,9 +1436,18 @@
           "rows": 5
         },
         {
+          "type": "text",
+          "name": "q_contact",
+          "title": "Contact information (optional):",
+          "description": "If you choose to identify yourself, please provide your name and preferred contact method (email and/or phone).",
+          "placeholder": "Name, email, and/or phone number",
+          "textUpdateMode": "onTyping"
+        },
+        {
           "type": "radiogroup",
           "name": "q_contact_request",
           "title": "Would you like someone from Temple Shalom to contact you about any of your responses?",
+          "visibleIf": "{q_contact} notempty",
           "choices": [
             {
               "value": "yes",
@@ -1449,14 +1458,6 @@
               "text": "No, thank you"
             }
           ]
-        },
-        {
-          "type": "text",
-          "name": "q_contact",
-          "title": "Contact information:",
-          "description": "Please provide your name and preferred contact method (email and/or phone).",
-          "placeholder": "Name, email, and/or phone number",
-          "visibleIf": "{q_contact_request} = 'yes'"
         }
       ],
       "navigationTitle": "Final"

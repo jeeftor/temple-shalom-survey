@@ -33,10 +33,6 @@ async function expectNoRenderingErrors(page) {
   await expect(page.locator("#sectionNav")).toBeVisible();
 }
 
-test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => localStorage.clear());
-});
-
 async function goToSection(page, index) {
   const select = page.locator("#sectionSelect");
   if (await select.isVisible()) {
@@ -87,6 +83,41 @@ test("survey sections render without clipping", async ({ page }, testInfo) => {
 
   expect(errors).toEqual([]);
   await testInfo.attach("survey-url", { body: Buffer.from(page.url()), contentType: "text/plain" });
+});
+
+test("unfinished responses can be saved and resumed", async ({ page }, testInfo) => {
+  await page.goto("/");
+  await expect(page.locator(".sd-root-modern")).toBeVisible();
+  await goToSection(page, sections.length - 1);
+  await page.locator('[data-name="q_contact"] input').fill("Test Member, test@example.com");
+
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("ts_survey_draft_2026"))).not.toBeNull();
+  await page.reload();
+  await expect(page.locator("#draftNotice")).toBeVisible();
+  await expect(page.locator("#surveyContainer")).toBeHidden();
+  await captureVisual(page, testInfo, "draft-resume-prompt.png");
+  await page.locator("#resumeDraftBtn").click();
+  await expect(page.locator('[data-name="q_contact"] input')).toHaveValue("Test Member, test@example.com");
+  await expect(page.locator('[data-name="q_contact_request"]')).toBeVisible();
+  await expect(page.locator("#sectionSelect")).toHaveValue(String(sections.length - 1));
+
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("ts_survey_draft_2026"))).not.toBeNull();
+  await page.reload();
+  await page.locator("#startOverBtn").click();
+  await expect(page.locator('[data-name="q_contact"]')).toHaveCount(0);
+  await expect(page.locator("#sectionSelect")).toHaveValue("0");
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("ts_survey_draft_2026"))).toBeNull();
+});
+
+test("expired drafts are discarded", async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(() => {
+    localStorage.setItem("ts_survey_draft_2026", JSON.stringify({ data: { q_contact: "Old draft" }, pageNo: 6, savedAt: Date.now() - 31 * 24 * 60 * 60 * 1000 }));
+  });
+  await page.reload();
+  await expect(page.locator("#draftNotice")).toBeHidden();
+  await expect(page.locator("#surveyContainer")).toBeVisible();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("ts_survey_draft_2026"))).toBeNull();
 });
 
 test("contact request appears after identification", async ({ page }) => {

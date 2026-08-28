@@ -129,6 +129,29 @@
       box-shadow: 0 1px 4px rgba(0,56,184,0.08);
     }
     #surveyIntro[hidden] { display: none; }
+    #draftNotice {
+      background: var(--white);
+      border: 2px solid var(--blue);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 4px 16px rgba(0,56,184,0.12);
+    }
+    #draftNotice[hidden], #draftStatus[hidden] { display: none; }
+    #draftNotice h2 { color: var(--blue-dark); font-size: 1.15rem; margin-bottom: 0.5rem; }
+    #draftNotice p { color: var(--text-muted); line-height: 1.5; }
+    #draftActions { display: flex; gap: 0.75rem; margin-top: 1rem; }
+    #draftActions button {
+      border: 2px solid var(--blue);
+      border-radius: var(--radius);
+      padding: 0.55rem 1rem;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    #resumeDraftBtn { background: var(--blue); color: var(--white); }
+    #startOverBtn { background: var(--white); color: var(--blue); }
+    #draftStatus { color: var(--text-muted); font-size: 0.78rem; text-align: right; margin-bottom: 0.5rem; }
 
     /* Skip / action bar */
     #actionBar {
@@ -136,6 +159,7 @@
       justify-content: flex-end;
       margin-bottom: 0.5rem;
     }
+    #actionBar[hidden] { display: none; }
     #skipBtn {
       padding: 0.4rem 1.1rem;
       background: transparent;
@@ -430,6 +454,8 @@
 
       #main { padding: 0 0.75rem; margin-top: 1rem; }
       #surveyIntro { font-size: 0.88rem; padding: 0.85rem 1rem; }
+      #draftActions { flex-direction: column; }
+      #draftActions button { width: 100%; }
       .sd-progress-buttons { padding: 0.75rem 0.5rem 0.25rem !important; }
 
       /* ── Matrix → stacked card layout on mobile ─────────────── */
@@ -551,6 +577,15 @@
 
 <div id="main">
   <div id="surveyIntro" hidden></div>
+  <div id="draftNotice" hidden>
+    <h2>Continue your saved survey?</h2>
+    <p id="draftMessage"></p>
+    <div id="draftActions">
+      <button id="resumeDraftBtn" type="button">Resume saved survey</button>
+      <button id="startOverBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div id="draftStatus" hidden></div>
   <div id="actionBar">
     <button id="skipBtn" class="hidden">Skip this section &rarr;</button>
   </div>
@@ -566,7 +601,10 @@
 
   // ── Already-submitted guard ──────────────────────────────────
   const SUBMITTED_KEY = "ts_survey_submitted_2026";
-  if (localStorage.getItem(SUBMITTED_KEY)) {
+  const DRAFT_KEY = "ts_survey_draft_2026";
+  const DRAFT_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+  const alreadySubmitted = Boolean(localStorage.getItem(SUBMITTED_KEY));
+  if (alreadySubmitted) {
     document.getElementById("surveyContainer").innerHTML = `
       <div style="max-width:600px;margin:4rem auto;padding:2rem;text-align:center;
                   background:#f0faf0;border:2px solid #a5d6a7;border-radius:8px;">
@@ -607,13 +645,15 @@
     });
 
   // ── Load survey ─────────────────────────────────────────────
-  fetch("survey.json")
-    .then(r => r.json())
-    .then(initSurvey)
-    .catch(err => {
-      document.getElementById("surveyContainer").innerHTML =
-        `<p style="color:red;padding:1rem">Failed to load survey: ${err.message}</p>`;
-    });
+  if (!alreadySubmitted) {
+    fetch("survey.json")
+      .then(r => r.json())
+      .then(initSurvey)
+      .catch(err => {
+        document.getElementById("surveyContainer").innerHTML =
+          `<p style="color:red;padding:1rem">Failed to load survey: ${err.message}</p>`;
+      });
+  }
 
   function initSurvey(surveyJson) {
     const survey = new Survey.Model(surveyJson);
@@ -651,6 +691,68 @@
     });
 
     const completedPages = new Set();
+    const draftNotice = document.getElementById("draftNotice");
+    const draftMessage = document.getElementById("draftMessage");
+    const draftStatus = document.getElementById("draftStatus");
+    const surveyContainer = document.getElementById("surveyContainer");
+    const actionBar = document.getElementById("actionBar");
+    let draftTimer;
+    let savedDraft = null;
+    try {
+      savedDraft = JSON.parse(localStorage.getItem(DRAFT_KEY));
+      if (!savedDraft?.savedAt || Date.now() - savedDraft.savedAt > DRAFT_TTL_MS) {
+        localStorage.removeItem(DRAFT_KEY);
+        savedDraft = null;
+      }
+    } catch {
+      localStorage.removeItem(DRAFT_KEY);
+    }
+    let draftReady = !savedDraft;
+
+    function setDraftPromptVisible(visible) {
+      draftNotice.hidden = !visible;
+      surveyContainer.hidden = visible;
+      actionBar.hidden = visible;
+    }
+
+    function saveDraft() {
+      if (!draftReady) return;
+      clearTimeout(draftTimer);
+      if (Object.keys(survey.data).length === 0) {
+        localStorage.removeItem(DRAFT_KEY);
+        draftStatus.hidden = true;
+        return;
+      }
+      draftStatus.hidden = false;
+      draftStatus.textContent = "Saving draft…";
+      draftTimer = setTimeout(() => {
+        const data = survey.data;
+        const savedAt = Date.now();
+        localStorage.setItem(DRAFT_KEY, JSON.stringify({ data, pageNo: survey.currentPageNo, savedAt }));
+        draftStatus.textContent = `Saved on this device at ${new Date(savedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+      }, 500);
+    }
+
+    document.getElementById("resumeDraftBtn").addEventListener("click", () => {
+      draftReady = true;
+      survey.data = savedDraft.data || {};
+      survey.currentPageNo = Math.min(savedDraft.pageNo || 0, lastPage);
+      setDraftPromptVisible(false);
+      updateNav(survey.currentPageNo);
+      updateSkip(survey.currentPageNo);
+      draftStatus.hidden = false;
+      draftStatus.textContent = "Saved draft resumed";
+    });
+
+    document.getElementById("startOverBtn").addEventListener("click", () => {
+      localStorage.removeItem(DRAFT_KEY);
+      savedDraft = null;
+      draftReady = true;
+      setDraftPromptVisible(false);
+      updateNav(0);
+      updateSkip(0);
+      draftStatus.hidden = true;
+    });
 
     function updateNav(pageNo) {
       sectionSelect.value = String(pageNo);
@@ -686,11 +788,13 @@
       const cur = survey.currentPageNo;
       updateNav(cur);
       updateSkip(cur);
+      saveDraft();
       window.scrollTo({ top: 0, behavior: "smooth" });
       setTimeout(wrapMatrixTables, 50);
     });
 
     survey.onAfterRenderQuestion.add(() => setTimeout(wrapMatrixTables, 30));
+    survey.onValueChanged.add(saveDraft);
 
     // Make progress bar buttons navigable by click
     function bindProgressNav() {
@@ -799,6 +903,9 @@
       .then(r => r.json())
       .then(result => {
         if (result.success || result.error === "duplicate") {
+          clearTimeout(draftTimer);
+          localStorage.removeItem(DRAFT_KEY);
+          draftStatus.hidden = true;
           localStorage.setItem(SUBMITTED_KEY, "1");
           statusEl.className = "success";
           statusEl.textContent = result.error === "duplicate"
@@ -819,7 +926,17 @@
     });
 
     // ── Render ─────────────────────────────────────────────────
-    survey.render(document.getElementById("surveyContainer"));
+    survey.render(surveyContainer);
+    if (savedDraft) {
+      const savedDate = new Date(savedDraft.savedAt).toLocaleString([], {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      });
+      draftMessage.textContent = `A draft saved on this device on ${savedDate} contains unfinished responses.`;
+      setDraftPromptVisible(true);
+    }
   }
 </script>
 

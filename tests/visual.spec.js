@@ -147,13 +147,11 @@ test("print view renders every section", async ({ page }, testInfo) => {
   await page.goto("/print.html");
   await expect(page.locator(".section")).toHaveCount(sections.length);
   await expect(page.locator(".question").first()).toBeVisible();
-  await expect(page.locator(".branch-note")).toHaveCount(3);
-  await expect(page.getByText("Only answer if you indicated that someone in your household requires ADA accessibility.")).toBeVisible();
-  await expect(page.getByText("Only answer if you currently have children in your household.")).toBeVisible();
-  await expect(page.getByText("Only answer if you provided optional contact information.")).toBeVisible();
-  await expect(page.getByText(/Q\(q_/)).toHaveCount(0);
+  await expect(page.locator(".branch-note")).toHaveCount(0);
+  await expect(page.getByText("Only answer if", { exact: false })).toHaveCount(0);
   await expect(page.getByText("Does the lack of ADA accessibility limit", { exact: false })).toBeVisible();
   await expect(page.getByText("has or do you expect your child(ren) under 18", { exact: false })).toBeVisible();
+  await expect(page.getByText("Contact information (optional):", { exact: false })).toBeVisible();
   await expect(page.getByText("Would you like someone from Temple Shalom to contact you", { exact: false })).toBeVisible();
   await page.emulateMedia({ media: "print" });
   await captureVisual(page, testInfo, "survey-print.png");

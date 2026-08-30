@@ -240,19 +240,6 @@ function renderQuestion(el) {
   const div = document.createElement("div");
   div.className = "question";
 
-  // Branch condition note
-  if (el.visibleIf) {
-    const instructions = {
-      q4_ada_limits: "Only answer if you indicated that someone in your household requires ADA accessibility.",
-      q13_children_activities: "Only answer if you currently have children in your household.",
-      q_contact_request: "Only answer if you provided optional contact information.",
-    };
-    const note = document.createElement("div");
-    note.className = "branch-note";
-    note.textContent = instructions[el.name] || "Only answer if: " + humanizeCondition(el.visibleIf);
-    div.appendChild(note);
-  }
-
   // Question text
   const title = document.createElement("div");
   title.className = "question-text";

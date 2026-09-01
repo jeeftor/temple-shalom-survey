@@ -11,15 +11,18 @@
  * 2. Paste this entire file into the editor.
  * 3. Set SHEET_ID below to the ID of your Google Sheet
  *    (the long string in the Sheet's URL between /d/ and /edit).
- * 4. Click Deploy > New Deployment > Web App.
+ * 4. In Project Settings > Script Properties, add WEBHOOK_TOKEN with a
+ *    randomly generated secret value.
+ * 5. Click Deploy > New Deployment > Web App.
  *    - Execute as: Me
  *    - Who has access: Anyone
- * 5. Copy the deployment URL and set it as a Cloudflare Worker secret:
+ * 6. Copy the deployment URL and set it as a Cloudflare Worker secret:
  *    npx wrangler secret put GS_WEBHOOK_URL
- *    (paste the URL when prompted)
+ * 7. Set the same token as a second Cloudflare Worker secret:
+ *    npx wrangler secret put GS_WEBHOOK_TOKEN
  */
 
-const SHEET_ID   = "YOUR_GOOGLE_SHEET_ID_HERE";
+const SHEET_ID   = "1U4yxBRCslfJtbCOx--HwfagQd0pu8Ys4G8H1FCmrBk4";
 const SHEET_NAME = "Responses";  // tab name inside the spreadsheet
 
 // Metadata columns that always come first (in this order).
@@ -44,6 +47,11 @@ function doPost(e) {
   try {
     const raw  = e.postData.contents;
     const data = JSON.parse(raw);
+    const expectedToken = PropertiesService.getScriptProperties().getProperty("WEBHOOK_TOKEN");
+    if (!expectedToken || data.webhook_token !== expectedToken) {
+      return jsonResponse({ success: false, error: "Unauthorized" });
+    }
+    delete data.webhook_token;
 
     const ss    = SpreadsheetApp.openById(SHEET_ID);
     let   sheet = ss.getSheetByName(SHEET_NAME);

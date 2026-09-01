@@ -97,8 +97,10 @@ async function handleSubmit(request, env) {
 
     // ── Dual-write to Google Sheets (best-effort, non-blocking) ────────────
     // D1 is the source of truth. If Sheets fails, we log but still succeed.
-    if (env.GS_WEBHOOK_URL) {
+    if (env.GS_WEBHOOK_URL && env.GS_WEBHOOK_TOKEN) {
       const sheetPayload = {
+        ...body,
+        webhook_token:      env.GS_WEBHOOK_TOKEN,
         response_id:        responseId,
         timestamp:          timestamp,
         session_id:         sessionId,
@@ -108,7 +110,6 @@ async function handleSubmit(request, env) {
         completion_seconds: completionSeconds,
         sections_answered:  body._sections_answered || null,
         user_agent:         userAgent,
-        ...body,
       };
       // Remove underscore-prefixed client metadata (already mapped above)
       for (const k of Object.keys(sheetPayload)) {
@@ -116,11 +117,15 @@ async function handleSubmit(request, env) {
       }
 
       try {
-        await fetch(env.GS_WEBHOOK_URL, {
+        const gsResponse = await fetch(env.GS_WEBHOOK_URL, {
           method:  "POST",
           headers: { "Content-Type": "application/json" },
           body:    JSON.stringify(sheetPayload),
         });
+        const gsResult = await gsResponse.json();
+        if (!gsResponse.ok || !gsResult.success) {
+          throw new Error(gsResult.error || `HTTP ${gsResponse.status}`);
+        }
       } catch (gsErr) {
         // Sheets write failed — log but don't fail the submission
         console.error("Google Sheets write failed:", gsErr.message);
@@ -237,7 +242,12 @@ async function handleResults(request, env) {
 
 async function handleHealth(env) {
   const row = await env.DB.prepare("SELECT COUNT(*) as n FROM responses").first();
-  return json({ status: "ok", responses: row?.n ?? 0, ts: new Date().toISOString() });
+  return json({
+    status: "ok",
+    responses: row?.n ?? 0,
+    sheets_configured: Boolean(env.GS_WEBHOOK_URL && env.GS_WEBHOOK_TOKEN),
+    ts: new Date().toISOString(),
+  });
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

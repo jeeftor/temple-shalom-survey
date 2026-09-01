@@ -1313,6 +1313,32 @@
         },
         {
           "type": "radiogroup",
+          "name": "q_service_announcements_length",
+          "title": "Please rate the current announcements during services:",
+          "choices": [
+            {
+              "value": "too_long",
+              "text": "Too long / too much information"
+            },
+            {
+              "value": "just_right",
+              "text": "Just right"
+            },
+            {
+              "value": "too_short",
+              "text": "Too short / not enough information"
+            }
+          ]
+        },
+        {
+          "type": "comment",
+          "name": "q_service_announcements_comments",
+          "title": "What comments or suggestions do you have about announcements during services?",
+          "maxLength": 1000,
+          "rows": 4
+        },
+        {
+          "type": "radiogroup",
           "name": "q_comm_satisfaction",
           "title": "Overall, how satisfied are you with Temple Shalom's current communications?",
           "choices": [

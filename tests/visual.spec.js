@@ -61,6 +61,8 @@ test("section navigation adapts without duplicate progress dots", async ({ page 
   await expect(page.locator("#sectionSelect option").nth(5)).toContainText("Communications");
   await goToSection(page, 5);
   await expect(page.locator(".sd-page__title")).toContainText("Communications Preferences");
+  await expect(page.locator('[data-name="q_service_announcements_length"]')).toBeVisible();
+  await expect(page.locator('[data-name="q_service_announcements_comments"]')).toBeVisible();
 });
 
 test("survey sections render without clipping", async ({ page }, testInfo) => {

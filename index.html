@@ -629,11 +629,73 @@
   // ── Already-submitted guard ──────────────────────────────────
   const SUBMITTED_KEY = "ts_survey_submitted_2026";
   const DRAFT_KEY = "ts_survey_draft_2026";
+  const RESUBMIT_KEY = "ts_survey_resubmit_2026";
   const DRAFT_TTL_MS = 30 * 24 * 60 * 60 * 1000;
   const alreadySubmitted = Boolean(localStorage.getItem(SUBMITTED_KEY));
   let allowResubmit = false;
 
+  // Check if we were in the middle of a resubmission and have a draft to resume
+  const resubmitInProgress = Boolean(localStorage.getItem(RESUBMIT_KEY));
+  let savedDraft = null;
+  try {
+    savedDraft = JSON.parse(localStorage.getItem(DRAFT_KEY));
+  } catch {}
+  const hasValidDraft = savedDraft && (Date.now() - savedDraft.savedAt < DRAFT_TTL_MS);
+
   function showAlreadySubmittedNotice() {
+    // Clean up stale resubmit flag if draft expired
+    if (resubmitInProgress && !hasValidDraft) {
+      localStorage.removeItem(RESUBMIT_KEY);
+    }
+    // If we have a draft from an in-progress resubmission, offer to resume it
+    if (resubmitInProgress && hasValidDraft) {
+      document.getElementById("surveyContainer").innerHTML = `
+        <div style="max-width:600px;margin:4rem auto;padding:2rem;text-align:center;
+                    background:#f0f7ff;border:2px solid var(--blue-light);border-radius:8px;">
+          <h2 style="color:var(--blue-dark)">You have an in-progress response</h2>
+          <p style="margin-top:1rem;color:#444">
+            You started submitting a new response but didn't finish.<br>
+            Your draft is saved — would you like to continue?
+          </p>
+          <div style="margin-top:1.5rem;display:flex;gap:0.75rem;justify-content:center;">
+            <button id="resumeDraftBtn" style="background:var(--blue);color:white;
+                    border:none;padding:0.6rem 2rem;border-radius:6px;font-size:11pt;
+                    cursor:pointer;font-weight:bold;">
+              Continue my response
+            </button>
+            <button id="startOverBtn" style="background:white;color:var(--blue);
+                    border:2px solid var(--blue);padding:0.6rem 2rem;border-radius:6px;font-size:11pt;
+                    cursor:pointer;font-weight:bold;">
+              Start over
+            </button>
+          </div>
+        </div>`;
+      document.getElementById("skipBtn").style.display = "none";
+      document.getElementById("versionFooter").style.display = "none";
+
+      document.getElementById("resumeDraftBtn").addEventListener("click", () => {
+        allowResubmit = true;
+        document.getElementById("surveyContainer").innerHTML = "";
+        document.getElementById("skipBtn").style.display = "";
+        document.getElementById("versionFooter").style.display = "";
+        if (cachedSurveyJson) {
+          initSurvey(cachedSurveyJson);
+        } else {
+          fetch("survey.json")
+            .then(r => r.json())
+            .then(json => { cachedSurveyJson = json; return initSurvey(json); });
+        }
+      });
+
+      document.getElementById("startOverBtn").addEventListener("click", () => {
+        localStorage.removeItem(DRAFT_KEY);
+        localStorage.removeItem(RESUBMIT_KEY);
+        startFreshResubmit();
+      });
+      return;
+    }
+
+    // Normal "already submitted" notice
     document.getElementById("surveyContainer").innerHTML = `
       <div style="max-width:600px;margin:4rem auto;padding:2rem;text-align:center;
                   background:#f0faf0;border:2px solid #a5d6a7;border-radius:8px;">
@@ -650,26 +712,29 @@
       </div>`;
     document.getElementById("skipBtn").style.display = "none";
     document.getElementById("versionFooter").style.display = "none";
-    document.getElementById("resubmitBtn").addEventListener("click", () => {
-      allowResubmit = true;
-      document.getElementById("surveyContainer").innerHTML = "";
-      document.getElementById("skipBtn").style.display = "";
-      document.getElementById("versionFooter").style.display = "";
-      // Clear old draft so we start fresh (but keep session_id for linking)
-      localStorage.removeItem(DRAFT_KEY);
-      // Use cached survey JSON if available, otherwise fetch
-      if (cachedSurveyJson) {
-        initSurvey(cachedSurveyJson);
-      } else {
-        fetch("survey.json")
-          .then(r => r.json())
-          .then(json => { cachedSurveyJson = json; return initSurvey(json); })
-          .catch(err => {
-            document.getElementById("surveyContainer").innerHTML =
-              `<p style="color:red;padding:1rem">Failed to load survey: ${err.message}</p>`;
-          });
-      }
-    });
+    document.getElementById("resubmitBtn").addEventListener("click", startFreshResubmit);
+  }
+
+  function startFreshResubmit() {
+    allowResubmit = true;
+    localStorage.setItem(RESUBMIT_KEY, "1");
+    document.getElementById("surveyContainer").innerHTML = "";
+    document.getElementById("skipBtn").style.display = "";
+    document.getElementById("versionFooter").style.display = "";
+    // Clear old draft so we start fresh (but keep session_id for linking)
+    localStorage.removeItem(DRAFT_KEY);
+    // Use cached survey JSON if available, otherwise fetch
+    if (cachedSurveyJson) {
+      initSurvey(cachedSurveyJson);
+    } else {
+      fetch("survey.json")
+        .then(r => r.json())
+        .then(json => { cachedSurveyJson = json; return initSurvey(json); })
+        .catch(err => {
+          document.getElementById("surveyContainer").innerHTML =
+            `<p style="color:red;padding:1rem">Failed to load survey: ${err.message}</p>`;
+        });
+    }
   }
 
   if (alreadySubmitted) {
@@ -1028,6 +1093,7 @@
         if (result.success || result.error === "duplicate") {
           clearTimeout(draftTimer);
           localStorage.removeItem(DRAFT_KEY);
+          localStorage.removeItem(RESUBMIT_KEY);
           draftStatus.hidden = true;
           localStorage.setItem(SUBMITTED_KEY, "1");
           statusEl.className = "success";

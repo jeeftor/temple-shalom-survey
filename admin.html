@@ -126,6 +126,9 @@
     .bar-item .bar-track { flex: 1; background: var(--blue-pale); border-radius: 4px; height: 16px; position: relative; }
     .bar-item .bar-fill  { background: var(--blue); border-radius: 4px; height: 100%; transition: width 0.4s; }
     .bar-item .bar-count { width: 50px; text-align: right; color: #555; flex-shrink: 0; }
+    .bar-item.no-answer .bar-fill { background: #ccc; }
+    .bar-item.no-answer .bar-lbl { color: #999; font-style: italic; }
+    .response-rate { font-size: 8pt; color: #888; margin-bottom: 0.4rem; }
 
     /* Data explorer */
     .explorer-bar {
@@ -660,6 +663,7 @@ function explorerUpdate() {
 function renderChoiceChartHTML(q, responses) {
   const labels = choiceMap(q);
   const counts = {};
+  let answered = 0;
   responses.forEach(r => {
     const v = r.answers?.[q.name];
     if (v == null || v === "") return;
@@ -668,9 +672,11 @@ function renderChoiceChartHTML(q, responses) {
       const lbl = labels[x] || x;
       counts[lbl] = (counts[lbl] || 0) + 1;
     });
+    answered++;
   });
   if (!Object.keys(counts).length) return '<div class="explorer-empty">No data for this question.</div>';
 
+  const skipped = responses.length - answered;
   let sorted;
   if (q.choices && q.choices.length) {
     sorted = q.choices.map(c => [c.text || c.value, counts[c.text || c.value] || 0]).filter(([, c]) => c > 0);
@@ -679,12 +685,19 @@ function renderChoiceChartHTML(q, responses) {
   }
 
   return `<div class="panel-body">
+    <div class="response-rate">${answered} of ${responses.length} answered (${Math.round(answered/responses.length*100)}%)</div>
     ${sorted.map(([lbl, cnt]) => `
       <div class="bar-item">
         <div class="bar-lbl" title="${lbl}">${lbl}</div>
         <div class="bar-track"><div class="bar-fill" style="width:${Math.round(cnt/responses.length*100)}%"></div></div>
         <div class="bar-count">${cnt} (${Math.round(cnt/responses.length*100)}%)</div>
       </div>`).join("")}
+    ${skipped > 0 ? `
+      <div class="bar-item no-answer">
+        <div class="bar-lbl">No answer</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${Math.round(skipped/responses.length*100)}%"></div></div>
+        <div class="bar-count">${skipped} (${Math.round(skipped/responses.length*100)}%)</div>
+      </div>` : ""}
   </div>`;
 }
 
@@ -697,15 +710,23 @@ function renderRatingChartHTML(q, responses) {
   for (let i = min; i <= max; i++) counts[i] = 0;
   vals.forEach(v => { counts[v] = (counts[v] || 0) + 1; });
   const avg = (vals.reduce((s, v) => s + v, 0) / vals.length).toFixed(1);
+  const skipped = responses.length - vals.length;
 
   return `<div class="panel-body">
-    <div style="font-size:10pt;color:#666;margin-bottom:0.5rem;">Average: <strong>${avg}</strong> (${vals.length} responses)</div>
+    <div class="response-rate">${vals.length} of ${responses.length} answered (${Math.round(vals.length/responses.length*100)}%)</div>
+    <div style="font-size:10pt;color:#666;margin-bottom:0.5rem;">Average: <strong>${avg}</strong></div>
     ${Object.entries(counts).map(([val, cnt]) => `
       <div class="bar-item">
         <div class="bar-lbl">${val}</div>
-        <div class="bar-track"><div class="bar-fill" style="width:${Math.round(cnt/vals.length*100)}%"></div></div>
-        <div class="bar-count">${cnt} (${Math.round(cnt/vals.length*100)}%)</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${Math.round(cnt/responses.length*100)}%"></div></div>
+        <div class="bar-count">${cnt} (${Math.round(cnt/responses.length*100)}%)</div>
       </div>`).join("")}
+    ${skipped > 0 ? `
+      <div class="bar-item no-answer">
+        <div class="bar-lbl">No answer</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${Math.round(skipped/responses.length*100)}%"></div></div>
+        <div class="bar-count">${skipped} (${Math.round(skipped/responses.length*100)}%)</div>
+      </div>` : ""}
   </div>`;
 }
 
@@ -731,8 +752,12 @@ function renderMatrixChartHTML(q, responses) {
       counts[lbl] = (counts[lbl] || 0) + 1;
       total++;
     });
-    if (total === 0) return;
-    html += `<div style="margin:0.6rem 0 0.2rem;font-weight:600;font-size:9pt;color:#333;">${rowLabel}</div>`;
+    if (total === 0) {
+      html += `<div style="margin:0.6rem 0 0.2rem;font-weight:600;font-size:9pt;color:#333;">${rowLabel}</div>`;
+      html += `<div class="bar-item no-answer"><div class="bar-lbl">No answers</div><div class="bar-track"></div><div class="bar-count">0 of ${responses.length}</div></div>`;
+      return;
+    }
+    html += `<div style="margin:0.6rem 0 0.2rem;font-weight:600;font-size:9pt;color:#333;">${rowLabel} <span style="font-weight:400;color:#999;font-size:8pt">(${total}/${responses.length})</span></div>`;
     colOrder.forEach(colVal => {
       const lbl = cols[colVal] || colVal;
       const cnt = counts[lbl] || 0;
@@ -740,10 +765,19 @@ function renderMatrixChartHTML(q, responses) {
       html += `
         <div class="bar-item">
           <div class="bar-lbl" title="${lbl}">${lbl}</div>
-          <div class="bar-track"><div class="bar-fill" style="width:${Math.round(cnt/total*100)}%"></div></div>
-          <div class="bar-count">${cnt} (${Math.round(cnt/total*100)}%)</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${Math.round(cnt/responses.length*100)}%"></div></div>
+          <div class="bar-count">${cnt} (${Math.round(cnt/responses.length*100)}%)</div>
         </div>`;
     });
+    const rowSkipped = responses.length - total;
+    if (rowSkipped > 0) {
+      html += `
+        <div class="bar-item no-answer">
+          <div class="bar-lbl">No answer</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${Math.round(rowSkipped/responses.length*100)}%"></div></div>
+          <div class="bar-count">${rowSkipped} (${Math.round(rowSkipped/responses.length*100)}%)</div>
+        </div>`;
+    }
   });
   html += '</div>';
   return html;
@@ -755,9 +789,10 @@ function renderCommentList(q, responses) {
     .filter(a => a.text && a.text.trim())
     .sort((a, b) => new Date(b.date) - new Date(a.date));
 
-  if (!answers.length) return '<div class="explorer-empty">No text answers for this question.</div>';
+  const skipped = responses.length - answers.length;
+  if (!answers.length) return `<div class="explorer-empty">No text answers for this question. (${skipped} of ${responses.length} skipped)</div>`;
 
-  return `<div class="explorer-subtitle">${answers.length} answer${answers.length !== 1 ? "s" : ""}</div>
+  return `<div class="explorer-subtitle">${answers.length} of ${responses.length} answered (${skipped} skipped)</div>
     <div class="comment-list">
       ${answers.map(a => `
         <div class="comment-item">
@@ -863,6 +898,9 @@ function renderChoiceChart(q, responses) {
   });
   if (!Object.keys(counts).length) return null;
 
+  const answered = total;
+  const skipped = responses.length - answered;
+
   // Preserve choice order if available, otherwise sort by count
   let sorted;
   if (q.choices && q.choices.length) {
@@ -877,12 +915,19 @@ function renderChoiceChart(q, responses) {
   panel.innerHTML = `
     <div class="panel-hdr">${q.title || q.name}${q.type === "checkbox" ? " <span style='font-weight:400;color:#888;font-size:9pt'>(multi-select)</span>" : ""}</div>
     <div class="panel-body">
+      <div class="response-rate">${answered} of ${responses.length} answered (${Math.round(answered/responses.length*100)}%)</div>
       ${sorted.map(([lbl, cnt]) => `
         <div class="bar-item">
           <div class="bar-lbl" title="${lbl}">${lbl}</div>
           <div class="bar-track"><div class="bar-fill" style="width:${Math.round(cnt/responses.length*100)}%"></div></div>
           <div class="bar-count">${cnt} (${Math.round(cnt/responses.length*100)}%)</div>
         </div>`).join("")}
+      ${skipped > 0 ? `
+        <div class="bar-item no-answer">
+          <div class="bar-lbl">No answer</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${Math.round(skipped/responses.length*100)}%"></div></div>
+          <div class="bar-count">${skipped} (${Math.round(skipped/responses.length*100)}%)</div>
+        </div>` : ""}
     </div>`;
   return panel;
 }
@@ -899,15 +944,23 @@ function renderRatingChart(q, responses) {
   const panel = document.createElement("div");
   panel.className = "panel";
   const avg = (vals.reduce((s, v) => s + v, 0) / vals.length).toFixed(1);
+  const skipped = responses.length - vals.length;
   panel.innerHTML = `
     <div class="panel-hdr">${q.title || q.name} <span style="font-weight:400;color:#888;font-size:9pt">(avg: ${avg})</span></div>
     <div class="panel-body">
+      <div class="response-rate">${vals.length} of ${responses.length} answered (${Math.round(vals.length/responses.length*100)}%)</div>
       ${Object.entries(counts).map(([val, cnt]) => `
         <div class="bar-item">
           <div class="bar-lbl">${val}</div>
-          <div class="bar-track"><div class="bar-fill" style="width:${Math.round(cnt/vals.length*100)}%"></div></div>
-          <div class="bar-count">${cnt} (${Math.round(cnt/vals.length*100)}%)</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${Math.round(cnt/responses.length*100)}%"></div></div>
+          <div class="bar-count">${cnt} (${Math.round(cnt/responses.length*100)}%)</div>
         </div>`).join("")}
+      ${skipped > 0 ? `
+        <div class="bar-item no-answer">
+          <div class="bar-lbl">No answer</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${Math.round(skipped/responses.length*100)}%"></div></div>
+          <div class="bar-count">${skipped} (${Math.round(skipped/responses.length*100)}%)</div>
+        </div>` : ""}
     </div>`;
   return panel;
 }
@@ -940,9 +993,13 @@ function renderMatrixChart(q, responses) {
       counts[lbl] = (counts[lbl] || 0) + 1;
       total++;
     });
-    if (total === 0) return;
+    if (total === 0) {
+      html += `<div style="margin:0.6rem 0 0.2rem;font-weight:600;font-size:9pt;color:#333;">${rowLabel}</div>`;
+      html += `<div class="bar-item no-answer"><div class="bar-lbl">No answers</div><div class="bar-track"></div><div class="bar-count">0 of ${responses.length}</div></div>`;
+      return;
+    }
 
-    html += `<div style="margin:0.6rem 0 0.2rem;font-weight:600;font-size:9pt;color:#333;">${rowLabel}</div>`;
+    html += `<div style="margin:0.6rem 0 0.2rem;font-weight:600;font-size:9pt;color:#333;">${rowLabel} <span style="font-weight:400;color:#999;font-size:8pt">(${total}/${responses.length})</span></div>`;
     // Use column order
     colOrder.forEach(colVal => {
       const lbl = cols[colVal] || colVal;
@@ -951,10 +1008,19 @@ function renderMatrixChart(q, responses) {
       html += `
         <div class="bar-item">
           <div class="bar-lbl" title="${lbl}">${lbl}</div>
-          <div class="bar-track"><div class="bar-fill" style="width:${Math.round(cnt/total*100)}%"></div></div>
-          <div class="bar-count">${cnt} (${Math.round(cnt/total*100)}%)</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${Math.round(cnt/responses.length*100)}%"></div></div>
+          <div class="bar-count">${cnt} (${Math.round(cnt/responses.length*100)}%)</div>
         </div>`;
     });
+    const rowSkipped = responses.length - total;
+    if (rowSkipped > 0) {
+      html += `
+        <div class="bar-item no-answer">
+          <div class="bar-lbl">No answer</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${Math.round(rowSkipped/responses.length*100)}%"></div></div>
+          <div class="bar-count">${rowSkipped} (${Math.round(rowSkipped/responses.length*100)}%)</div>
+        </div>`;
+    }
   });
 
   html += `</div>`;

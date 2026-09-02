@@ -249,9 +249,7 @@
       "navigationTitle": "Jewish Journey"
     },
     {
-      "name": "page_engagement",
-      "title": "Section 3: Engagement at Temple Shalom",
-      "description": "OPTIONAL — Why do you engage? What are you looking for? What is missing? What prevents you from participating more?",
+      "title": "Section 3: Worship & Programs",
       "elements": [
         {
           "type": "radiogroup",
@@ -463,7 +461,12 @@
               "text": "Regularly"
             }
           ]
-        },
+        }
+      ]
+    },
+    {
+      "title": "Section 4: Social Engagement & Interests",
+      "elements": [
         {
           "type": "radiogroup",
           "name": "q12_children",
@@ -745,12 +748,11 @@
           "maxLength": 1000,
           "rows": 4
         }
-      ],
-      "navigationTitle": "Engagement"
+      ]
     },
     {
       "name": "page_satisfaction",
-      "title": "Section 4: Member Satisfaction",
+      "title": "Section 5: Member Satisfaction",
       "description": "OPTIONAL — Help us understand how Temple Shalom is doing overall.",
       "elements": [
         {
@@ -1078,7 +1080,7 @@
     },
     {
       "name": "page_financial",
-      "title": "Section 5: Financial & Giving",
+      "title": "Section 6: Financial & Giving",
       "description": "OPTIONAL — Help us understand how we can better communicate our financial needs and opportunities.",
       "elements": [
         {
@@ -1246,7 +1248,7 @@
     },
     {
       "name": "page_communications",
-      "title": "Section 6: Communications Preferences",
+      "title": "Section 7: Communications Preferences",
       "description": "OPTIONAL — We are rethinking how we communicate with members. Your input will directly shape our approach.",
       "elements": [
         {

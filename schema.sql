@@ -18,3 +18,17 @@ CREATE TABLE IF NOT EXISTS responses (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_responses_response_id ON responses(response_id);
 CREATE        INDEX IF NOT EXISTS idx_responses_session     ON responses(session_id);
 CREATE        INDEX IF NOT EXISTS idx_responses_timestamp   ON responses(timestamp);
+
+-- Drafts table for save-and-continue-later (cross-device resume)
+CREATE TABLE IF NOT EXISTS drafts (
+  draft_id    TEXT    NOT NULL UNIQUE,            -- short code for resume URL
+  session_id  TEXT,                                -- links to survey session
+  page_no     INTEGER DEFAULT 0,                   -- which section they were on
+  payload     TEXT    NOT NULL,                    -- JSON survey data so far
+  created_at  TEXT    NOT NULL,
+  updated_at  TEXT    NOT NULL,
+  expires_at  TEXT    NOT NULL                     -- 30-day TTL
+);
+
+CREATE INDEX IF NOT EXISTS idx_drafts_session ON drafts(session_id);
+CREATE INDEX IF NOT EXISTS idx_drafts_expires ON drafts(expires_at);

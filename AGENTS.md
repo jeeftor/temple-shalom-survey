@@ -7,7 +7,7 @@ Guidance for AI agents (Devin, Claude, etc.) working in this repo.
 A static survey site for the Temple Shalom (Colorado Springs) member survey, deployed on Cloudflare Pages, with responses collected by a Cloudflare Worker writing to a Cloudflare D1 (SQLite) database.
 
 - **Frontend**: vanilla HTML/CSS/JS using [SurveyJS](https://surveyjs.io/) (loaded from `unpkg.com`, pinned to `survey-core@1.12.13` / `survey-js-ui@1.12.13`). No build step, no bundler, no npm dependencies in the repo.
-- **Backend**: single Cloudflare Worker (`worker.js`) with four routes — `POST /submit`, `GET /export?key=`, `GET /results?key=`, `GET /health`.
+- **Backend**: single Cloudflare Worker (`worker.js`) with six routes — `POST /submit`, `POST /draft`, `GET /draft?id=`, `GET /export?key=`, `GET /results?key=`, `GET /health`.
 - **Database**: Cloudflare D1, binding `DB`, database `temple-shalom-responses`. Schema in `schema.sql`; additive migrations in `migrate.sql`.
 - **Survey definition**: `survey.json` (SurveyJS JSON schema). This is the source of truth for all questions; `index.html` and `print.html` both render it.
 - **Source PDF**: `Temple Shalom - Member Survey 2025 (DRAFT).pdf` is the original paper survey — reference it when questions need to be reconciled with the printed version.
@@ -35,7 +35,9 @@ A static survey site for the Temple Shalom (Colorado Springs) member survey, dep
 
 - **No build system.** HTML/JS/CSS ship as-is. Don't introduce bundlers, transpilers, or npm packages without explicit ask.
 - **SurveyJS is loaded from `unpkg.com` at a pinned version.** Bump the version in all three HTML files together (`index.html`, `print.html`, `admin.html`) if upgrading.
-- **Responses are stored as a JSON blob** in `responses.payload`, plus denormalized metadata columns (`response_id`, `session_id`, `survey_version`, `ip_country`, `cf_ray`, `completion_seconds`, `sections_answered`, `user_agent`). Server-stamped fields (`response_id`, `timestamp`, `ip_country`, `cf_ray`) must never be trusted from the client body.
+- **Responses are stored as a JSON blob** in `responses.payload`, plus denormalized metadata columns (`response_id`, `session_id`, `submission_number`, `previous_response_id`, `survey_version`, `ip_country`, `cf_ray`, `completion_seconds`, `sections_answered`, `user_agent`, `referrer`). Server-stamped fields (`response_id`, `timestamp`, `ip_country`, `cf_ray`) must never be trusted from the client body.
+- **Re-submission linking**: `session_id` (browser localStorage UUID) links submissions from the same browser. The Worker computes `submission_number` (1, 2, 3...) and `previous_response_id` server-side by looking up prior submissions with the same `session_id`. The frontend allows re-submission via a "Submit again" button.
+- **Drafts (save-and-continue-later)**: the `drafts` table stores in-progress surveys for cross-device resume. `POST /draft` saves (upserts by `session_id`), `GET /draft?id=XXXX` loads. Drafts expire after 30 days. The frontend auto-saves to both localStorage and D1, and shows a resume link. Opening `?draft=XXXX` in the URL triggers the resume prompt.
 - **Dedup**: `response_id` is `crypto.randomUUID()` and `UNIQUE`. The worker returns `409 duplicate` on `UNIQUE` constraint violations.
 - **Rate limiting**: in-memory per-IP, max 5 submits/min. Note this resets on worker restart and is per-isolate — it's a guard, not a guarantee.
 - **Auth for `/export` and `/results`**: a single shared `EXPORT_KEY` Worker secret (query param `?key=`). Don't commit it; it lives as a Cloudflare secret.

@@ -80,34 +80,54 @@
       max-width: 1100px;
       margin: 0 auto;
     }
-    #sectionPills {
-      display: grid;
-      grid-template-columns: repeat(7, minmax(0, 1fr));
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
+    /* Progress bar */
+    #surveyProgress {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 0.5rem;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+    #progressLabel { white-space: nowrap; font-weight: 600; }
+    #progressTrack {
+      flex: 1;
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
       overflow: hidden;
+    }
+    #progressFill {
+      height: 100%;
+      background: var(--blue);
+      border-radius: 3px;
+      transition: width 0.3s ease;
+      width: 0%;
+    }
+    #progressPct { white-space: nowrap; }
+    /* Pills: flex-wrap instead of fixed grid so they don't squish */
+    #sectionPills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.3rem;
     }
     #sectionSelect { display: none; }
     .nav-pill {
-      min-width: 0;
-      padding: 0.65rem 0.35rem;
-      border: 0;
-      border-right: 1px solid var(--border);
+      padding: 0.4rem 0.7rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
       background: var(--white);
       color: var(--text-muted);
       font-size: 0.75rem;
       font-weight: 600;
       cursor: pointer;
-      overflow: hidden;
-      text-overflow: ellipsis;
       transition: all 0.15s;
       white-space: nowrap;
     }
-    .nav-pill:last-child   { border-right: 0; }
-    .nav-pill:hover        { color: var(--blue); background: var(--blue-faint); }
-    .nav-pill.active       { background: var(--blue); color: var(--white); font-weight: 700; }
-    .nav-pill.done         { color: #2e7d32; background: #f0faf0; }
-    .nav-pill.done::before { content: "✓ "; font-weight: 700; }
+    .nav-pill:hover        { color: var(--blue); background: var(--blue-faint); border-color: var(--blue-light); }
+    .nav-pill.active       { background: var(--blue); color: var(--white); font-weight: 700; border-color: var(--blue); }
+    .nav-pill.done         { color: #2e7d32; background: #f0faf0; border-color: #a5d6a7; }
+    .nav-pill.done::before { content: "\2713 "; font-weight: 700; }
     .nav-pill.done:hover   { background: #e0f5e0; }
 
     /* ── Main layout ─────────────────────────────────────────── */
@@ -570,6 +590,11 @@
 <!-- Clickable section navigation -->
 <nav id="sectionNav" aria-label="Survey sections">
   <div id="sectionNavInner">
+    <div id="surveyProgress">
+      <span id="progressLabel">Section 1 of 7</span>
+      <div id="progressTrack"><div id="progressFill"></div></div>
+      <span id="progressPct">0%</span>
+    </div>
     <select id="sectionSelect" aria-label="Current survey section"></select>
     <div id="sectionPills"></div>
   </div>
@@ -733,6 +758,25 @@
     }
     let draftReady = !savedDraft;
 
+    // Check for server-side draft via ?draft=XXXX URL param (cross-device resume)
+    const urlDraftId = new URLSearchParams(location.search).get("draft");
+    let serverDraft = null;
+    if (urlDraftId) {
+      // Fetch async; will show prompt if found
+      fetch(`${SUBMIT_URL.replace("/submit", "/draft")}?id=${urlDraftId}`)
+        .then(r => r.json())
+        .then(result => {
+          if (result.success && result.data) {
+            serverDraft = { data: result.data, pageNo: result.page_no || 0, draftId: urlDraftId };
+            if (sessionId) localStorage.setItem("ts_survey_session", result.session_id || sessionId);
+            // Show resume prompt
+            draftMessage.textContent = `A saved draft was found from ${new Date(result.expires_at).toLocaleDateString()}. Would you like to resume?`;
+            setDraftPromptVisible(true);
+          }
+        })
+        .catch(() => {});
+    }
+
     function setDraftPromptVisible(visible) {
       draftNotice.hidden = !visible;
       surveyContainer.hidden = visible;
@@ -751,16 +795,47 @@
       draftStatus.textContent = "Saving draft…";
       draftTimer = setTimeout(() => {
         const data = survey.data;
+        const pageNo = survey.currentPageNo;
         const savedAt = Date.now();
-        localStorage.setItem(DRAFT_KEY, JSON.stringify({ data, pageNo: survey.currentPageNo, savedAt }));
+        localStorage.setItem(DRAFT_KEY, JSON.stringify({ data, pageNo, savedAt }));
         draftStatus.textContent = `Saved on this device at ${new Date(savedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+        // Also save to server for cross-device resume
+        saveDraftToServer(data, pageNo);
       }, 500);
+    }
+
+    let serverDraftId = null;
+    let serverDraftTimer = null;
+    function saveDraftToServer(data, pageNo) {
+      clearTimeout(serverDraftTimer);
+      serverDraftTimer = setTimeout(async () => {
+        try {
+          const res = await fetch(SUBMIT_URL.replace("/submit", "/draft"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              _session:  sessionId,
+              _page_no:  pageNo,
+              data:      data,
+            }),
+          });
+          const result = await res.json();
+          if (result.success && result.draft_id) {
+            serverDraftId = result.draft_id;
+            const resumeUrl = `${location.origin}${location.pathname}?draft=${result.draft_id}`;
+            draftStatus.innerHTML = `Saved at ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} · <a href="${resumeUrl}" style="color:var(--blue);">Resume link</a>`;
+          }
+        } catch (e) {
+          // Server save is best-effort; localStorage draft still works
+        }
+      }, 2000);
     }
 
     document.getElementById("resumeDraftBtn").addEventListener("click", () => {
       draftReady = true;
-      survey.data = savedDraft.data || {};
-      survey.currentPageNo = Math.min(savedDraft.pageNo || 0, lastPage);
+      const draft = serverDraft || savedDraft;
+      survey.data = draft.data || {};
+      survey.currentPageNo = Math.min(draft.pageNo || 0, lastPage);
       setDraftPromptVisible(false);
       updateNav(survey.currentPageNo);
       updateSkip(survey.currentPageNo);
@@ -771,6 +846,7 @@
     document.getElementById("startOverBtn").addEventListener("click", () => {
       localStorage.removeItem(DRAFT_KEY);
       savedDraft = null;
+      serverDraft = null;
       draftReady = true;
       setDraftPromptVisible(false);
       updateNav(0);
@@ -780,6 +856,11 @@
 
     function updateNav(pageNo) {
       sectionSelect.value = String(pageNo);
+      const total = pills.length;
+      const pct = Math.round(((pageNo + 1) / total) * 100);
+      document.getElementById("progressLabel").textContent = `Section ${pageNo + 1} of ${total}`;
+      document.getElementById("progressFill").style.width = `${pct}%`;
+      document.getElementById("progressPct").textContent = `${pct}%`;
       pills.forEach((pill, i) => {
         pill.classList.remove("active", "done");
         if (i === pageNo) {

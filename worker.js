@@ -36,6 +36,12 @@ export default {
     if (url.pathname === "/submit" && method === "POST") {
       return handleSubmit(request, env);
     }
+    if (url.pathname === "/draft" && method === "POST") {
+      return handleDraftSave(request, env);
+    }
+    if (url.pathname === "/draft" && method === "GET") {
+      return handleDraftLoad(request, env);
+    }
     if (url.pathname === "/export" && method === "GET") {
       return handleExport(request, env);
     }
@@ -284,6 +290,94 @@ async function handleResults(request, env) {
   }));
 
   return json({ count: responses.length, responses });
+}
+
+// ── Draft save/load (save-and-continue-later) ────────────────────────────────
+
+const DRAFT_TTL_DAYS = 30;
+
+async function handleDraftSave(request, env) {
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ success: false, error: "Invalid JSON" }, 400);
+  }
+
+  const sessionId = body._session || null;
+  const pageNo    = body._page_no || 0;
+  const data      = body.data || {};
+  if (!sessionId) {
+    return json({ success: false, error: "Missing session" }, 400);
+  }
+
+  const now       = new Date();
+  const expires   = new Date(now.getTime() + DRAFT_TTL_DAYS * 24 * 60 * 60 * 1000);
+  const nowIso    = now.toISOString();
+  const expIso    = expires.toISOString();
+
+  // Generate a short draft ID (8 chars, URL-safe)
+  const draftId = crypto.randomUUID().replace(/-/g, "").slice(0, 8);
+  const payload = JSON.stringify(data);
+
+  try {
+    // Upsert: if a draft exists for this session, update it; otherwise insert
+    const existing = await env.DB.prepare(
+      "SELECT draft_id FROM drafts WHERE session_id = ? ORDER BY updated_at DESC LIMIT 1"
+    ).bind(sessionId).first();
+
+    if (existing) {
+      await env.DB.prepare(
+        `UPDATE drafts SET payload = ?, page_no = ?, updated_at = ?, expires_at = ? WHERE draft_id = ?`
+      ).bind(payload, pageNo, nowIso, expIso, existing.draft_id).run();
+      return json({ success: true, draft_id: existing.draft_id, expires_at: expIso });
+    }
+
+    await env.DB.prepare(
+      `INSERT INTO drafts (draft_id, session_id, page_no, payload, created_at, updated_at, expires_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    ).bind(draftId, sessionId, pageNo, payload, nowIso, nowIso, expIso).run();
+    return json({ success: true, draft_id: draftId, expires_at: expIso });
+  } catch (err) {
+    console.error("Draft save failed:", err.message);
+    return json({ success: false, error: "server_error" }, 500);
+  }
+}
+
+async function handleDraftLoad(request, env) {
+  const url = new URL(request.url);
+  const draftId = url.searchParams.get("id");
+  if (!draftId) {
+    return json({ success: false, error: "Missing draft id" }, 400);
+  }
+
+  try {
+    const row = await env.DB.prepare(
+      "SELECT draft_id, session_id, page_no, payload, expires_at FROM drafts WHERE draft_id = ?"
+    ).bind(draftId).first();
+
+    if (!row) {
+      return json({ success: false, error: "Draft not found" }, 404);
+    }
+
+    // Check expiry
+    if (new Date(row.expires_at) < new Date()) {
+      await env.DB.prepare("DELETE FROM drafts WHERE draft_id = ?").bind(draftId).run();
+      return json({ success: false, error: "Draft expired" }, 410);
+    }
+
+    return json({
+      success: true,
+      draft_id: row.draft_id,
+      session_id: row.session_id,
+      page_no: row.page_no,
+      data: JSON.parse(row.payload),
+      expires_at: row.expires_at,
+    });
+  } catch (err) {
+    console.error("Draft load failed:", err.message);
+    return json({ success: false, error: "server_error" }, 500);
+  }
 }
 
 // ── Health ────────────────────────────────────────────────────────────────────

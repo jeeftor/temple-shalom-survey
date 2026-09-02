@@ -638,6 +638,7 @@ async function loadSurveyDef() {
   }
   _allQuestions = null;
   _explorerQuestions = null;
+  qNumberMap = {};
   return surveyDef;
 }
 
@@ -720,6 +721,7 @@ let qNumberMap = {};
 let qRowNumberMap = {};
 
 function buildQNumberMap() {
+  if (qNumberMap._built) return;
   qNumberMap = {};
   qRowNumberMap = {};
   if (!surveyDef) return;
@@ -735,6 +737,7 @@ function buildQNumberMap() {
       n++;
     });
   });
+  qNumberMap._built = true;
 }
 
 function qNum(name) { return qNumberMap[name] ? `Q${qNumberMap[name]}` : ""; }

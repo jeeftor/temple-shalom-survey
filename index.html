@@ -658,7 +658,7 @@
             Your draft is saved — would you like to continue?
           </p>
           <div style="margin-top:1.5rem;display:flex;gap:0.75rem;justify-content:center;">
-            <button id="resumeDraftBtn" style="background:var(--blue);color:white;
+            <button id="continueResubmitBtn" style="background:var(--blue);color:white;
                     border:none;padding:0.6rem 2rem;border-radius:6px;font-size:11pt;
                     cursor:pointer;font-weight:bold;">
               Continue my response
@@ -673,17 +673,17 @@
       document.getElementById("skipBtn").style.display = "none";
       document.getElementById("versionFooter").style.display = "none";
 
-      document.getElementById("resumeDraftBtn").addEventListener("click", () => {
+      document.getElementById("continueResubmitBtn").addEventListener("click", () => {
         allowResubmit = true;
         document.getElementById("surveyContainer").innerHTML = "";
         document.getElementById("skipBtn").style.display = "";
         document.getElementById("versionFooter").style.display = "";
         if (cachedSurveyJson) {
-          initSurvey(cachedSurveyJson);
+          initSurvey(cachedSurveyJson, true);
         } else {
           fetch("survey.json")
             .then(r => r.json())
-            .then(json => { cachedSurveyJson = json; return initSurvey(json); });
+            .then(json => { cachedSurveyJson = json; return initSurvey(json, true); });
         }
       });
 
@@ -783,7 +783,7 @@
       }
     });
 
-  function initSurvey(surveyJson) {
+  function initSurvey(surveyJson, skipDraftPrompt) {
     const survey = new Survey.Model(surveyJson);
     const intro = document.getElementById("surveyIntro");
     intro.textContent = surveyJson.description || "";
@@ -839,6 +839,13 @@
       localStorage.removeItem(DRAFT_KEY);
     }
     let draftReady = !savedDraft;
+
+    // When resuming a resubmission, load the draft directly without prompting
+    if (skipDraftPrompt && savedDraft) {
+      draftReady = true;
+      survey.data = savedDraft.data || {};
+      if (savedDraft.pageNo != null) survey.currentPageNo = savedDraft.pageNo;
+    }
 
     // Check for server-side draft via ?draft=XXXX URL param (cross-device resume)
     const urlDraftId = new URLSearchParams(location.search).get("draft");

@@ -524,10 +524,6 @@
           ],
           "columns": [
             {
-              "value": "no_age",
-              "text": "No children this age"
-            },
-            {
               "value": "no",
               "text": "No"
             },

@@ -165,18 +165,22 @@
     .bar-fill.sent-na { background: #bbb; }     /* N/A - grey */
 
     /* Data explorer */
+    .explorer-panel { background: #f4f7fc; border: 1.5px solid #c9d6e8; }
+    .explorer-panel .panel-hdr { background: linear-gradient(135deg, var(--blue-dark), var(--blue)); }
     .explorer-bar {
       display: flex;
       gap: 0.75rem;
       align-items: flex-end;
       flex-wrap: wrap;
       padding: 1rem;
+      background: white;
+      border-bottom: 1px solid #e0e7f0;
     }
     .explorer-field { display: flex; flex-direction: column; gap: 0.2rem; }
-    .explorer-field label { font-size: 8pt; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+    .explorer-field label { font-size: 8pt; font-weight: 600; color: #4a6a8a; text-transform: uppercase; letter-spacing: 0.5px; }
     .explorer-field select {
       padding: 0.4rem 0.6rem;
-      border: 1.5px solid var(--border);
+      border: 1.5px solid #b0c4de;
       border-radius: var(--radius);
       font-size: 10pt;
       background: white;
@@ -184,20 +188,20 @@
       min-width: 200px;
       max-width: 300px;
     }
-    .explorer-field select:focus { border-color: var(--blue); outline: none; }
+    .explorer-field select:focus { border-color: var(--blue); outline: none; box-shadow: 0 0 0 2px rgba(0,56,184,0.15); }
     .explorer-clear {
       padding: 0.4rem 0.8rem;
-      border: 1.5px solid var(--border);
+      border: 1.5px solid #b0c4de;
       border-radius: var(--radius);
       background: white;
       cursor: pointer;
       font-size: 10pt;
-      color: #666;
+      color: #4a6a8a;
     }
-    .explorer-clear:hover { background: var(--blue-pale); border-color: var(--blue); }
+    .explorer-clear:hover { background: var(--blue-pale); border-color: var(--blue); color: var(--blue-dark); }
     .explorer-result { padding: 0 1rem 1rem; }
-    .explorer-empty { color: #888; font-size: 10pt; padding: 2rem; text-align: center; }
-    .explorer-subtitle { font-size: 9pt; color: #888; margin-bottom: 0.5rem; }
+    .explorer-empty { color: #7a8a9a; font-size: 10pt; padding: 2rem; text-align: center; }
+    .explorer-subtitle { font-size: 9pt; color: #4a6a8a; margin-bottom: 0.5rem; font-weight: 600; }
     .explorer-crosstab-note {
       background: var(--blue-pale);
       border-left: 3px solid var(--blue);
@@ -306,7 +310,7 @@
   <div class="stat-row" id="statRow"></div>
 
   <!-- Data explorer -->
-  <div class="panel">
+  <div class="panel explorer-panel">
     <div class="panel-hdr">Data Explorer</div>
     <div class="explorer-bar">
       <div class="explorer-field">

@@ -153,6 +153,22 @@
     .chart-toggle button:hover { border-color: var(--blue); color: var(--blue); }
     .chart-toggle button.active { background: var(--blue); color: white; border-color: var(--blue); }
 
+    /* Section filter */
+    .section-filter { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .section-filter button {
+      padding: 0.35rem 0.8rem;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      background: white;
+      cursor: pointer;
+      font-size: 10pt;
+      font-weight: 600;
+      color: #666;
+      transition: all 0.15s;
+    }
+    .section-filter button:hover { border-color: var(--blue); color: var(--blue); }
+    .section-filter button.active { background: var(--blue); color: white; border-color: var(--blue); }
+
     /* Side-by-side bar + pie */
     .chart-both { display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: flex-start; }
     .chart-half { flex: 1; min-width: 280px; }
@@ -388,6 +404,7 @@
   </div>
 
   <!-- Aggregations -->
+  <div id="sectionFilter" class="section-filter"></div>
   <div id="charts"></div>
 
   </div><!-- /tab-dashboard -->
@@ -1100,14 +1117,44 @@ const PIE_COLORS = ["#0038b8","#1a5fd4","#4d8ae6","#80b5f0","#b3d5f5","#e6c300",
 // Chart type state: "bar" or "pie" per question
 let chartTypeState = {};
 
+let activeSection = "all";
+
+function setSectionFilter(section) {
+  activeSection = section;
+  renderCharts(currentResponses || []);
+}
+
+let currentResponses = [];
+
 function renderCharts(responses) {
+  currentResponses = responses;
   const wrap = document.getElementById("charts");
+  const filterBar = document.getElementById("sectionFilter");
   wrap.innerHTML = "";
+  filterBar.innerHTML = "";
 
   if (!surveyDef) { wrap.textContent = "Loading chart definitions…"; return; }
   buildQNumberMap();
 
+  // Build section filter buttons
+  const sections = surveyDef.pages.map((p, i) => ({ title: p.title || `Section ${i+1}`, idx: i }));
+  const allBtn = document.createElement("button");
+  allBtn.textContent = "All";
+  allBtn.className = activeSection === "all" ? "active" : "";
+  allBtn.onclick = () => setSectionFilter("all");
+  filterBar.appendChild(allBtn);
+  sections.forEach(s => {
+    const btn = document.createElement("button");
+    btn.textContent = s.title;
+    btn.className = activeSection === s.idx ? "active" : "";
+    btn.onclick = () => setSectionFilter(s.idx);
+    filterBar.appendChild(btn);
+  });
+
   surveyDef.pages.forEach((page, pageIdx) => {
+    // Skip sections not matching the filter
+    if (activeSection !== "all" && activeSection !== pageIdx) return;
+
     const chartable = (page.elements || []).filter(q =>
       ["radiogroup", "checkbox", "rating", "matrix"].includes(q.type)
     );

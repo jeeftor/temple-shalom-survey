@@ -990,6 +990,26 @@
     survey.onAfterRenderQuestion.add(() => setTimeout(wrapMatrixTables, 30));
     survey.onValueChanged.add(saveDraft);
 
+    // ── Live selection counter for maxSelectedChoices questions ──
+    function updateSelectionCounters() {
+      const page = survey.currentPage;
+      if (!page) return;
+      page.questions.forEach(q => {
+        if (!q.maxSelectedChoices) return;
+        const val = q.value;
+        const count = Array.isArray(val) ? val.length : (val ? 1 : 0);
+        const max = q.maxSelectedChoices;
+        const el = document.querySelector(`[data-name="${q.name}"] .sd-question__description`);
+        if (el) {
+          el.textContent = `Selected: ${count} of ${max}${count >= max ? " — limit reached" : ""}`;
+          el.style.color = count >= max ? "#b00020" : "var(--text-muted)";
+          el.style.fontWeight = count >= max ? "600" : "400";
+        }
+      });
+    }
+    survey.onValueChanged.add(updateSelectionCounters);
+    survey.onAfterRenderQuestion.add(updateSelectionCounters);
+
     // Make progress bar buttons navigable by click
     function bindProgressNav() {
       document.querySelectorAll(".sd-progress-buttons__list-element").forEach((el, i) => {

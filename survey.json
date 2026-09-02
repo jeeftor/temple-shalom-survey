@@ -316,7 +316,9 @@
             }
           ],
           "hasOther": true,
-          "otherText": "Other"
+          "otherText": "Other",
+          "maxErrorText": "You've already selected 3. Uncheck one of your selections to pick something else.",
+          "description": " "
         },
         {
           "type": "matrix",
@@ -1169,7 +1171,9 @@
             }
           ],
           "hasOther": true,
-          "otherText": "Other"
+          "otherText": "Other",
+          "maxErrorText": "You've already selected 3. Uncheck one of your selections to pick something else.",
+          "description": " "
         },
         {
           "type": "radiogroup",

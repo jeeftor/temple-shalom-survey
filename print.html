@@ -167,8 +167,9 @@
       .section { page-break-inside: auto; }
       /* Individual questions never split across pages */
       .question { page-break-inside: avoid; }
-      /* Matrix tables never split across pages */
-      table { page-break-inside: avoid; }
+      /* Matrix tables CAN split across pages; <thead> repeats automatically */
+      table { page-break-inside: auto; }
+      thead { display: table-header-group; }
       /* Section headers stay with their first question */
       .section-header { page-break-after: avoid; }
       .section-skip { page-break-after: avoid; }

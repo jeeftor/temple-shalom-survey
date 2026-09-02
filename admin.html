@@ -129,6 +129,40 @@
     .bar-item.no-answer .bar-fill { background: #ccc; }
     .bar-item.no-answer .bar-lbl { color: #999; font-style: italic; }
     .response-rate { font-size: 8pt; color: #888; margin-bottom: 0.4rem; }
+    .q-num { display: inline-block; background: var(--blue-pale); color: var(--blue-dark); font-size: 8pt; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 3px; margin-right: 0.4rem; }
+
+    /* Chart type toggle */
+    .chart-toggle {
+      display: inline-flex;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-left: auto;
+    }
+    .chart-toggle button {
+      padding: 0.2rem 0.5rem;
+      border: 0;
+      background: white;
+      cursor: pointer;
+      font-size: 8pt;
+      color: #666;
+    }
+    .chart-toggle button.active { background: var(--blue); color: white; }
+
+    /* Pie chart */
+    .pie-wrap { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .pie-svg { flex-shrink: 0; }
+    .pie-legend { font-size: 9pt; }
+    .pie-legend-item { display: flex; align-items: center; gap: 0.3rem; margin: 0.2rem 0; }
+    .pie-legend-swatch { width: 12px; height: 12px; border-radius: 2px; flex-shrink: 0; }
+
+    /* Matrix sentiment colors */
+    .bar-fill.sent-1 { background: #c62828; }  /* very negative - red */
+    .bar-fill.sent-2 { background: #ef6c00; }  /* negative - orange */
+    .bar-fill.sent-3 { background: #f9a825; }  /* neutral - yellow */
+    .bar-fill.sent-4 { background: #558b2f; }  /* positive - light green */
+    .bar-fill.sent-5 { background: #2e7d32; }  /* very positive - green */
+    .bar-fill.sent-na { background: #bbb; }     /* N/A - grey */
 
     /* Data explorer */
     .explorer-bar {
@@ -288,6 +322,10 @@
         <select id="explorerFilterVal" onchange="explorerUpdate()"></select>
       </div>
       <button class="explorer-clear" onclick="explorerClear()">Clear</button>
+      <div class="chart-toggle" id="explorerChartToggle" style="display:none;">
+        <button class="active" onclick="setExplorerChartType('bar')">Bar</button>
+        <button onclick="setExplorerChartType('pie')">Pie</button>
+      </div>
     </div>
     <div class="explorer-result" id="explorerResult">
       <div class="explorer-empty">Pick a question above to explore the data.</div>
@@ -488,6 +526,7 @@ function findQuestion(name) {
 
 // Populate the explorer dropdowns
 function initExplorer() {
+  buildQNumberMap();
   const qSelect = document.getElementById("explorerQ");
   const filterQSelect = document.getElementById("explorerFilterQ");
   const qs = getAllQuestions();
@@ -637,6 +676,17 @@ function explorerUpdate() {
     return;
   }
 
+  // Show/hide pie toggle only for choice questions
+  const toggle = document.getElementById("explorerChartToggle");
+  if (q.type === "radiogroup" || q.type === "checkbox") {
+    toggle.style.display = "inline-flex";
+    const isPie = chartTypeState["explorer_" + q.name] === "pie";
+    toggle.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+    toggle.querySelector(isPie ? "button:nth-child(2)" : "button:nth-child(1)").classList.add("active");
+  } else {
+    toggle.style.display = "none";
+  }
+
   let html = "";
 
   if (filterNote) {
@@ -684,8 +734,11 @@ function renderChoiceChartHTML(q, responses) {
     sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
   }
 
+  const num = qNum(q.name);
+  const isPie = chartTypeState["explorer_" + q.name] === "pie";
   return `<div class="panel-body">
-    <div class="response-rate">${answered} of ${responses.length} answered (${Math.round(answered/responses.length*100)}%)</div>
+    <div class="response-rate">${num} · ${answered} of ${responses.length} answered (${Math.round(answered/responses.length*100)}%)</div>
+    ${isPie ? renderPieChartHTML(sorted, skipped, responses.length) : `
     ${sorted.map(([lbl, cnt]) => `
       <div class="bar-item">
         <div class="bar-lbl" title="${lbl}">${lbl}</div>
@@ -697,7 +750,7 @@ function renderChoiceChartHTML(q, responses) {
         <div class="bar-lbl">No answer</div>
         <div class="bar-track"><div class="bar-fill" style="width:${Math.round(skipped/responses.length*100)}%"></div></div>
         <div class="bar-count">${skipped} (${Math.round(skipped/responses.length*100)}%)</div>
-      </div>` : ""}
+      </div>` : ""}`}
   </div>`;
 }
 
@@ -712,8 +765,9 @@ function renderRatingChartHTML(q, responses) {
   const avg = (vals.reduce((s, v) => s + v, 0) / vals.length).toFixed(1);
   const skipped = responses.length - vals.length;
 
+  const num = qNum(q.name);
   return `<div class="panel-body">
-    <div class="response-rate">${vals.length} of ${responses.length} answered (${Math.round(vals.length/responses.length*100)}%)</div>
+    <div class="response-rate">${num} · ${vals.length} of ${responses.length} answered (${Math.round(vals.length/responses.length*100)}%)</div>
     <div style="font-size:10pt;color:#666;margin-bottom:0.5rem;">Average: <strong>${avg}</strong></div>
     ${Object.entries(counts).map(([val, cnt]) => `
       <div class="bar-item">
@@ -762,10 +816,11 @@ function renderMatrixChartHTML(q, responses) {
       const lbl = cols[colVal] || colVal;
       const cnt = counts[lbl] || 0;
       if (cnt === 0) return;
+      const sClass = sentimentClass(colVal);
       html += `
         <div class="bar-item">
           <div class="bar-lbl" title="${lbl}">${lbl}</div>
-          <div class="bar-track"><div class="bar-fill" style="width:${Math.round(cnt/responses.length*100)}%"></div></div>
+          <div class="bar-track"><div class="bar-fill ${sClass}" style="width:${Math.round(cnt/responses.length*100)}%"></div></div>
           <div class="bar-count">${cnt} (${Math.round(cnt/responses.length*100)}%)</div>
         </div>`;
     });
@@ -789,10 +844,11 @@ function renderCommentList(q, responses) {
     .filter(a => a.text && a.text.trim())
     .sort((a, b) => new Date(b.date) - new Date(a.date));
 
+  const num = qNum(q.name);
   const skipped = responses.length - answers.length;
-  if (!answers.length) return `<div class="explorer-empty">No text answers for this question. (${skipped} of ${responses.length} skipped)</div>`;
+  if (!answers.length) return `<div class="explorer-empty">${num ? num + " · " : ""}No text answers for this question. (${skipped} of ${responses.length} skipped)</div>`;
 
-  return `<div class="explorer-subtitle">${answers.length} of ${responses.length} answered (${skipped} skipped)</div>
+  return `<div class="explorer-subtitle">${num ? num + " · " : ""}${answers.length} of ${responses.length} answered (${skipped} skipped)</div>
     <div class="comment-list">
       ${answers.map(a => `
         <div class="comment-item">
@@ -812,7 +868,18 @@ function explorerClear() {
   document.getElementById("explorerQ").value = "";
   document.getElementById("explorerFilterQ").value = "";
   document.getElementById("explorerFilterValWrap").style.display = "none";
+  document.getElementById("explorerChartToggle").style.display = "none";
   document.getElementById("explorerResult").innerHTML = '<div class="explorer-empty">Pick a question above to explore the data.</div>';
+}
+
+function setExplorerChartType(type) {
+  const qName = document.getElementById("explorerQ").value;
+  if (qName) chartTypeState["explorer_" + qName] = type;
+  // Update toggle buttons
+  const toggle = document.getElementById("explorerChartToggle");
+  toggle.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+  toggle.querySelector(type === "pie" ? "button:nth-child(2)" : "button:nth-child(1)").classList.add("active");
+  explorerUpdate();
 }
 
 // ── Aggregate charts (auto-discovered from survey.json) ──────────────────────
@@ -845,11 +912,57 @@ function matrixLookups(question) {
   return { rows, cols, colOrder: (question.columns || []).map(c => c.value) };
 }
 
+// Question number map (Q1, Q2, ...) based on order in survey.json
+let qNumberMap = {};
+function buildQNumberMap() {
+  qNumberMap = {};
+  if (!surveyDef) return;
+  let n = 1;
+  surveyDef.pages.forEach(page => {
+    (page.elements || []).forEach(q => { qNumberMap[q.name] = n++; });
+  });
+}
+function qNum(name) { return qNumberMap[name] ? `Q${qNumberMap[name]}` : ""; }
+
+// Sentiment color for matrix column values
+// Maps common column values to sentiment levels (1=very negative, 5=very positive, na=grey)
+const SENTIMENT_MAP = {
+  // Satisfaction
+  "very_satisfied": 5, "satisfied": 4, "neutral": 3, "dissatisfied": 2, "very_dissatisfied": 1,
+  "meets_needs": 5, "does_not_meet": 1, "no_opinion": 3,
+  // Agreement
+  "strongly_agree": 5, "agree": 4, "disagree": 2, "strongly_disagree": 1,
+  // Performance
+  "strength": 5, "meeting_expectations": 3, "weakness": 1,
+  "needs_improvement": 1, "very_satisfied": 5,
+  // Familiarity
+  "very_familiar": 5, "reasonably": 4, "slightly": 2, "not_familiar": 1,
+  // Frequency
+  "regularly": 5, "occasionally": 4, "want_to": 3, "no": 1,
+  // Participation
+  "monthly": 4, "some": 3, "no_participation": 1, "none_in_hh": 0,
+  // N/A
+  "na": "na", "not_aware": "na", "dont_know": "na", "no_age": "na",
+};
+function sentimentClass(colValue) {
+  const s = SENTIMENT_MAP[colValue];
+  if (s === undefined || s === 0) return "";
+  if (s === "na") return "sent-na";
+  return `sent-${s}`;
+}
+
+// Pie chart colors
+const PIE_COLORS = ["#0038b8","#1a5fd4","#4d8ae6","#80b5f0","#b3d5f5","#e0a800","#e6c300","#f9a825","#ef6c00","#c62828","#2e7d32","#558b2f","#7e57c2","#5c6bc0","#8d6e63","#78909c"];
+
+// Chart type state: "bar" or "pie" per question
+let chartTypeState = {};
+
 function renderCharts(responses) {
   const wrap = document.getElementById("charts");
   wrap.innerHTML = "";
 
   if (!surveyDef) { wrap.textContent = "Loading chart definitions…"; return; }
+  buildQNumberMap();
 
   surveyDef.pages.forEach((page, pageIdx) => {
     const chartable = (page.elements || []).filter(q =>
@@ -901,7 +1014,6 @@ function renderChoiceChart(q, responses) {
   const answered = total;
   const skipped = responses.length - answered;
 
-  // Preserve choice order if available, otherwise sort by count
   let sorted;
   if (q.choices && q.choices.length) {
     sorted = q.choices.map(c => [c.text || c.value, counts[c.text || c.value] || 0])
@@ -910,12 +1022,21 @@ function renderChoiceChart(q, responses) {
     sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
   }
 
+  const num = qNum(q.name);
+  const isPie = chartTypeState[q.name] === "pie";
   const panel = document.createElement("div");
   panel.className = "panel";
   panel.innerHTML = `
-    <div class="panel-hdr">${q.title || q.name}${q.type === "checkbox" ? " <span style='font-weight:400;color:#888;font-size:9pt'>(multi-select)</span>" : ""}</div>
+    <div class="panel-hdr">
+      <span>${num ? `<span class="q-num">${num}</span>` : ""}${q.title || q.name}${q.type === "checkbox" ? " <span style='font-weight:400;color:#888;font-size:9pt'>(multi-select)</span>" : ""}</span>
+      <div class="chart-toggle" data-q="${q.name}">
+        <button class="${!isPie ? 'active' : ''}" onclick="setChartType('${q.name}','bar')">Bar</button>
+        <button class="${isPie ? 'active' : ''}" onclick="setChartType('${q.name}','pie')">Pie</button>
+      </div>
+    </div>
     <div class="panel-body">
       <div class="response-rate">${answered} of ${responses.length} answered (${Math.round(answered/responses.length*100)}%)</div>
+      ${isPie ? renderPieChartHTML(sorted, skipped, responses.length) : `
       ${sorted.map(([lbl, cnt]) => `
         <div class="bar-item">
           <div class="bar-lbl" title="${lbl}">${lbl}</div>
@@ -927,9 +1048,50 @@ function renderChoiceChart(q, responses) {
           <div class="bar-lbl">No answer</div>
           <div class="bar-track"><div class="bar-fill" style="width:${Math.round(skipped/responses.length*100)}%"></div></div>
           <div class="bar-count">${skipped} (${Math.round(skipped/responses.length*100)}%)</div>
-        </div>` : ""}
+        </div>` : ""}`}
     </div>`;
   return panel;
+}
+
+function setChartType(qName, type) {
+  chartTypeState[qName] = type;
+  const displayResponses = latestOnly ? getLatestPerPerson(allResponses) : allResponses;
+  renderCharts(displayResponses);
+}
+
+function renderPieChartHTML(sorted, skipped, total) {
+  const data = [...sorted];
+  if (skipped > 0) data.push(["No answer", skipped]);
+  const sum = data.reduce((s, [, c]) => s + c, 0);
+  if (sum === 0) return '<div class="explorer-empty">No data</div>';
+
+  const r = 60, cx = 70, cy = 70;
+  let angle = -Math.PI / 2;
+  let slices = "";
+  let legend = "";
+
+  data.forEach(([lbl, cnt], i) => {
+    const pct = cnt / sum;
+    const endAngle = angle + pct * 2 * Math.PI;
+    const x1 = cx + r * Math.cos(angle);
+    const y1 = cy + r * Math.sin(angle);
+    const x2 = cx + r * Math.cos(endAngle);
+    const y2 = cy + r * Math.sin(endAngle);
+    const largeArc = pct > 0.5 ? 1 : 0;
+    const color = lbl === "No answer" ? "#ccc" : PIE_COLORS[i % PIE_COLORS.length];
+    if (pct < 1) {
+      slices += `<path d="M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${largeArc} 1 ${x2},${y2} Z" fill="${color}" stroke="white" stroke-width="1"/>`;
+    } else {
+      slices += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${color}" stroke="white" stroke-width="1"/>`;
+    }
+    legend += `<div class="pie-legend-item"><div class="pie-legend-swatch" style="background:${color}"></div>${lbl}: ${cnt} (${Math.round(pct*100)}%)</div>`;
+    angle = endAngle;
+  });
+
+  return `<div class="pie-wrap">
+    <svg class="pie-svg" width="140" height="140" viewBox="0 0 140 140">${slices}</svg>
+    <div class="pie-legend">${legend}</div>
+  </div>`;
 }
 
 function renderRatingChart(q, responses) {
@@ -945,8 +1107,9 @@ function renderRatingChart(q, responses) {
   panel.className = "panel";
   const avg = (vals.reduce((s, v) => s + v, 0) / vals.length).toFixed(1);
   const skipped = responses.length - vals.length;
+  const num = qNum(q.name);
   panel.innerHTML = `
-    <div class="panel-hdr">${q.title || q.name} <span style="font-weight:400;color:#888;font-size:9pt">(avg: ${avg})</span></div>
+    <div class="panel-hdr">${num ? `<span class="q-num">${num}</span>` : ""}${q.title || q.name} <span style="font-weight:400;color:#888;font-size:9pt">(avg: ${avg})</span></div>
     <div class="panel-body">
       <div class="response-rate">${vals.length} of ${responses.length} answered (${Math.round(vals.length/responses.length*100)}%)</div>
       ${Object.entries(counts).map(([val, cnt]) => `
@@ -979,7 +1142,8 @@ function renderMatrixChart(q, responses) {
   panel.className = "panel";
   panel.style.gridColumn = "span 2"; // matrix charts are wider
 
-  let html = `<div class="panel-hdr">${q.title || q.name}</div><div class="panel-body">`;
+  const num = qNum(q.name);
+  let html = `<div class="panel-hdr">${num ? `<span class="q-num">${num}</span>` : ""}${q.title || q.name}</div><div class="panel-body">`;
 
   Object.entries(rows).forEach(([rowVal, rowLabel]) => {
     const counts = {};
@@ -1000,15 +1164,16 @@ function renderMatrixChart(q, responses) {
     }
 
     html += `<div style="margin:0.6rem 0 0.2rem;font-weight:600;font-size:9pt;color:#333;">${rowLabel} <span style="font-weight:400;color:#999;font-size:8pt">(${total}/${responses.length})</span></div>`;
-    // Use column order
+    // Use column order with sentiment colors
     colOrder.forEach(colVal => {
       const lbl = cols[colVal] || colVal;
       const cnt = counts[lbl] || 0;
       if (cnt === 0) return;
+      const sClass = sentimentClass(colVal);
       html += `
         <div class="bar-item">
           <div class="bar-lbl" title="${lbl}">${lbl}</div>
-          <div class="bar-track"><div class="bar-fill" style="width:${Math.round(cnt/responses.length*100)}%"></div></div>
+          <div class="bar-track"><div class="bar-fill ${sClass}" style="width:${Math.round(cnt/responses.length*100)}%"></div></div>
           <div class="bar-count">${cnt} (${Math.round(cnt/responses.length*100)}%)</div>
         </div>`;
     });

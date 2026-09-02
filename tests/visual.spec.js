@@ -3,7 +3,8 @@ const { test, expect } = require("@playwright/test");
 const sections = [
   "Demographics",
   "Your Jewish Journey",
-  "Engagement at Temple Shalom",
+  "Worship & Programs",
+  "Social Engagement & Interests",
   "Member Satisfaction",
   "Financial & Giving",
   "Communications Preferences",
@@ -58,8 +59,8 @@ test("section navigation adapts without duplicate progress dots", async ({ page 
   await expect(page.locator(".sd-root-modern")).toBeVisible();
   await expect(page.locator(".sd-progress-buttons")).toHaveCount(0);
   await expect(page.locator("#sectionSelect option")).toHaveCount(sections.length);
-  await expect(page.locator("#sectionSelect option").nth(5)).toContainText("Communications");
-  await goToSection(page, 5);
+  await expect(page.locator("#sectionSelect option").nth(6)).toContainText("Communications");
+  await goToSection(page, 6);
   await expect(page.locator(".sd-page__title")).toContainText("Communications Preferences");
   await expect(page.locator('[data-name="q_service_announcements_length"]')).toBeVisible();
   await expect(page.locator('[data-name="q_service_announcements_comments"]')).toBeVisible();

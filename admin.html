@@ -149,6 +149,11 @@
     }
     .chart-toggle button.active { background: var(--blue); color: white; }
 
+    /* Side-by-side bar + pie */
+    .chart-both { display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: flex-start; }
+    .chart-half { flex: 1; min-width: 280px; }
+    .chart-half .bar-lbl { width: 160px; }
+
     /* Pie chart */
     .pie-wrap { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
     .pie-svg { flex-shrink: 0; }
@@ -361,10 +366,6 @@
         <select id="explorerFilterVal" onchange="explorerUpdate()"></select>
       </div>
       <button class="explorer-clear" onclick="explorerClear()">Clear</button>
-      <div class="chart-toggle" id="explorerChartToggle" style="display:none;">
-        <button class="active" onclick="setExplorerChartType('bar')">Bar</button>
-        <button onclick="setExplorerChartType('pie')">Pie</button>
-      </div>
     </div>
     <div class="explorer-result" id="explorerResult">
       <div class="explorer-empty">Pick a question above to explore the data.</div>
@@ -729,16 +730,7 @@ function explorerUpdate() {
     return;
   }
 
-  // Show/hide pie toggle only for choice questions
-  const toggle = document.getElementById("explorerChartToggle");
-  if (q.type === "radiogroup" || q.type === "checkbox") {
-    toggle.style.display = "inline-flex";
-    const isPie = chartTypeState["explorer_" + q.name] === "pie";
-    toggle.querySelectorAll("button").forEach(b => b.classList.remove("active"));
-    toggle.querySelector(isPie ? "button:nth-child(2)" : "button:nth-child(1)").classList.add("active");
-  } else {
-    toggle.style.display = "none";
-  }
+  // Chart type toggle is now rendered inline per question
 
   let html = "";
 
@@ -788,22 +780,32 @@ function renderChoiceChartHTML(q, responses) {
   }
 
   const num = qNum(q.name);
-  const isPie = chartTypeState["explorer_" + q.name] === "pie";
+  const chartType = chartTypeState["explorer_" + q.name] || "both";
   return `<div class="panel-body">
     <div class="response-rate">${num} · ${answered} of ${responses.length} answered (${Math.round(answered/responses.length*100)}%)</div>
-    ${isPie ? renderPieChartHTML(sorted, skipped, responses.length) : `
-    ${sorted.map(([lbl, cnt]) => `
-      <div class="bar-item">
-        <div class="bar-lbl" title="${lbl}">${lbl}</div>
-        <div class="bar-track"><div class="bar-fill" style="width:${Math.round(cnt/responses.length*100)}%"></div></div>
-        <div class="bar-count">${cnt} (${Math.round(cnt/responses.length*100)}%)</div>
-      </div>`).join("")}
-    ${skipped > 0 ? `
-      <div class="bar-item no-answer">
-        <div class="bar-lbl">No answer</div>
-        <div class="bar-track"><div class="bar-fill" style="width:${Math.round(skipped/responses.length*100)}%"></div></div>
-        <div class="bar-count">${skipped} (${Math.round(skipped/responses.length*100)}%)</div>
-      </div>` : ""}`}
+    <div class="chart-toggle" style="margin-bottom:0.5rem;">
+      <button class="${chartType === 'both' ? 'active' : ''}" onclick="setExplorerChartType('${q.name}','both')">Both</button>
+      <button class="${chartType === 'bar' ? 'active' : ''}" onclick="setExplorerChartType('${q.name}','bar')">Bar</button>
+      <button class="${chartType === 'pie' ? 'active' : ''}" onclick="setExplorerChartType('${q.name}','pie')">Pie</button>
+    </div>
+    <div class="${chartType === 'both' ? 'chart-both' : ''}">
+      ${chartType !== 'pie' ? `
+      <div class="chart-half">
+        ${sorted.map(([lbl, cnt]) => `
+          <div class="bar-item">
+            <div class="bar-lbl" title="${lbl}">${lbl}</div>
+            <div class="bar-track"><div class="bar-fill" style="width:${Math.round(cnt/responses.length*100)}%"></div></div>
+            <div class="bar-count">${cnt} (${Math.round(cnt/responses.length*100)}%)</div>
+          </div>`).join("")}
+        ${skipped > 0 ? `
+          <div class="bar-item no-answer">
+            <div class="bar-lbl">No answer</div>
+            <div class="bar-track"><div class="bar-fill" style="width:${Math.round(skipped/responses.length*100)}%"></div></div>
+            <div class="bar-count">${skipped} (${Math.round(skipped/responses.length*100)}%)</div>
+          </div>` : ""}
+      </div>` : ""}
+      ${chartType !== 'bar' ? `<div class="chart-half">${renderPieChartHTML(sorted, skipped, responses.length)}</div>` : ""}
+    </div>
   </div>`;
 }
 
@@ -921,17 +923,11 @@ function explorerClear() {
   document.getElementById("explorerQ").value = "";
   document.getElementById("explorerFilterQ").value = "";
   document.getElementById("explorerFilterValWrap").style.display = "none";
-  document.getElementById("explorerChartToggle").style.display = "none";
   document.getElementById("explorerResult").innerHTML = '<div class="explorer-empty">Pick a question above to explore the data.</div>';
 }
 
-function setExplorerChartType(type) {
-  const qName = document.getElementById("explorerQ").value;
+function setExplorerChartType(qName, type) {
   if (qName) chartTypeState["explorer_" + qName] = type;
-  // Update toggle buttons
-  const toggle = document.getElementById("explorerChartToggle");
-  toggle.querySelectorAll("button").forEach(b => b.classList.remove("active"));
-  toggle.querySelector(type === "pie" ? "button:nth-child(2)" : "button:nth-child(1)").classList.add("active");
   explorerUpdate();
 }
 
@@ -1076,32 +1072,38 @@ function renderChoiceChart(q, responses) {
   }
 
   const num = qNum(q.name);
-  const isPie = chartTypeState[q.name] === "pie";
+  const chartType = chartTypeState[q.name] || "both";
   const panel = document.createElement("div");
   panel.className = "panel";
   panel.innerHTML = `
     <div class="panel-hdr">
       <span>${num ? `<span class="q-num">${num}</span>` : ""}${q.title || q.name}${q.type === "checkbox" ? " <span style='font-weight:400;color:#888;font-size:9pt'>(multi-select)</span>" : ""}</span>
       <div class="chart-toggle" data-q="${q.name}">
-        <button class="${!isPie ? 'active' : ''}" onclick="setChartType('${q.name}','bar')">Bar</button>
-        <button class="${isPie ? 'active' : ''}" onclick="setChartType('${q.name}','pie')">Pie</button>
+        <button class="${chartType === 'both' ? 'active' : ''}" onclick="setChartType('${q.name}','both')">Both</button>
+        <button class="${chartType === 'bar' ? 'active' : ''}" onclick="setChartType('${q.name}','bar')">Bar</button>
+        <button class="${chartType === 'pie' ? 'active' : ''}" onclick="setChartType('${q.name}','pie')">Pie</button>
       </div>
     </div>
     <div class="panel-body">
       <div class="response-rate">${answered} of ${responses.length} answered (${Math.round(answered/responses.length*100)}%)</div>
-      ${isPie ? renderPieChartHTML(sorted, skipped, responses.length) : `
-      ${sorted.map(([lbl, cnt]) => `
-        <div class="bar-item">
-          <div class="bar-lbl" title="${lbl}">${lbl}</div>
-          <div class="bar-track"><div class="bar-fill" style="width:${Math.round(cnt/responses.length*100)}%"></div></div>
-          <div class="bar-count">${cnt} (${Math.round(cnt/responses.length*100)}%)</div>
-        </div>`).join("")}
-      ${skipped > 0 ? `
-        <div class="bar-item no-answer">
-          <div class="bar-lbl">No answer</div>
-          <div class="bar-track"><div class="bar-fill" style="width:${Math.round(skipped/responses.length*100)}%"></div></div>
-          <div class="bar-count">${skipped} (${Math.round(skipped/responses.length*100)}%)</div>
-        </div>` : ""}`}
+      <div class="${chartType === 'both' ? 'chart-both' : ''}">
+        ${chartType !== 'pie' ? `
+        <div class="chart-half">
+          ${sorted.map(([lbl, cnt]) => `
+            <div class="bar-item">
+              <div class="bar-lbl" title="${lbl}">${lbl}</div>
+              <div class="bar-track"><div class="bar-fill" style="width:${Math.round(cnt/responses.length*100)}%"></div></div>
+              <div class="bar-count">${cnt} (${Math.round(cnt/responses.length*100)}%)</div>
+            </div>`).join("")}
+          ${skipped > 0 ? `
+            <div class="bar-item no-answer">
+              <div class="bar-lbl">No answer</div>
+              <div class="bar-track"><div class="bar-fill" style="width:${Math.round(skipped/responses.length*100)}%"></div></div>
+              <div class="bar-count">${skipped} (${Math.round(skipped/responses.length*100)}%)</div>
+            </div>` : ""}
+        </div>` : ""}
+        ${chartType !== 'bar' ? `<div class="chart-half">${renderPieChartHTML(sorted, skipped, responses.length)}</div>` : ""}
+      </div>
     </div>`;
   return panel;
 }

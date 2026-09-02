@@ -211,6 +211,30 @@
       color: var(--blue-dark);
       border-radius: 0 4px 4px 0;
     }
+
+    /* Tab bar */
+    .tab-bar {
+      display: flex;
+      gap: 0;
+      border-bottom: 2px solid var(--blue);
+      margin-bottom: 1.5rem;
+    }
+    .tab-bar button {
+      padding: 0.6rem 1.5rem;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 11pt;
+      font-weight: 600;
+      color: #666;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .tab-bar button:hover { color: var(--blue); }
+    .tab-bar button.active { color: var(--blue); border-bottom-color: var(--blue); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
     .comment-list { max-height: 400px; overflow-y: auto; }
     .comment-item {
       padding: 0.6rem 0.8rem;
@@ -309,6 +333,15 @@
   <!-- Stats row -->
   <div class="stat-row" id="statRow"></div>
 
+  <!-- Tab bar -->
+  <div class="tab-bar">
+    <button class="active" onclick="switchTab('dashboard', this)">Dashboard</button>
+    <button onclick="switchTab('responses', this)">Individual Responses</button>
+  </div>
+
+  <!-- Dashboard tab -->
+  <div id="tab-dashboard" class="tab-content active">
+
   <!-- Data explorer -->
   <div class="panel explorer-panel">
     <div class="panel-hdr">Data Explorer</div>
@@ -338,6 +371,11 @@
 
   <!-- Aggregations -->
   <div id="charts"></div>
+
+  </div><!-- /tab-dashboard -->
+
+  <!-- Responses tab -->
+  <div id="tab-responses" class="tab-content">
 
   <!-- Response table -->
   <div class="panel">
@@ -374,6 +412,8 @@
     </div>
   </div>
 
+  </div><!-- /tab-responses -->
+
 </div>
 
 <script>
@@ -381,6 +421,13 @@ const WORKER = "https://temple-shalom-survey.jeffstein.workers.dev";
 let allResponses = [];
 let exportKey    = "";
 let latestOnly   = true;
+
+function switchTab(name, btn) {
+  document.querySelectorAll(".tab-bar button").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
+  document.getElementById("tab-" + name).classList.add("active");
+  if (btn) btn.classList.add("active");
+}
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
 

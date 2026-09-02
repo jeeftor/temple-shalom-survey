@@ -215,24 +215,26 @@
     /* Tab bar */
     .tab-bar {
       display: flex;
-      gap: 0;
-      border-bottom: 2px solid var(--blue);
+      gap: 0.5rem;
       margin-bottom: 1.5rem;
     }
     .tab-bar button {
-      padding: 0.6rem 1.5rem;
-      border: none;
-      background: transparent;
+      padding: 0.6rem 1.4rem;
+      border: 2px solid var(--border);
+      background: white;
       cursor: pointer;
       font-size: 11pt;
       font-weight: 600;
       color: #666;
-      border-bottom: 3px solid transparent;
-      margin-bottom: -2px;
-      transition: color 0.2s, border-color 0.2s;
+      border-radius: var(--radius);
+      transition: all 0.2s;
     }
-    .tab-bar button:hover { color: var(--blue); }
-    .tab-bar button.active { color: var(--blue); border-bottom-color: var(--blue); }
+    .tab-bar button:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-pale); }
+    .tab-bar button.active {
+      color: white;
+      background: var(--blue);
+      border-color: var(--blue);
+    }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
     .comment-list { max-height: 400px; overflow-y: auto; }

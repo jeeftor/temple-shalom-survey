@@ -7,7 +7,12 @@
     /* ── Screen styles ── */
     @page {
       size: letter landscape;
-      margin: 0.5in;
+      margin: 0.5in 0.5in 0.75in 0.5in;
+      @bottom-right {
+        content: "Page " counter(page) " of " counter(pages);
+        font-size: 9pt;
+        color: #888;
+      }
     }
     body {
       font-family: 'Georgia', serif;
@@ -27,8 +32,6 @@
     header p  { font-size: 10pt; color: #555; margin: 0.4rem 0 0; }
 
     .section {
-      border: 1.5px solid #0038b8;
-      border-radius: 6px;
       margin: 1.5rem 0;
     }
     .section-header {
@@ -37,6 +40,7 @@
       padding: 0.5rem 1rem;
       font-size: 12pt;
       font-weight: bold;
+      border-radius: 4px;
     }
     .section-optional {
       font-size: 9pt;
@@ -46,11 +50,11 @@
     }
     .section-skip {
       background: #dce8ff;
-      border-bottom: 1px solid #0038b8;
       padding: 0.3rem 1rem;
       font-size: 9pt;
       color: #00277d;
       font-style: italic;
+      border-radius: 0 0 4px 4px;
     }
     .section-body { padding: 0.75rem 1rem; }
 
@@ -126,7 +130,7 @@
     .text-box {
       border: 1px solid #aaa;
       border-radius: 4px;
-      min-height: 60px;
+      min-height: 100px;
       width: 100%;
       margin-top: 0.3rem;
     }
@@ -170,9 +174,11 @@
       /* Matrix tables CAN split across pages; <thead> repeats automatically */
       table { page-break-inside: auto; }
       thead { display: table-header-group; }
-      /* Section headers stay with their first question */
+      /* Section headers stay with following content (no orphaned headers) */
       .section-header { page-break-after: avoid; }
       .section-skip { page-break-after: avoid; }
+      /* Section body stays with its header */
+      .section-body { page-break-before: avoid; }
       a { color: inherit; text-decoration: none; }
     }
   </style>
@@ -201,21 +207,47 @@ fetch("survey.json")
     document.getElementById("surveyPrint").textContent = "Error loading survey: " + err.message;
   });
 
-let qNum = 0;
+// Conditional questions that get letter suffixes instead of their own number
+const SUB_QUESTIONS = {
+  'q4_ada_limits':           'q3_ada',
+  'q13_children_activities': 'q12_children',
+  'q_contact_request':       'q_contact_phone',
+};
+
+// Pre-compute question numbers (letter suffixes for conditional follow-ups)
+let qNumberMap = {};
+function buildQNumberMap(survey) {
+  qNumberMap = {};
+  let n = 0;
+  const subLetter = {};
+  survey.pages.forEach(page => {
+    (page.elements || []).forEach(el => {
+      const parent = SUB_QUESTIONS[el.name];
+      if (parent) {
+        subLetter[parent] = (subLetter[parent] || 0) + 1;
+        const letter = String.fromCharCode(97 + subLetter[parent] - 1);
+        qNumberMap[el.name] = qNumberMap[parent] + letter;
+      } else {
+        n++;
+        qNumberMap[el.name] = String(n);
+      }
+    });
+  });
+}
 
 function renderPrint(survey) {
   const container = document.getElementById("surveyPrint");
   container.innerHTML = "";
 
-  // Build a page-to-question-number map for skip instructions
-  const pageStartQ = [];
-  let counter = 0;
-  survey.pages.forEach(page => {
-    pageStartQ.push(counter + 1);
-    counter += (page.elements || []).length;
-  });
+  buildQNumberMap(survey);
 
-  qNum = 0;
+  // Build a page-to-question-number map for skip instructions
+  // (first question number on each page)
+  const pageStartQ = [];
+  survey.pages.forEach(page => {
+    const firstEl = (page.elements || [])[0];
+    pageStartQ.push(firstEl ? qNumberMap[firstEl.name] : null);
+  });
 
   survey.pages.forEach((page, pageIdx) => {
     const isLast    = pageIdx === survey.pages.length - 1;
@@ -253,14 +285,14 @@ function renderPrint(survey) {
 }
 
 function renderQuestion(el) {
-  qNum++;
+  const num = qNumberMap[el.name] || "?";
   const div = document.createElement("div");
   div.className = "question";
 
   // Question text
   const title = document.createElement("div");
   title.className = "question-text";
-  title.innerHTML = `<span class="question-num">${qNum}.</span> ${el.title || el.name}`;
+  title.innerHTML = `<span class="question-num">${num}.</span> ${el.title || el.name}`;
   div.appendChild(title);
 
   // Description
@@ -351,7 +383,7 @@ function renderChoices(el, shape) {
 }
 
 function renderTextArea(el) {
-  const lines = el.rows || 4;
+  const lines = el.rows || 6;
   const div = document.createElement("div");
   div.className = "text-box";
   div.style.minHeight = (lines * 1.6) + "rem";

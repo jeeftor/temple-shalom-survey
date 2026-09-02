@@ -222,6 +222,11 @@
       font-weight: 600 !important;
       color: var(--text) !important;
     }
+    .custom-q-num {
+      color: var(--blue);
+      font-weight: 700;
+      margin-right: 0.4rem;
+    }
 
     /* ── Progress bar (buttons style with labels) ───────────── */
     /* Container */
@@ -828,6 +833,14 @@
     const surveyContainer = document.getElementById("surveyContainer");
     const actionBar = document.getElementById("actionBar");
     let draftTimer;
+
+    // Session ID — needed for drafts and submit
+    let sessionId = localStorage.getItem("ts_survey_session");
+    if (!sessionId) {
+      sessionId = crypto.randomUUID();
+      localStorage.setItem("ts_survey_session", sessionId);
+    }
+
     let savedDraft = null;
     try {
       savedDraft = JSON.parse(localStorage.getItem(DRAFT_KEY));
@@ -977,7 +990,7 @@
 
     // ── Page change ────────────────────────────────────────────
     survey.onCurrentPageChanged.add((_, opts) => {
-      const prev = opts.oldCurrentPage ? surveyJson.pages.indexOf(opts.oldCurrentPage) : -1;
+      const prev = opts.oldCurrentPage ? survey.pages.indexOf(opts.oldCurrentPage) : -1;
       if (prev >= 0) completedPages.add(prev);
       const cur = survey.currentPageNo;
       updateNav(cur);
@@ -989,6 +1002,50 @@
 
     survey.onAfterRenderQuestion.add(() => setTimeout(wrapMatrixTables, 30));
     survey.onValueChanged.add(saveDraft);
+
+    // ── Custom question numbering (letter suffixes for conditional questions) ──
+    // Conditional follow-ups get "3a", "11a", "41a" instead of causing renumbering
+    const SUB_QUESTIONS = {
+      'q4_ada_limits':         'q3_ada',
+      'q13_children_activities': 'q12_children',
+      'q_contact_request':     'q_contact_phone',
+    };
+
+    function computeQuestionNumbers() {
+      const numbers = {};
+      let n = 0;
+      const subLetter = {};
+      survey.pages.forEach(page => {
+        page.questions.forEach(q => {
+          if (!q.isVisible) return;
+          const parent = SUB_QUESTIONS[q.name];
+          if (parent) {
+            subLetter[parent] = (subLetter[parent] || 0) + 1;
+            numbers[q.name] = numbers[parent] + String.fromCharCode(97 + subLetter[parent] - 1);
+          } else {
+            n++;
+            numbers[q.name] = String(n);
+          }
+        });
+      });
+      return numbers;
+    }
+
+    function updateQuestionNumbers() {
+      const numbers = computeQuestionNumbers();
+      Object.entries(numbers).forEach(([name, num]) => {
+        const titleEl = document.querySelector(`[data-name="${name}"] .sd-question__title`);
+        if (!titleEl) return;
+        const existing = titleEl.querySelector('.custom-q-num');
+        if (existing) existing.remove();
+        const span = document.createElement('span');
+        span.className = 'custom-q-num';
+        span.textContent = num + '.';
+        titleEl.insertBefore(span, titleEl.firstChild);
+      });
+    }
+    survey.onAfterRenderQuestion.add(updateQuestionNumbers);
+    survey.onValueChanged.add(updateQuestionNumbers);
 
     // ── Live selection counter for maxSelectedChoices questions ──
     function updateSelectionCounters() {
@@ -1083,14 +1140,6 @@
       statusEl.className = "sending";
       statusEl.textContent = "Sending your response…";
 
-      // Persist a browser session ID so we can spot duplicate submissions in the sheet.
-    // This is a random UUID stored in localStorage — no PII, no tracking across sites.
-    let sessionId = localStorage.getItem("ts_survey_session");
-    if (!sessionId) {
-      sessionId = crypto.randomUUID();
-      localStorage.setItem("ts_survey_session", sessionId);
-    }
-
     // Which sections had any answers?
     const sectionsAnswered = (surveyJson.pages || [])
       .map(p => p.title)
@@ -1130,7 +1179,7 @@
               ? "Your updated response has been saved. Thank you for completing the survey again!"
               : "Your response has been saved. Thank you for completing the survey!";
           completedPages.add(lastPage);
-          updateNav(lastPage + 1);
+          updateNav(lastPage);
         } else {
           throw new Error(result.error || "unknown");
         }

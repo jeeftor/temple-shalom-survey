@@ -6,7 +6,7 @@
   "progressBarType": "buttons",
   "progressBarShowPageTitles": true,
   "progressBarShowPageNumbers": false,
-  "showQuestionNumbers": "on",
+  "showQuestionNumbers": "off",
   "questionErrorLocation": "bottom",
   "checkErrorsMode": "onComplete",
   "showNavigationButtons": "bottom",
@@ -602,6 +602,10 @@
             {
               "value": "fully_engaged",
               "text": "I'm already as engaged as I want to be"
+            },
+            {
+              "value": "security",
+              "text": "Concerns about security"
             }
           ],
           "hasOther": true,
@@ -1198,7 +1202,7 @@
             },
             {
               "value": "unaware",
-              "text": "I'm not aware of the dues structure"
+              "text": "Not aware of the dues structure"
             }
           ]
         },
@@ -1476,6 +1480,56 @@
       "description": "Almost done — thank you for taking the time to share your feedback.",
       "elements": [
         {
+          "type": "radiogroup",
+          "name": "q_babka",
+          "title": "Chocolate Babka or Cinnamon Babka?",
+          "description": "In Seinfeld S5E13 \"The Dinner Party\", Jerry and George debate which is the greater babka. Where do you stand?",
+          "choices": [
+            {
+              "value": "chocolate",
+              "text": "Chocolate Babka — the greater babka"
+            },
+            {
+              "value": "cinnamon",
+              "text": "Cinnamon Babka — the lesser babka (but still great)"
+            },
+            {
+              "value": "both",
+              "text": "I refuse to choose. All babka is sacred."
+            },
+            {
+              "value": "neither",
+              "text": "I have never had babka and I need to fix this immediately."
+            },
+            {
+              "value": "gluten_free",
+              "text": "Any babka that is gluten-free"
+            }
+          ],
+          "isRequired": false
+        },
+        {
+          "type": "radiogroup",
+          "name": "q_joke",
+          "title": "Before you go — which of these jokes is funnier?",
+          "description": "A little survey humor to end on. (Yes, this is a real question.)",
+          "choices": [
+            {
+              "value": "joke1",
+              "text": "A Jewish mother gives her son two ties. He wears one to dinner. She says: \"What, you don't like the other one?\""
+            },
+            {
+              "value": "joke2",
+              "text": "A man asks his rabbi: \"Rabbi, is it okay to text on Shabbat?\" The rabbi replies: \"Only if you don't hit send.\""
+            },
+            {
+              "value": "joke3",
+              "text": "Why don't Jewish mothers drink water? Because their children are already full of guilt."
+            }
+          ],
+          "isRequired": false
+        },
+        {
           "type": "comment",
           "name": "q28_final_comments",
           "title": "What other feedback or comments would you like to share?",
@@ -1484,17 +1538,32 @@
         },
         {
           "type": "text",
-          "name": "q_contact",
-          "title": "Contact information (optional):",
-          "description": "If you choose to identify yourself, please provide your name and preferred contact method (email and/or phone).",
-          "placeholder": "Name, email, and/or phone number",
+          "name": "q_contact_name",
+          "title": "Name (optional)",
+          "placeholder": "Your name",
+          "textUpdateMode": "onTyping"
+        },
+        {
+          "type": "text",
+          "name": "q_contact_email",
+          "title": "Email (optional)",
+          "placeholder": "your@email.com",
+          "inputType": "email",
+          "textUpdateMode": "onTyping"
+        },
+        {
+          "type": "text",
+          "name": "q_contact_phone",
+          "title": "Phone (optional)",
+          "placeholder": "(719) 555-0123",
+          "inputType": "tel",
           "textUpdateMode": "onTyping"
         },
         {
           "type": "radiogroup",
           "name": "q_contact_request",
           "title": "Would you like someone from Temple Shalom to contact you about any of your responses?",
-          "visibleIf": "{q_contact} notempty",
+          "visibleIf": "{q_contact_name} notempty or {q_contact_email} notempty or {q_contact_phone} notempty",
           "choices": [
             {
               "value": "yes",

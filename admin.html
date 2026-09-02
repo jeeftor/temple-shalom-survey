@@ -2,12 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Temple Shalom Survey — Admin</title>
   <style>
     :root {
       --blue:      #0038b8;
       --blue-dark: #00277d;
       --blue-pale: #dce8ff;
+      --blue-light: #dce8ff;
       --green:     #1a7f3c;
       --red:       #c0392b;
       --border:    #c9d6e8;
@@ -715,26 +717,42 @@ function getAnswerValue(q, r) {
   return r.answers?.[q.name];
 }
 
-// ── Question numbering ────────────────────────────────────────────────────────
+// ── Question numbering (letter suffixes for conditional follow-ups) ───────────
 
 let qNumberMap = {};
 let qRowNumberMap = {};
+
+// Conditional questions that get letter suffixes instead of their own number
+const SUB_QUESTIONS = {
+  'q4_ada_limits':           'q3_ada',
+  'q13_children_activities': 'q12_children',
+  'q_contact_request':       'q_contact_phone',
+};
 
 function buildQNumberMap() {
   if (qNumberMap._built) return;
   qNumberMap = {};
   qRowNumberMap = {};
   if (!surveyDef) return;
-  let n = 1;
+  let n = 0;
+  const subLetter = {};
   surveyDef.pages.forEach(page => {
     (page.elements || []).forEach(q => {
-      qNumberMap[q.name] = n;
+      const parent = SUB_QUESTIONS[q.name];
+      if (parent) {
+        subLetter[parent] = (subLetter[parent] || 0) + 1;
+        const letter = String.fromCharCode(97 + subLetter[parent] - 1);
+        qNumberMap[q.name] = qNumberMap[parent] + letter;
+      } else {
+        n++;
+        qNumberMap[q.name] = String(n);
+      }
+      const baseNum = qNumberMap[q.name];
       if (q.type === "matrix" && q.rows) {
         q.rows.forEach((row, i) => {
-          qRowNumberMap[q.name + "|" + (row.value || row)] = `Q${n}.${i + 1}`;
+          qRowNumberMap[q.name + "|" + (row.value || row)] = `Q${baseNum}.${i + 1}`;
         });
       }
-      n++;
     });
   });
   qNumberMap._built = true;
@@ -749,6 +767,7 @@ function qNumFor(q) { return q._matrixParent ? qRowNum(q._matrixParent, q._matri
 function choiceMap(question) {
   const m = {};
   (question.choices || []).forEach(c => { m[c.value] = c.text || c.value; });
+  if (question.hasOther || question.showOtherItem) m["other"] = "Other";
   return m;
 }
 
@@ -936,8 +955,14 @@ function countChoiceAnswers(q, responses) {
 }
 
 function sortChoiceCounts(q, counts) {
+  const labels = choiceMap(q);
   if (q.choices && q.choices.length) {
-    return q.choices.map(c => [c.text || c.value, counts[c.text || c.value] || 0]).filter(([, c]) => c > 0);
+    const result = q.choices.map(c => [labels[c.value] || c.value, counts[labels[c.value] || c.value] || 0]);
+      // Include "other" if it has counts and the question allows it
+      if ((q.hasOther || q.showOtherItem) && counts["Other"]) {
+        result.push(["Other", counts["Other"]]);
+      }
+      return result.filter(([, c]) => c > 0);
   }
   return Object.entries(counts).sort((a, b) => b[1] - a[1]);
 }

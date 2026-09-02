@@ -109,10 +109,6 @@
           ],
           "columns": [
             {
-              "value": "none_in_hh",
-              "text": "Not in our household"
-            },
-            {
               "value": "no_participation",
               "text": "No participation"
             },

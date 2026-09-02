@@ -311,11 +311,16 @@ ANNOUNCE_COMMENTS = [
     "", "", "", "",
 ]
 
-CONTACTS = [
-    "Jane Doe, jane@example.com, 555-0100",
-    "Robert Smith, 555-0200",
-    "Sarah & Mike Johnson, sarah.johnson@email.com",
-    "David Cohen, david.cohen@email.com, 555-0300",
+CONTACT_NAMES = [
+    "Jane Doe", "Robert Smith", "Sarah Johnson", "David Cohen",
+    "", "", "", "", "", "",  # most don't leave contact
+]
+CONTACT_EMAILS = [
+    "jane@example.com", "", "sarah.johnson@email.com", "david.cohen@email.com",
+    "", "", "", "", "", "",  # most don't leave contact
+]
+CONTACT_PHONES = [
+    "555-0100", "555-0200", "", "555-0300",
     "", "", "", "", "", "",  # most don't leave contact
 ]
 
@@ -543,16 +548,29 @@ def generate_response(idx):
     # Q40 comm improvement — often skipped
     r["q15_comm_improvement"] = random.choice(COMM_IMPROVEMENT)
 
+    # Q39 babka
+    r["q_babka"] = weighted_pick(
+        ["chocolate", "cinnamon", "both", "neither", "gluten_free"],
+        [35, 25, 20, 10, 10],
+    )
+
+    # Q40 joke
+    r["q_joke"] = weighted_pick(["joke1", "joke2", "joke3"], [40, 35, 25])
+
     # Q41 final comments — often skipped
     r["q28_final_comments"] = random.choice(FINAL_COMMENTS)
 
-    # Q42 contact — often skipped
-    contact = random.choice(CONTACTS)
-    if contact:
-        r["q_contact"] = contact
+    # Q41-43 contact info — often skipped
+    name = random.choice(CONTACT_NAMES)
+    email = random.choice(CONTACT_EMAILS)
+    phone = random.choice(CONTACT_PHONES)
+    if name: r["q_contact_name"] = name
+    if email: r["q_contact_email"] = email
+    if phone: r["q_contact_phone"] = phone
 
-    # Q43 contact request
-    r["q_contact_request"] = weighted_pick(CONTACT_REQ, CONTACT_REQ_W)
+    # Q43a contact request
+    if name or email or phone:
+        r["q_contact_request"] = weighted_pick(CONTACT_REQ, CONTACT_REQ_W)
 
     return r
 

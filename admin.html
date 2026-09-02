@@ -283,7 +283,10 @@ document.getElementById("keyInput").addEventListener("keydown", e => {
 
 async function loadData(key) {
   try {
-    const res = await fetch(`${WORKER}/results?key=${encodeURIComponent(key)}`);
+    const [res] = await Promise.all([
+      fetch(`${WORKER}/results?key=${encodeURIComponent(key)}`),
+      loadSurveyDef(),
+    ]);
     if (res.status === 401) {
       document.getElementById("authError").textContent = "Invalid key. Try again.";
       return;
@@ -382,55 +385,186 @@ function npsBar(vals) {
   </div><div style="font-size:8pt;color:#888;margin-top:2px">${Math.round(d)}% detractors · ${Math.round(pa)}% passives · ${Math.round(p)}% promoters</div>`;
 }
 
-// ── Aggregate charts ──────────────────────────────────────────────────────────
+// ── Aggregate charts (auto-discovered from survey.json) ──────────────────────
 
-const CHART_QUESTIONS = [
-  { key: "q1_member_type",         label: "Membership Type" },
-  { key: "q5_religious_identity",  label: "Religious Identity" },
-  { key: "q6_engagement",          label: "Engagement Level" },
-  { key: "q12_children",           label: "Children in household?" },
-  { key: "q16_barriers",           label: "Barriers to Participation" },
-  { key: "q18_dues_fairness",      label: "Dues Fairness" },
-  { key: "q23_comm_channels",      label: "Preferred Communication Channels" },
-];
+let surveyDef = null;
+
+async function loadSurveyDef() {
+  if (surveyDef) return surveyDef;
+  try {
+    const res = await fetch("survey.json");
+    surveyDef = await res.json();
+  } catch {
+    surveyDef = { pages: [] };
+  }
+  return surveyDef;
+}
+
+// Build a value→label lookup from choices
+function choiceMap(question) {
+  const m = {};
+  (question.choices || []).forEach(c => { m[c.value] = c.text || c.value; });
+  return m;
+}
+
+function matrixLookups(question) {
+  const rows = {};
+  (question.rows || []).forEach(r => { rows[r.value] = r.text || r.value; });
+  const cols = {};
+  (question.columns || []).forEach(c => { cols[c.value] = c.text || c.value; });
+  return { rows, cols, colOrder: (question.columns || []).map(c => c.value) };
+}
 
 function renderCharts(responses) {
   const wrap = document.getElementById("charts");
   wrap.innerHTML = "";
 
-  // Add 2-column layout
-  const grid = document.createElement("div");
-  grid.style.cssText = "display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:1rem;margin-bottom:1.5rem;";
+  if (!surveyDef) { wrap.textContent = "Loading chart definitions…"; return; }
 
-  CHART_QUESTIONS.forEach(q => {
-    const counts = {};
-    responses.forEach(r => {
-      const v = r.answers?.[q.key];
-      if (v == null || v === "") return;
-      const vals = Array.isArray(v) ? v : [v];
-      vals.forEach(x => { counts[x] = (counts[x] || 0) + 1; });
+  surveyDef.pages.forEach((page, pageIdx) => {
+    const chartable = (page.elements || []).filter(q =>
+      ["radiogroup", "checkbox", "rating", "matrix"].includes(q.type)
+    );
+    if (!chartable.length) return;
+
+    // Section header
+    const hdr = document.createElement("h3");
+    hdr.style.cssText = "grid-column:1/-1;font-size:12pt;color:var(--blue-dark);margin:1.5rem 0 0.5rem;border-bottom:1px solid var(--border);padding-bottom:0.3rem;";
+    hdr.textContent = page.title || `Section ${pageIdx + 1}`;
+    wrap.appendChild(hdr);
+
+    const grid = document.createElement("div");
+    grid.style.cssText = "display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:1rem;margin-bottom:1rem;";
+
+    chartable.forEach(q => {
+      let panel = null;
+      if (q.type === "radiogroup" || q.type === "checkbox") {
+        panel = renderChoiceChart(q, responses);
+      } else if (q.type === "rating") {
+        panel = renderRatingChart(q, responses);
+      } else if (q.type === "matrix") {
+        panel = renderMatrixChart(q, responses);
+      }
+      if (panel) grid.appendChild(panel);
     });
 
-    if (!Object.keys(counts).length) return;
-    const total = responses.length;
-    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    if (grid.children.length) wrap.appendChild(grid);
+  });
+}
 
-    const panel = document.createElement("div");
-    panel.className = "panel";
-    panel.innerHTML = `
-      <div class="panel-hdr">${q.label}</div>
-      <div class="panel-body">
-        ${sorted.map(([lbl, cnt]) => `
-          <div class="bar-item">
-            <div class="bar-lbl" title="${lbl}">${lbl}</div>
-            <div class="bar-track"><div class="bar-fill" style="width:${Math.round(cnt/total*100)}%"></div></div>
-            <div class="bar-count">${cnt} (${Math.round(cnt/total*100)}%)</div>
-          </div>`).join("")}
-      </div>`;
-    grid.appendChild(panel);
+function renderChoiceChart(q, responses) {
+  const labels = choiceMap(q);
+  const counts = {};
+  let total = 0;
+  responses.forEach(r => {
+    const v = r.answers?.[q.name];
+    if (v == null || v === "") return;
+    const vals = Array.isArray(v) ? v : [v];
+    vals.forEach(x => {
+      const lbl = labels[x] || x;
+      counts[lbl] = (counts[lbl] || 0) + 1;
+    });
+    total++;
+  });
+  if (!Object.keys(counts).length) return null;
+
+  // Preserve choice order if available, otherwise sort by count
+  let sorted;
+  if (q.choices && q.choices.length) {
+    sorted = q.choices.map(c => [c.text || c.value, counts[c.text || c.value] || 0])
+      .filter(([, c]) => c > 0);
+  } else {
+    sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  }
+
+  const panel = document.createElement("div");
+  panel.className = "panel";
+  panel.innerHTML = `
+    <div class="panel-hdr">${q.title || q.name}${q.type === "checkbox" ? " <span style='font-weight:400;color:#888;font-size:9pt'>(multi-select)</span>" : ""}</div>
+    <div class="panel-body">
+      ${sorted.map(([lbl, cnt]) => `
+        <div class="bar-item">
+          <div class="bar-lbl" title="${lbl}">${lbl}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${Math.round(cnt/responses.length*100)}%"></div></div>
+          <div class="bar-count">${cnt} (${Math.round(cnt/responses.length*100)}%)</div>
+        </div>`).join("")}
+    </div>`;
+  return panel;
+}
+
+function renderRatingChart(q, responses) {
+  const vals = responses.map(r => r.answers?.[q.name]).filter(v => v != null && v !== "");
+  if (!vals.length) return null;
+  const min = q.rateMin || 0;
+  const max = q.rateMax || 10;
+  const counts = {};
+  for (let i = min; i <= max; i++) counts[i] = 0;
+  vals.forEach(v => { counts[v] = (counts[v] || 0) + 1; });
+
+  const panel = document.createElement("div");
+  panel.className = "panel";
+  const avg = (vals.reduce((s, v) => s + v, 0) / vals.length).toFixed(1);
+  panel.innerHTML = `
+    <div class="panel-hdr">${q.title || q.name} <span style="font-weight:400;color:#888;font-size:9pt">(avg: ${avg})</span></div>
+    <div class="panel-body">
+      ${Object.entries(counts).map(([val, cnt]) => `
+        <div class="bar-item">
+          <div class="bar-lbl">${val}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${Math.round(cnt/vals.length*100)}%"></div></div>
+          <div class="bar-count">${cnt} (${Math.round(cnt/vals.length*100)}%)</div>
+        </div>`).join("")}
+    </div>`;
+  return panel;
+}
+
+function renderMatrixChart(q, responses) {
+  const { rows, cols, colOrder } = matrixLookups(q);
+  // Check if there's any data
+  let hasData = false;
+  responses.forEach(r => {
+    const v = r.answers?.[q.name];
+    if (v && typeof v === "object") hasData = true;
+  });
+  if (!hasData) return null;
+
+  const panel = document.createElement("div");
+  panel.className = "panel";
+  panel.style.gridColumn = "span 2"; // matrix charts are wider
+
+  let html = `<div class="panel-hdr">${q.title || q.name}</div><div class="panel-body">`;
+
+  Object.entries(rows).forEach(([rowVal, rowLabel]) => {
+    const counts = {};
+    let total = 0;
+    responses.forEach(r => {
+      const v = r.answers?.[q.name];
+      if (!v || typeof v !== "object") return;
+      const cell = v[rowVal];
+      if (cell == null || cell === "") return;
+      const lbl = cols[cell] || cell;
+      counts[lbl] = (counts[lbl] || 0) + 1;
+      total++;
+    });
+    if (total === 0) return;
+
+    html += `<div style="margin:0.6rem 0 0.2rem;font-weight:600;font-size:9pt;color:#333;">${rowLabel}</div>`;
+    // Use column order
+    colOrder.forEach(colVal => {
+      const lbl = cols[colVal] || colVal;
+      const cnt = counts[lbl] || 0;
+      if (cnt === 0) return;
+      html += `
+        <div class="bar-item">
+          <div class="bar-lbl" title="${lbl}">${lbl}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${Math.round(cnt/total*100)}%"></div></div>
+          <div class="bar-count">${cnt} (${Math.round(cnt/total*100)}%)</div>
+        </div>`;
+    });
   });
 
-  wrap.appendChild(grid);
+  html += `</div>`;
+  panel.innerHTML = html;
+  return panel;
 }
 
 // ── Response table ────────────────────────────────────────────────────────────

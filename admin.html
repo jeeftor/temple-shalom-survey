@@ -127,6 +127,62 @@
     .bar-item .bar-fill  { background: var(--blue); border-radius: 4px; height: 100%; transition: width 0.4s; }
     .bar-item .bar-count { width: 50px; text-align: right; color: #555; flex-shrink: 0; }
 
+    /* Data explorer */
+    .explorer-bar {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      padding: 1rem;
+    }
+    .explorer-field { display: flex; flex-direction: column; gap: 0.2rem; }
+    .explorer-field label { font-size: 8pt; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+    .explorer-field select {
+      padding: 0.4rem 0.6rem;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 10pt;
+      background: white;
+      color: var(--text);
+      min-width: 200px;
+      max-width: 300px;
+    }
+    .explorer-field select:focus { border-color: var(--blue); outline: none; }
+    .explorer-clear {
+      padding: 0.4rem 0.8rem;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      background: white;
+      cursor: pointer;
+      font-size: 10pt;
+      color: #666;
+    }
+    .explorer-clear:hover { background: var(--blue-pale); border-color: var(--blue); }
+    .explorer-result { padding: 0 1rem 1rem; }
+    .explorer-empty { color: #888; font-size: 10pt; padding: 2rem; text-align: center; }
+    .explorer-subtitle { font-size: 9pt; color: #888; margin-bottom: 0.5rem; }
+    .explorer-crosstab-note {
+      background: var(--blue-pale);
+      border-left: 3px solid var(--blue);
+      padding: 0.4rem 0.6rem;
+      margin-bottom: 0.75rem;
+      font-size: 9pt;
+      color: var(--blue-dark);
+      border-radius: 0 4px 4px 0;
+    }
+    .comment-list { max-height: 400px; overflow-y: auto; }
+    .comment-item {
+      padding: 0.6rem 0.8rem;
+      margin: 0.3rem 0;
+      background: #f8f9fc;
+      border-left: 3px solid var(--blue-light);
+      border-radius: 0 4px 4px 0;
+      font-size: 10pt;
+      color: #333;
+      line-height: 1.4;
+    }
+    .comment-meta { font-size: 8pt; color: #999; margin-top: 0.2rem; }
+
     /* Responses table */
     .tbl-wrap { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
@@ -211,6 +267,29 @@
 
   <!-- Stats row -->
   <div class="stat-row" id="statRow"></div>
+
+  <!-- Data explorer -->
+  <div class="panel">
+    <div class="panel-hdr">Data Explorer</div>
+    <div class="explorer-bar">
+      <div class="explorer-field">
+        <label for="explorerQ">Question</label>
+        <select id="explorerQ" onchange="explorerUpdate()"></select>
+      </div>
+      <div class="explorer-field">
+        <label for="explorerFilterQ">Cross-tab filter (optional)</label>
+        <select id="explorerFilterQ" onchange="explorerUpdateFilter()"></select>
+      </div>
+      <div class="explorer-field" id="explorerFilterValWrap" style="display:none;">
+        <label for="explorerFilterVal">Filter value</label>
+        <select id="explorerFilterVal" onchange="explorerUpdate()"></select>
+      </div>
+      <button class="explorer-clear" onclick="explorerClear()">Clear</button>
+    </div>
+    <div class="explorer-result" id="explorerResult">
+      <div class="explorer-empty">Pick a question above to explore the data.</div>
+    </div>
+  </div>
 
   <!-- Aggregations -->
   <div id="charts"></div>
@@ -309,6 +388,7 @@ async function loadData(key) {
     document.getElementById("csvLink").download = "responses.csv";
 
     renderStats(displayResponses);
+    initExplorer();
     renderCharts(displayResponses);
     renderTable(displayResponses);
   } catch (e) {
@@ -383,6 +463,321 @@ function npsBar(vals) {
     <div class="seg passive" style="flex:${pa}"></div>
     <div class="seg promote" style="flex:${p}"></div>
   </div><div style="font-size:8pt;color:#888;margin-top:2px">${Math.round(d)}% detractors · ${Math.round(pa)}% passives · ${Math.round(p)}% promoters</div>`;
+}
+
+// ── Data Explorer ─────────────────────────────────────────────────────────────
+
+// Flatten all questions from surveyDef into a list with section info
+function getAllQuestions() {
+  if (!surveyDef) return [];
+  const qs = [];
+  surveyDef.pages.forEach((page, pageIdx) => {
+    (page.elements || []).forEach(q => {
+      qs.push({ ...q, sectionTitle: page.title || `Section ${pageIdx + 1}`, pageIdx });
+    });
+  });
+  return qs;
+}
+
+function findQuestion(name) {
+  return getAllQuestions().find(q => q.name === name);
+}
+
+// Populate the explorer dropdowns
+function initExplorer() {
+  const qSelect = document.getElementById("explorerQ");
+  const filterQSelect = document.getElementById("explorerFilterQ");
+  const qs = getAllQuestions();
+
+  // Group by section for the question dropdown
+  qSelect.innerHTML = '<option value="">— Pick a question —</option>';
+  let currentSection = "";
+  qs.forEach(q => {
+    if (q.sectionTitle !== currentSection) {
+      currentSection = q.sectionTitle;
+      const og = document.createElement("optgroup");
+      og.label = currentSection;
+      qSelect.appendChild(og);
+    }
+    const opt = document.createElement("option");
+    opt.value = q.name;
+    opt.textContent = (q.title || q.name).slice(0, 70);
+    qSelect.lastChild.appendChild(opt); // append to last optgroup
+  });
+
+  // Filter dropdown: same questions (for cross-tab)
+  filterQSelect.innerHTML = '<option value="">— No filter —</option>';
+  currentSection = "";
+  qs.forEach(q => {
+    if (q.sectionTitle !== currentSection) {
+      currentSection = q.sectionTitle;
+      const og = document.createElement("optgroup");
+      og.label = currentSection;
+      filterQSelect.appendChild(og);
+    }
+    const opt = document.createElement("option");
+    opt.value = q.name;
+    opt.textContent = (q.title || q.name).slice(0, 70);
+    filterQSelect.lastChild.appendChild(opt);
+  });
+}
+
+// When the filter question changes, populate the filter value dropdown
+function explorerUpdateFilter() {
+  const filterQName = document.getElementById("explorerFilterQ").value;
+  const valWrap = document.getElementById("explorerFilterValWrap");
+  const valSelect = document.getElementById("explorerFilterVal");
+
+  if (!filterQName) {
+    valWrap.style.display = "none";
+    explorerUpdate();
+    return;
+  }
+
+  const q = findQuestion(filterQName);
+  if (!q) { valWrap.style.display = "none"; return; }
+
+  valWrap.style.display = "flex";
+
+  // Get unique values from responses for this question
+  const displayResponses = latestOnly ? getLatestPerPerson(allResponses) : allResponses;
+  const labels = choiceMap(q);
+  const { rows, cols } = q.type === "matrix" ? matrixLookups(q) : { rows: null, cols: null };
+
+  let uniqueVals = new Set();
+  displayResponses.forEach(r => {
+    const v = r.answers?.[q.name];
+    if (v == null || v === "") return;
+    if (q.type === "checkbox") {
+      (Array.isArray(v) ? v : [v]).forEach(x => uniqueVals.add(x));
+    } else if (q.type === "matrix") {
+      if (typeof v === "object") {
+        Object.entries(v).forEach(([rowVal, colVal]) => {
+          if (colVal) uniqueVals.add(`${rowVal}=${colVal}`);
+        });
+      }
+    } else {
+      uniqueVals.add(v);
+    }
+  });
+
+  valSelect.innerHTML = '<option value="">— Any —</option>';
+  [...uniqueVals].sort().forEach(val => {
+    let label;
+    if (q.type === "matrix") {
+      const [rv, cv] = val.split("=");
+      label = `${rows[rv] || rv} → ${cols[cv] || cv}`;
+    } else {
+      label = labels[val] || val;
+    }
+    const opt = document.createElement("option");
+    opt.value = val;
+    opt.textContent = label;
+    valSelect.appendChild(opt);
+  });
+
+  explorerUpdate();
+}
+
+// Main explorer render
+function explorerUpdate() {
+  const qName = document.getElementById("explorerQ").value;
+  const result = document.getElementById("explorerResult");
+
+  if (!qName) {
+    result.innerHTML = '<div class="explorer-empty">Pick a question above to explore the data.</div>';
+    return;
+  }
+
+  const q = findQuestion(qName);
+  if (!q) return;
+
+  // Get filtered responses
+  let displayResponses = latestOnly ? getLatestPerPerson(allResponses) : allResponses;
+
+  // Apply cross-tab filter
+  const filterQName = document.getElementById("explorerFilterQ").value;
+  const filterVal = document.getElementById("explorerFilterVal").value;
+  let filterNote = "";
+
+  if (filterQName && filterVal) {
+    const filterQ = findQuestion(filterQName);
+    if (filterQ) {
+      const before = displayResponses.length;
+      displayResponses = displayResponses.filter(r => {
+        const v = r.answers?.[filterQName];
+        if (v == null || v === "") return false;
+        if (filterQ.type === "checkbox") {
+          return (Array.isArray(v) ? v : [v]).includes(filterVal);
+        } else if (filterQ.type === "matrix") {
+          if (typeof v !== "object") return false;
+          const [rv, cv] = filterVal.split("=");
+          return v[rv] === cv;
+        }
+        return v === filterVal;
+      });
+      const filterLabels = choiceMap(filterQ);
+      const { rows: fRows, cols: fCols } = filterQ.type === "matrix" ? matrixLookups(filterQ) : { rows: null, cols: null };
+      let valLabel;
+      if (filterQ.type === "matrix") {
+        const [rv, cv] = filterVal.split("=");
+        valLabel = `${fRows[rv] || rv} → ${fCols[cv] || cv}`;
+      } else {
+        valLabel = filterLabels[filterVal] || filterVal;
+      }
+      filterNote = `Filtered to ${filterQ.title || filterQ.name} = "${valLabel}" — ${displayResponses.length} of ${before} responses`;
+    }
+  }
+
+  if (!displayResponses.length) {
+    result.innerHTML = `<div class="explorer-empty">No responses match this filter.</div>`;
+    return;
+  }
+
+  let html = "";
+
+  if (filterNote) {
+    html += `<div class="explorer-crosstab-note">${filterNote}</div>`;
+  }
+
+  html += `<div class="explorer-subtitle">${displayResponses.length} response${displayResponses.length !== 1 ? "s" : ""}</div>`;
+
+  // Render based on question type
+  if (q.type === "radiogroup" || q.type === "checkbox") {
+    html += renderChoiceChartHTML(q, displayResponses);
+  } else if (q.type === "rating") {
+    html += renderRatingChartHTML(q, displayResponses);
+  } else if (q.type === "matrix") {
+    html += renderMatrixChartHTML(q, displayResponses);
+  } else if (q.type === "comment" || q.type === "text") {
+    html += renderCommentList(q, displayResponses);
+  }
+
+  result.innerHTML = html;
+}
+
+// HTML-returning versions of the chart functions (for the explorer)
+function renderChoiceChartHTML(q, responses) {
+  const labels = choiceMap(q);
+  const counts = {};
+  responses.forEach(r => {
+    const v = r.answers?.[q.name];
+    if (v == null || v === "") return;
+    const vals = Array.isArray(v) ? v : [v];
+    vals.forEach(x => {
+      const lbl = labels[x] || x;
+      counts[lbl] = (counts[lbl] || 0) + 1;
+    });
+  });
+  if (!Object.keys(counts).length) return '<div class="explorer-empty">No data for this question.</div>';
+
+  let sorted;
+  if (q.choices && q.choices.length) {
+    sorted = q.choices.map(c => [c.text || c.value, counts[c.text || c.value] || 0]).filter(([, c]) => c > 0);
+  } else {
+    sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  }
+
+  return `<div class="panel-body">
+    ${sorted.map(([lbl, cnt]) => `
+      <div class="bar-item">
+        <div class="bar-lbl" title="${lbl}">${lbl}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${Math.round(cnt/responses.length*100)}%"></div></div>
+        <div class="bar-count">${cnt} (${Math.round(cnt/responses.length*100)}%)</div>
+      </div>`).join("")}
+  </div>`;
+}
+
+function renderRatingChartHTML(q, responses) {
+  const vals = responses.map(r => r.answers?.[q.name]).filter(v => v != null && v !== "");
+  if (!vals.length) return '<div class="explorer-empty">No data for this question.</div>';
+  const min = q.rateMin || 0;
+  const max = q.rateMax || 10;
+  const counts = {};
+  for (let i = min; i <= max; i++) counts[i] = 0;
+  vals.forEach(v => { counts[v] = (counts[v] || 0) + 1; });
+  const avg = (vals.reduce((s, v) => s + v, 0) / vals.length).toFixed(1);
+
+  return `<div class="panel-body">
+    <div style="font-size:10pt;color:#666;margin-bottom:0.5rem;">Average: <strong>${avg}</strong> (${vals.length} responses)</div>
+    ${Object.entries(counts).map(([val, cnt]) => `
+      <div class="bar-item">
+        <div class="bar-lbl">${val}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${Math.round(cnt/vals.length*100)}%"></div></div>
+        <div class="bar-count">${cnt} (${Math.round(cnt/vals.length*100)}%)</div>
+      </div>`).join("")}
+  </div>`;
+}
+
+function renderMatrixChartHTML(q, responses) {
+  const { rows, cols, colOrder } = matrixLookups(q);
+  let hasData = false;
+  responses.forEach(r => {
+    const v = r.answers?.[q.name];
+    if (v && typeof v === "object") hasData = true;
+  });
+  if (!hasData) return '<div class="explorer-empty">No data for this question.</div>';
+
+  let html = '<div class="panel-body">';
+  Object.entries(rows).forEach(([rowVal, rowLabel]) => {
+    const counts = {};
+    let total = 0;
+    responses.forEach(r => {
+      const v = r.answers?.[q.name];
+      if (!v || typeof v !== "object") return;
+      const cell = v[rowVal];
+      if (cell == null || cell === "") return;
+      const lbl = cols[cell] || cell;
+      counts[lbl] = (counts[lbl] || 0) + 1;
+      total++;
+    });
+    if (total === 0) return;
+    html += `<div style="margin:0.6rem 0 0.2rem;font-weight:600;font-size:9pt;color:#333;">${rowLabel}</div>`;
+    colOrder.forEach(colVal => {
+      const lbl = cols[colVal] || colVal;
+      const cnt = counts[lbl] || 0;
+      if (cnt === 0) return;
+      html += `
+        <div class="bar-item">
+          <div class="bar-lbl" title="${lbl}">${lbl}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${Math.round(cnt/total*100)}%"></div></div>
+          <div class="bar-count">${cnt} (${Math.round(cnt/total*100)}%)</div>
+        </div>`;
+    });
+  });
+  html += '</div>';
+  return html;
+}
+
+function renderCommentList(q, responses) {
+  const answers = responses
+    .map(r => ({ text: r.answers?.[q.name], date: r.timestamp, sub: r.submission_number }))
+    .filter(a => a.text && a.text.trim())
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  if (!answers.length) return '<div class="explorer-empty">No text answers for this question.</div>';
+
+  return `<div class="explorer-subtitle">${answers.length} answer${answers.length !== 1 ? "s" : ""}</div>
+    <div class="comment-list">
+      ${answers.map(a => `
+        <div class="comment-item">
+          ${escapeHtml(a.text)}
+          <div class="comment-meta">${new Date(a.date).toLocaleDateString()}${a.sub > 1 ? " · resubmission #" + a.sub : ""}</div>
+        </div>`).join("")}
+    </div>`;
+}
+
+function escapeHtml(s) {
+  const div = document.createElement("div");
+  div.textContent = s;
+  return div.innerHTML;
+}
+
+function explorerClear() {
+  document.getElementById("explorerQ").value = "";
+  document.getElementById("explorerFilterQ").value = "";
+  document.getElementById("explorerFilterValWrap").style.display = "none";
+  document.getElementById("explorerResult").innerHTML = '<div class="explorer-empty">Pick a question above to explore the data.</div>';
 }
 
 // ── Aggregate charts (auto-discovered from survey.json) ──────────────────────

@@ -6,6 +6,11 @@ ALTER TABLE responses ADD COLUMN cf_ray           TEXT;
 ALTER TABLE responses ADD COLUMN completion_seconds INTEGER;
 ALTER TABLE responses ADD COLUMN sections_answered TEXT;
 
+-- Re-submission linking metadata
+ALTER TABLE responses ADD COLUMN submission_number   INTEGER DEFAULT 1;
+ALTER TABLE responses ADD COLUMN previous_response_id TEXT;
+ALTER TABLE responses ADD COLUMN referrer            TEXT;
+
 -- Backfill response_id for any existing rows
 UPDATE responses SET response_id = hex(randomblob(16)) WHERE response_id IS NULL;
 

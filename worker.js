@@ -79,20 +79,38 @@ async function handleSubmit(request, env) {
   const sectionsAnswered   = body._sections_answered
     ? JSON.stringify(body._sections_answered) : null;
   const userAgent          = body._userAgent          || null;
+  const referrer           = body._referrer           || null;
 
   const payload = JSON.stringify(body);
+
+  // ── Re-submission linking: find prior submissions from this session ──────
+  let submissionNumber   = 1;
+  let previousResponseId = null;
+  if (sessionId) {
+    const prior = await env.DB.prepare(
+      `SELECT response_id FROM responses
+       WHERE session_id = ? ORDER BY id DESC LIMIT 1`
+    ).bind(sessionId).first();
+    if (prior) {
+      previousResponseId = prior.response_id;
+      const count = await env.DB.prepare(
+        `SELECT COUNT(*) as n FROM responses WHERE session_id = ?`
+      ).bind(sessionId).first();
+      submissionNumber = (count?.n || 0) + 1;
+    }
+  }
 
   try {
     await env.DB.prepare(`
       INSERT INTO responses
-        (response_id, timestamp, session_id, survey_version,
-         ip_country, cf_ray, completion_seconds, sections_answered,
-         user_agent, payload)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (response_id, timestamp, session_id, submission_number, previous_response_id,
+         survey_version, ip_country, cf_ray, completion_seconds, sections_answered,
+         user_agent, referrer, payload)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
-      responseId, timestamp, sessionId, surveyVersion,
-      ipCountry, cfRay, completionSeconds, sectionsAnswered,
-      userAgent, payload
+      responseId, timestamp, sessionId, submissionNumber, previousResponseId,
+      surveyVersion, ipCountry, cfRay, completionSeconds, sectionsAnswered,
+      userAgent, referrer, payload
     ).run();
 
     // ── Dual-write to Google Sheets (best-effort, non-blocking) ────────────
@@ -100,16 +118,19 @@ async function handleSubmit(request, env) {
     if (env.GS_WEBHOOK_URL && env.GS_WEBHOOK_TOKEN) {
       const sheetPayload = {
         ...body,
-        webhook_token:      env.GS_WEBHOOK_TOKEN,
-        response_id:        responseId,
-        timestamp:          timestamp,
-        session_id:         sessionId,
-        survey_version:     surveyVersion,
-        ip_country:         ipCountry,
-        cf_ray:             cfRay,
-        completion_seconds: completionSeconds,
-        sections_answered:  body._sections_answered || null,
-        user_agent:         userAgent,
+        webhook_token:        env.GS_WEBHOOK_TOKEN,
+        response_id:          responseId,
+        timestamp:            timestamp,
+        session_id:           sessionId,
+        submission_number:    submissionNumber,
+        previous_response_id: previousResponseId,
+        survey_version:       surveyVersion,
+        ip_country:           ipCountry,
+        cf_ray:               cfRay,
+        completion_seconds:   completionSeconds,
+        sections_answered:    body._sections_answered || null,
+        user_agent:           userAgent,
+        referrer:             referrer,
       };
       // Remove underscore-prefixed client metadata (already mapped above)
       for (const k of Object.keys(sheetPayload)) {
@@ -117,14 +138,33 @@ async function handleSubmit(request, env) {
       }
 
       try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
+        // Apps Script returns a 302 redirect after POST; fetch() follows it
+        // but converts POST→GET, landing on a "Page Not Found" HTML page.
+        // Use redirect:"manual" and follow the Location header ourselves.
         const gsResponse = await fetch(env.GS_WEBHOOK_URL, {
           method:  "POST",
           headers: { "Content-Type": "application/json" },
           body:    JSON.stringify(sheetPayload),
+          redirect: "manual",
+          signal:  controller.signal,
         });
-        const gsResult = await gsResponse.json();
-        if (!gsResponse.ok || !gsResult.success) {
-          throw new Error(gsResult.error || `HTTP ${gsResponse.status}`);
+        clearTimeout(timeout);
+
+        let finalResponse = gsResponse;
+        if (gsResponse.status === 302) {
+          const redirectUrl = gsResponse.headers.get("location");
+          if (redirectUrl) {
+            finalResponse = await fetch(redirectUrl, {
+              signal: controller.signal,
+            });
+          }
+        }
+
+        const gsResult = await finalResponse.json();
+        if (!finalResponse.ok || !gsResult.success) {
+          throw new Error(gsResult.error || `HTTP ${finalResponse.status}`);
         }
       } catch (gsErr) {
         // Sheets write failed — log but don't fail the submission
@@ -152,8 +192,8 @@ async function handleExport(request, env) {
   }
 
   const rows = await env.DB.prepare(`
-    SELECT id, response_id, timestamp, session_id, survey_version,
-           ip_country, completion_seconds, sections_answered, payload
+    SELECT id, response_id, timestamp, session_id, submission_number, previous_response_id,
+           survey_version, ip_country, completion_seconds, sections_answered, referrer, payload
     FROM responses ORDER BY id
   `).all();
 
@@ -174,7 +214,9 @@ async function handleExport(request, env) {
   const qKeys   = [...keySet].sort();
   const headers = [
     "id", "response_id", "timestamp", "session_id",
+    "submission_number", "previous_response_id",
     "survey_version", "ip_country", "completion_seconds", "sections_answered",
+    "referrer",
     ...qKeys
   ];
 
@@ -185,10 +227,13 @@ async function handleExport(request, env) {
       meta.response_id   || "",
       meta.timestamp     || "",
       meta.session_id    || "",
+      meta.submission_number || "",
+      meta.previous_response_id || "",
       meta.survey_version    || "",
       meta.ip_country        || "",
       meta.completion_seconds ?? "",
       meta.sections_answered || "",
+      meta.referrer          || "",
       ...qKeys.map(k => {
         const v = data[k];
         if (v == null) return "";
@@ -215,8 +260,8 @@ async function handleResults(request, env) {
   }
 
   const rows = await env.DB.prepare(`
-    SELECT id, response_id, timestamp, session_id, survey_version,
-           ip_country, completion_seconds, sections_answered, payload
+    SELECT id, response_id, timestamp, session_id, submission_number, previous_response_id,
+           survey_version, ip_country, completion_seconds, sections_answered, referrer, payload
     FROM responses ORDER BY id DESC
   `).all();
 
@@ -225,10 +270,13 @@ async function handleResults(request, env) {
     response_id:        row.response_id,
     timestamp:          row.timestamp,
     session_id:         row.session_id,
+    submission_number:  row.submission_number,
+    previous_response_id: row.previous_response_id,
     survey_version:     row.survey_version,
     ip_country:         row.ip_country,
     completion_seconds: row.completion_seconds,
     sections_answered:  row.sections_answered ? JSON.parse(row.sections_answered) : null,
+    referrer:           row.referrer,
     answers:            (() => {
       const d = JSON.parse(row.payload || "{}");
       return Object.fromEntries(Object.entries(d).filter(([k]) => !k.startsWith("_") && k !== "timestamp"));

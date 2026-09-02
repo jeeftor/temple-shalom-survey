@@ -225,6 +225,10 @@
       <div class="toolbar">
         <input type="text" id="searchBox" placeholder="Search responses…" oninput="filterTable()" />
         <button class="btn-outline" onclick="clearSearch()">Clear</button>
+        <label style="margin-left:auto;font-size:10pt;display:flex;align-items:center;gap:0.3rem;cursor:pointer;">
+          <input type="checkbox" id="latestOnly" checked onchange="toggleLatestOnly()" />
+          Latest per person only
+        </label>
       </div>
       <div class="tbl-wrap">
         <table id="respTable">
@@ -233,6 +237,7 @@
               <th>#</th>
               <th>Date</th>
               <th>Country</th>
+              <th>Sub</th>
               <th>Time (min)</th>
               <th>Sections</th>
               <th>NPS</th>
@@ -251,6 +256,7 @@
 const WORKER = "https://temple-shalom-survey.jeffstein.workers.dev";
 let allResponses = [];
 let exportKey    = "";
+let latestOnly   = true;
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
 
@@ -287,35 +293,64 @@ async function loadData(key) {
 
     document.getElementById("authScreen").style.display = "none";
     document.getElementById("dashboard").style.display  = "block";
+
+    latestOnly = document.getElementById("latestOnly").checked;
+    const displayResponses = latestOnly ? getLatestPerPerson(allResponses) : allResponses;
+    const uniqueCount = new Set(allResponses.map(x => x.session_id).filter(Boolean)).size;
+
     document.getElementById("hdrSub").textContent =
-      `${allResponses.length} response${allResponses.length !== 1 ? "s" : ""} · as of ${new Date().toLocaleString()}`;
+      `${uniqueCount} respondent${uniqueCount !== 1 ? "s" : ""} · ${allResponses.length} total submission${allResponses.length !== 1 ? "s" : ""} · as of ${new Date().toLocaleString()}`;
 
     document.getElementById("csvLink").href =
       `${WORKER}/export?key=${encodeURIComponent(key)}`;
     document.getElementById("csvLink").download = "responses.csv";
 
-    renderStats();
-    renderCharts();
-    renderTable(allResponses);
+    renderStats(displayResponses);
+    renderCharts(displayResponses);
+    renderTable(displayResponses);
   } catch (e) {
     document.getElementById("authError").textContent = "Error: " + e.message;
   }
 }
 
+// ── Helpers: latest per person ────────────────────────────────────────────────
+
+function getLatestPerPerson(responses) {
+  const bySession = new Map();
+  for (const r of responses) {
+    const key = r.session_id || r.response_id; // fallback to response_id if no session
+    const existing = bySession.get(key);
+    if (!existing || new Date(r.timestamp) > new Date(existing.timestamp)) {
+      bySession.set(key, r);
+    }
+  }
+  return [...bySession.values()];
+}
+
+function toggleLatestOnly() {
+  latestOnly = document.getElementById("latestOnly").checked;
+  const displayResponses = latestOnly ? getLatestPerPerson(allResponses) : allResponses;
+  renderStats(displayResponses);
+  renderCharts(displayResponses);
+  renderTable(displayResponses);
+}
+
 // ── Stats cards ───────────────────────────────────────────────────────────────
 
-function renderStats() {
-  const r = allResponses;
+function renderStats(responses) {
+  const r = responses;
   const npsVals = r.map(x => x.answers?.q_nps).filter(v => v != null);
   const nps = calcNPS(npsVals);
   const avgMin = r.filter(x => x.completion_seconds)
     .reduce((s, x, _, a) => s + x.completion_seconds / a.length, 0) / 60;
+  const uniqueCount = new Set(allResponses.map(x => x.session_id).filter(Boolean)).size;
+  const resubmits = allResponses.filter(x => (x.submission_number || 1) > 1).length;
 
   const cards = [
-    { val: r.length,                           lbl: "Total Responses" },
+    { val: r.length,                           lbl: latestOnly ? "Unique Respondents" : "Total Responses" },
     { val: nps != null ? nps : "—",           lbl: "NPS Score",       extra: npsBar(npsVals) },
     { val: avgMin ? avgMin.toFixed(1) + "m" : "—", lbl: "Avg Completion" },
-    { val: new Set(r.map(x => x.ip_country).filter(Boolean)).size, lbl: "Countries" },
+    { val: resubmits,                          lbl: "Re-submissions" },
   ];
 
   document.getElementById("statRow").innerHTML = cards.map(c => `
@@ -359,7 +394,7 @@ const CHART_QUESTIONS = [
   { key: "q23_comm_channels",      label: "Preferred Communication Channels" },
 ];
 
-function renderCharts() {
+function renderCharts(responses) {
   const wrap = document.getElementById("charts");
   wrap.innerHTML = "";
 
@@ -369,7 +404,7 @@ function renderCharts() {
 
   CHART_QUESTIONS.forEach(q => {
     const counts = {};
-    allResponses.forEach(r => {
+    responses.forEach(r => {
       const v = r.answers?.[q.key];
       if (v == null || v === "") return;
       const vals = Array.isArray(v) ? v : [v];
@@ -377,7 +412,7 @@ function renderCharts() {
     });
 
     if (!Object.keys(counts).length) return;
-    const total = allResponses.length;
+    const total = responses.length;
     const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
 
     const panel = document.createElement("div");
@@ -404,7 +439,7 @@ function renderTable(rows) {
   const tbody = document.getElementById("respBody");
   tbody.innerHTML = "";
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="7" class="empty">No responses yet.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="empty">No responses yet.</td></tr>`;
     return;
   }
 
@@ -414,12 +449,17 @@ function renderTable(rows) {
     const secs    = Array.isArray(r.sections_answered) ? r.sections_answered.length : "—";
     const nps     = r.answers?.q_nps ?? "—";
     const country = r.ip_country || "—";
+    const subNum  = r.submission_number || 1;
+    const subBadge = subNum > 1
+      ? `<span class="badge" style="background:#fff3cd;color:#856404;border:1px solid #ffc107;">#${subNum}</span>`
+      : `<span style="color:#aaa;">1</span>`;
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td style="color:#888">${r.id}</td>
       <td>${date}</td>
       <td><span class="badge badge-us">${country}</span></td>
+      <td>${subBadge}</td>
       <td>${mins}</td>
       <td>${secs}</td>
       <td>${nps !== "—" ? nps + "/10" : "—"}</td>
@@ -435,8 +475,19 @@ function renderTable(rows) {
 
     const answers = r.answers || {};
     const pairs = Object.entries(answers);
-    det.innerHTML = `<td colspan="7">
+    const meta = [
+      ["session_id", r.session_id],
+      ["submission_number", r.submission_number],
+      ["previous_response_id", r.previous_response_id],
+      ["referrer", r.referrer],
+      ["survey_version", r.survey_version],
+    ].filter(([_, v]) => v);
+
+    det.innerHTML = `<td colspan="8">
       <div class="detail-grid">
+        ${meta.length ? meta.map(([k, v]) => `
+          <div><span class="dk">${k}</span><br/><span class="dv" style="font-size:8pt;color:#666;">${v}</span></div>
+        `).join("") : ""}
         ${pairs.length ? pairs.map(([k, v]) => `
           <div><span class="dk">${k}</span><br/><span class="dv">${Array.isArray(v) ? v.join(", ") : v}</span></div>
         `).join("") : "<em>No answers recorded.</em>"}
@@ -456,8 +507,9 @@ function toggleDetail(btn) {
 
 function filterTable() {
   const q = document.getElementById("searchBox").value.toLowerCase();
-  if (!q) { renderTable(allResponses); return; }
-  const filtered = allResponses.filter(r =>
+  const base = latestOnly ? getLatestPerPerson(allResponses) : allResponses;
+  if (!q) { renderTable(base); return; }
+  const filtered = base.filter(r =>
     JSON.stringify(r).toLowerCase().includes(q)
   );
   renderTable(filtered);
@@ -465,7 +517,8 @@ function filterTable() {
 
 function clearSearch() {
   document.getElementById("searchBox").value = "";
-  renderTable(allResponses);
+  const base = latestOnly ? getLatestPerPerson(allResponses) : allResponses;
+  renderTable(base);
 }
 </script>
 </body>

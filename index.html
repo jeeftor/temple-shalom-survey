@@ -604,18 +604,42 @@
   const DRAFT_KEY = "ts_survey_draft_2026";
   const DRAFT_TTL_MS = 30 * 24 * 60 * 60 * 1000;
   const alreadySubmitted = Boolean(localStorage.getItem(SUBMITTED_KEY));
-  if (alreadySubmitted) {
+  let allowResubmit = false;
+
+  function showAlreadySubmittedNotice() {
     document.getElementById("surveyContainer").innerHTML = `
       <div style="max-width:600px;margin:4rem auto;padding:2rem;text-align:center;
                   background:#f0faf0;border:2px solid #a5d6a7;border-radius:8px;">
         <h2 style="color:#2e7d32">You've already submitted this survey</h2>
         <p style="margin-top:1rem;color:#444">
           Thank you! Your response has been recorded.<br>
-          If you believe this is an error, please contact the Temple office.
+          If your answers have changed or you'd like to submit again, click below.
         </p>
+        <button id="resubmitBtn" style="margin-top:1.5rem;background:var(--blue);color:white;
+                border:none;padding:0.6rem 2rem;border-radius:6px;font-size:11pt;
+                cursor:pointer;font-weight:bold;">
+          Submit again
+        </button>
       </div>`;
     document.getElementById("skipBtn").style.display = "none";
     document.getElementById("versionFooter").style.display = "none";
+    document.getElementById("resubmitBtn").addEventListener("click", () => {
+      allowResubmit = true;
+      document.getElementById("surveyContainer").innerHTML = "";
+      document.getElementById("skipBtn").style.display = "";
+      document.getElementById("versionFooter").style.display = "";
+      fetch("survey.json")
+        .then(r => r.json())
+        .then(initSurvey)
+        .catch(err => {
+          document.getElementById("surveyContainer").innerHTML =
+            `<p style="color:red;padding:1rem">Failed to load survey: ${err.message}</p>`;
+        });
+    });
+  }
+
+  if (alreadySubmitted) {
+    showAlreadySubmittedNotice();
   }
 
   // Track survey start time for completion_seconds
@@ -892,6 +916,7 @@
       _userAgent:           navigator.userAgent,
       _completion_seconds:  Math.round((Date.now() - surveyStartTime) / 1000),
       _sections_answered:   sectionsAnswered,
+      _referrer:            document.referrer || null,
       ...sender.data
     };
 
@@ -910,7 +935,9 @@
           statusEl.className = "success";
           statusEl.textContent = result.error === "duplicate"
             ? "It looks like we already received your response — thank you!"
-            : "Your response has been saved. Thank you for completing the survey!";
+            : alreadySubmitted
+              ? "Your updated response has been saved. Thank you for completing the survey again!"
+              : "Your response has been saved. Thank you for completing the survey!";
           completedPages.add(lastPage);
           updateNav(lastPage + 1);
         } else {

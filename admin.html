@@ -161,6 +161,17 @@
     .pie-legend-item { display: flex; align-items: center; gap: 0.3rem; margin: 0.2rem 0; }
     .pie-legend-swatch { width: 12px; height: 12px; border-radius: 2px; flex-shrink: 0; }
 
+    /* Matrix pie grid */
+    .matrix-pie-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
+    .matrix-pie-cell { background: #f8f9fc; border: 1px solid var(--border); border-radius: var(--radius); padding: 0.6rem; }
+    .matrix-pie-title { font-size: 9pt; font-weight: 600; color: #333; margin-bottom: 0.4rem; }
+    .matrix-pie-count { font-weight: 400; color: #999; font-size: 8pt; }
+    .matrix-pie-cell .pie-wrap { gap: 0.5rem; }
+    .matrix-pie-cell .pie-svg { width: 100px; height: 100px; }
+    .matrix-pie-cell .pie-legend { font-size: 8pt; }
+    .matrix-pie-cell .bar-item { font-size: 9pt; }
+    .matrix-pie-cell .bar-lbl { width: 110px; }
+
     /* Matrix sentiment colors */
     .bar-fill.sent-1 { background: #c62828; }  /* very negative - red */
     .bar-fill.sent-2 { background: #ef6c00; }  /* negative - orange */
@@ -574,6 +585,37 @@ function getAllQuestions() {
   return qs;
 }
 
+// Expand matrix questions into individual row "sub-questions" for the explorer
+function getAllExplorerQuestions() {
+  if (!surveyDef) return [];
+  const qs = [];
+  surveyDef.pages.forEach((page, pageIdx) => {
+    const sectionTitle = page.title || `Section ${pageIdx + 1}`;
+    (page.elements || []).forEach(q => {
+      if (q.type === "matrix" && q.rows) {
+        q.rows.forEach(row => {
+          const rowVal = row.value || row;
+          const rowLabel = row.text || row.value || row;
+          qs.push({
+            ...q,
+            name: q.name + "|" + rowVal,
+            title: rowLabel,
+            type: "radiogroup",
+            choices: q.columns || [],
+            sectionTitle,
+            pageIdx,
+            _matrixParent: q.name,
+            _matrixRow: rowVal,
+          });
+        });
+      } else {
+        qs.push({ ...q, sectionTitle, pageIdx });
+      }
+    });
+  });
+  return qs;
+}
+
 function findQuestion(name) {
   return getAllQuestions().find(q => q.name === name);
 }
@@ -583,7 +625,7 @@ function initExplorer() {
   buildQNumberMap();
   const qSelect = document.getElementById("explorerQ");
   const filterQSelect = document.getElementById("explorerFilterQ");
-  const qs = getAllQuestions();
+  const qs = getAllExplorerQuestions();
 
   // Group by section for the question dropdown
   qSelect.innerHTML = '<option value="">— Pick a question —</option>';
@@ -597,8 +639,9 @@ function initExplorer() {
     }
     const opt = document.createElement("option");
     opt.value = q.name;
-    opt.textContent = (q.title || q.name).slice(0, 70);
-    qSelect.lastChild.appendChild(opt); // append to last optgroup
+    const num = q._matrixParent ? qRowNum(q._matrixParent, q._matrixRow) : qNum(q.name);
+    opt.textContent = `${num} · ${(q.title || q.name).slice(0, 65)}`;
+    qSelect.lastChild.appendChild(opt);
   });
 
   // Filter dropdown: same questions (for cross-tab)
@@ -613,7 +656,8 @@ function initExplorer() {
     }
     const opt = document.createElement("option");
     opt.value = q.name;
-    opt.textContent = (q.title || q.name).slice(0, 70);
+    const num = q._matrixParent ? qRowNum(q._matrixParent, q._matrixRow) : qNum(q.name);
+    opt.textContent = `${num} · ${(q.title || q.name).slice(0, 65)}`;
     filterQSelect.lastChild.appendChild(opt);
   });
 }
@@ -630,7 +674,17 @@ function explorerUpdateFilter() {
     return;
   }
 
-  const q = findQuestion(filterQName);
+  // Handle matrix row sub-questions
+  let q;
+  if (filterQName.includes("|")) {
+    const [fpName, fRowVal] = filterQName.split("|");
+    const fp = findQuestion(fpName);
+    if (!fp) { valWrap.style.display = "none"; return; }
+    const fRow = (fp.rows || []).find(r => (r.value || r) === fRowVal);
+    q = { ...fp, name: filterQName, type: "radiogroup", choices: fp.columns || [], _matrixParent: fpName, _matrixRow: fRowVal, title: fRow ? (fRow.text || fRowVal) : fRowVal };
+  } else {
+    q = findQuestion(filterQName);
+  }
   if (!q) { valWrap.style.display = "none"; return; }
 
   valWrap.style.display = "flex";
@@ -638,20 +692,19 @@ function explorerUpdateFilter() {
   // Get unique values from responses for this question
   const displayResponses = latestOnly ? getLatestPerPerson(allResponses) : allResponses;
   const labels = choiceMap(q);
-  const { rows, cols } = q.type === "matrix" ? matrixLookups(q) : { rows: null, cols: null };
 
   let uniqueVals = new Set();
   displayResponses.forEach(r => {
-    const v = r.answers?.[q.name];
+    let v;
+    if (q._matrixParent && q._matrixRow) {
+      const ma = r.answers?.[q._matrixParent];
+      v = ma && typeof ma === "object" ? ma[q._matrixRow] : null;
+    } else {
+      v = r.answers?.[q.name];
+    }
     if (v == null || v === "") return;
     if (q.type === "checkbox") {
       (Array.isArray(v) ? v : [v]).forEach(x => uniqueVals.add(x));
-    } else if (q.type === "matrix") {
-      if (typeof v === "object") {
-        Object.entries(v).forEach(([rowVal, colVal]) => {
-          if (colVal) uniqueVals.add(`${rowVal}=${colVal}`);
-        });
-      }
     } else {
       uniqueVals.add(v);
     }
@@ -659,13 +712,7 @@ function explorerUpdateFilter() {
 
   valSelect.innerHTML = '<option value="">— Any —</option>';
   [...uniqueVals].sort().forEach(val => {
-    let label;
-    if (q.type === "matrix") {
-      const [rv, cv] = val.split("=");
-      label = `${rows[rv] || rv} → ${cols[cv] || cv}`;
-    } else {
-      label = labels[val] || val;
-    }
+    const label = labels[val] || val;
     const opt = document.createElement("option");
     opt.value = val;
     opt.textContent = label;
@@ -685,8 +732,27 @@ function explorerUpdate() {
     return;
   }
 
-  const q = findQuestion(qName);
-  if (!q) return;
+  // Handle matrix row sub-questions (name format: "qName|rowVal")
+  let q, matrixRowVal;
+  if (qName.includes("|")) {
+    const [parentName, rowVal] = qName.split("|");
+    const parent = findQuestion(parentName);
+    if (!parent) return;
+    const row = (parent.rows || []).find(r => (r.value || r) === rowVal);
+    q = {
+      ...parent,
+      name: qName,
+      title: row ? (row.text || row.value || rowVal) : rowVal,
+      type: "radiogroup",
+      choices: parent.columns || [],
+      _matrixParent: parentName,
+      _matrixRow: rowVal,
+    };
+    matrixRowVal = rowVal;
+  } else {
+    q = findQuestion(qName);
+    if (!q) return;
+  }
 
   // Get filtered responses
   let displayResponses = latestOnly ? getLatestPerPerson(allResponses) : allResponses;
@@ -697,30 +763,35 @@ function explorerUpdate() {
   let filterNote = "";
 
   if (filterQName && filterVal) {
-    const filterQ = findQuestion(filterQName);
+    let filterQ;
+    if (filterQName.includes("|")) {
+      const [fpName, fRowVal] = filterQName.split("|");
+      const fp = findQuestion(fpName);
+      if (fp) {
+        const fRow = (fp.rows || []).find(r => (r.value || r) === fRowVal);
+        filterQ = { ...fp, name: filterQName, type: "radiogroup", _matrixParent: fpName, _matrixRow: fRowVal, title: fRow ? (fRow.text || fRowVal) : fRowVal };
+      }
+    } else {
+      filterQ = findQuestion(filterQName);
+    }
     if (filterQ) {
       const before = displayResponses.length;
       displayResponses = displayResponses.filter(r => {
-        const v = r.answers?.[filterQName];
+        let v;
+        if (filterQ._matrixParent && filterQ._matrixRow) {
+          const ma = r.answers?.[filterQ._matrixParent];
+          v = ma && typeof ma === "object" ? ma[filterQ._matrixRow] : null;
+        } else {
+          v = r.answers?.[filterQName];
+        }
         if (v == null || v === "") return false;
         if (filterQ.type === "checkbox") {
           return (Array.isArray(v) ? v : [v]).includes(filterVal);
-        } else if (filterQ.type === "matrix") {
-          if (typeof v !== "object") return false;
-          const [rv, cv] = filterVal.split("=");
-          return v[rv] === cv;
         }
         return v === filterVal;
       });
       const filterLabels = choiceMap(filterQ);
-      const { rows: fRows, cols: fCols } = filterQ.type === "matrix" ? matrixLookups(filterQ) : { rows: null, cols: null };
-      let valLabel;
-      if (filterQ.type === "matrix") {
-        const [rv, cv] = filterVal.split("=");
-        valLabel = `${fRows[rv] || rv} → ${fCols[cv] || cv}`;
-      } else {
-        valLabel = filterLabels[filterVal] || filterVal;
-      }
+      const valLabel = filterLabels[filterVal] || filterVal;
       filterNote = `Filtered to ${filterQ.title || filterQ.name} = "${valLabel}" — ${displayResponses.length} of ${before} responses`;
     }
   }
@@ -760,7 +831,14 @@ function renderChoiceChartHTML(q, responses) {
   const counts = {};
   let answered = 0;
   responses.forEach(r => {
-    const v = r.answers?.[q.name];
+    let v;
+    if (q._matrixParent && q._matrixRow) {
+      // Matrix row sub-question: extract the row value from the matrix answer
+      const matrixAns = r.answers?.[q._matrixParent];
+      v = matrixAns && typeof matrixAns === "object" ? matrixAns[q._matrixRow] : null;
+    } else {
+      v = r.answers?.[q.name];
+    }
     if (v == null || v === "") return;
     const vals = Array.isArray(v) ? v : [v];
     vals.forEach(x => {
@@ -779,7 +857,7 @@ function renderChoiceChartHTML(q, responses) {
     sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
   }
 
-  const num = qNum(q.name);
+  const num = q._matrixParent ? qRowNum(q._matrixParent, q._matrixRow) : qNum(q.name);
   const chartType = chartTypeState["explorer_" + q.name] || "both";
   return `<div class="panel-body">
     <div class="response-rate">${num} · ${answered} of ${responses.length} answered (${Math.round(answered/responses.length*100)}%)</div>
@@ -961,17 +1039,29 @@ function matrixLookups(question) {
   return { rows, cols, colOrder: (question.columns || []).map(c => c.value) };
 }
 
-// Question number map (Q1, Q2, ...) based on order in survey.json
+// Question number map (Q1, Q2, ... and Q11.1, Q11.2 for matrix rows)
 let qNumberMap = {};
+let qRowNumberMap = {}; // "qName|rowVal" -> "Q11.1"
 function buildQNumberMap() {
   qNumberMap = {};
+  qRowNumberMap = {};
   if (!surveyDef) return;
   let n = 1;
   surveyDef.pages.forEach(page => {
-    (page.elements || []).forEach(q => { qNumberMap[q.name] = n++; });
+    (page.elements || []).forEach(q => {
+      qNumberMap[q.name] = n;
+      if (q.type === "matrix" && q.rows) {
+        q.rows.forEach((row, i) => {
+          const rowVal = row.value || row;
+          qRowNumberMap[q.name + "|" + rowVal] = `Q${n}.${i + 1}`;
+        });
+      }
+      n++;
+    });
   });
 }
 function qNum(name) { return qNumberMap[name] ? `Q${qNumberMap[name]}` : ""; }
+function qRowNum(qName, rowVal) { return qRowNumberMap[qName + "|" + rowVal] || ""; }
 
 // Sentiment color for matrix column values
 // Maps common column values to sentiment levels (1=very negative, 5=very positive, na=grey)
@@ -1193,12 +1283,21 @@ function renderMatrixChart(q, responses) {
   });
   if (!hasData) return null;
 
+  const num = qNum(q.name);
+  const chartType = chartTypeState[q.name] || "pie";
   const panel = document.createElement("div");
   panel.className = "panel";
-  panel.style.gridColumn = "span 2"; // matrix charts are wider
+  panel.style.gridColumn = "span 2";
 
-  const num = qNum(q.name);
-  let html = `<div class="panel-hdr">${num ? `<span class="q-num">${num}</span>` : ""}${q.title || q.name}</div><div class="panel-body">`;
+  let html = `<div class="panel-hdr">
+    <span>${num ? `<span class="q-num">${num}</span>` : ""}${q.title || q.name}</span>
+    <div class="chart-toggle" data-q="${q.name}">
+      <button class="${chartType === 'pie' ? 'active' : ''}" onclick="setChartType('${q.name}','pie')">Pie</button>
+      <button class="${chartType === 'bar' ? 'active' : ''}" onclick="setChartType('${q.name}','bar')">Bar</button>
+    </div>
+  </div>
+  <div class="panel-body">
+    <div class="matrix-pie-grid">`;
 
   Object.entries(rows).forEach(([rowVal, rowLabel]) => {
     const counts = {};
@@ -1212,38 +1311,41 @@ function renderMatrixChart(q, responses) {
       counts[lbl] = (counts[lbl] || 0) + 1;
       total++;
     });
+
+    const rowNum = qRowNum(q.name, rowVal);
+    const skipped = responses.length - total;
+
     if (total === 0) {
-      html += `<div style="margin:0.6rem 0 0.2rem;font-weight:600;font-size:9pt;color:#333;">${rowLabel}</div>`;
-      html += `<div class="bar-item no-answer"><div class="bar-lbl">No answers</div><div class="bar-track"></div><div class="bar-count">0 of ${responses.length}</div></div>`;
+      html += `<div class="matrix-pie-cell">
+        <div class="matrix-pie-title">${rowNum} · ${rowLabel} <span class="matrix-pie-count">0/${responses.length}</span></div>
+        <div class="explorer-empty" style="padding:0.5rem;">No answers</div>
+      </div>`;
       return;
     }
 
-    html += `<div style="margin:0.6rem 0 0.2rem;font-weight:600;font-size:9pt;color:#333;">${rowLabel} <span style="font-weight:400;color:#999;font-size:8pt">(${total}/${responses.length})</span></div>`;
-    // Use column order with sentiment colors
-    colOrder.forEach(colVal => {
-      const lbl = cols[colVal] || colVal;
-      const cnt = counts[lbl] || 0;
-      if (cnt === 0) return;
-      const sClass = sentimentClass(colVal);
-      html += `
-        <div class="bar-item">
-          <div class="bar-lbl" title="${lbl}">${lbl}</div>
-          <div class="bar-track"><div class="bar-fill ${sClass}" style="width:${Math.round(cnt/responses.length*100)}%"></div></div>
-          <div class="bar-count">${cnt} (${Math.round(cnt/responses.length*100)}%)</div>
-        </div>`;
-    });
-    const rowSkipped = responses.length - total;
-    if (rowSkipped > 0) {
-      html += `
-        <div class="bar-item no-answer">
-          <div class="bar-lbl">No answer</div>
-          <div class="bar-track"><div class="bar-fill" style="width:${Math.round(rowSkipped/responses.length*100)}%"></div></div>
-          <div class="bar-count">${rowSkipped} (${Math.round(rowSkipped/responses.length*100)}%)</div>
-        </div>`;
+    const sorted = colOrder
+      .map(colVal => [cols[colVal] || colVal, counts[cols[colVal] || colVal] || 0])
+      .filter(([, c]) => c > 0);
+
+    if (chartType === "pie") {
+      html += `<div class="matrix-pie-cell">
+        <div class="matrix-pie-title">${rowNum} · ${rowLabel} <span class="matrix-pie-count">${total}/${responses.length}</span></div>
+        ${renderPieChartHTML(sorted, skipped, responses.length)}
+      </div>`;
+    } else {
+      html += `<div class="matrix-pie-cell">
+        <div class="matrix-pie-title">${rowNum} · ${rowLabel} <span class="matrix-pie-count">${total}/${responses.length}</span></div>
+        ${sorted.map(([lbl, cnt]) => {
+          const colVal = colOrder.find(cv => (cols[cv] || cv) === lbl);
+          const sClass = sentimentClass(colVal);
+          return `<div class="bar-item"><div class="bar-lbl" title="${lbl}">${lbl}</div><div class="bar-track"><div class="bar-fill ${sClass}" style="width:${Math.round(cnt/responses.length*100)}%"></div></div><div class="bar-count">${cnt}</div></div>`;
+        }).join("")}
+        ${skipped > 0 ? `<div class="bar-item no-answer"><div class="bar-lbl">No answer</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(skipped/responses.length*100)}%"></div></div><div class="bar-count">${skipped}</div></div>` : ""}
+      </div>`;
     }
   });
 
-  html += `</div>`;
+  html += `</div></div>`;
   panel.innerHTML = html;
   return panel;
 }

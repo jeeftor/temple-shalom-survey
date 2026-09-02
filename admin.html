@@ -134,20 +134,24 @@
     /* Chart type toggle */
     .chart-toggle {
       display: inline-flex;
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      overflow: hidden;
+      gap: 0.25rem;
       margin-left: auto;
     }
     .chart-toggle button {
-      padding: 0.2rem 0.5rem;
-      border: 0;
+      padding: 0.25rem 0.55rem;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
       background: white;
       cursor: pointer;
-      font-size: 8pt;
-      color: #666;
+      font-size: 13pt;
+      line-height: 1;
+      color: #999;
+      transition: all 0.15s;
+      min-width: 28px;
+      text-align: center;
     }
-    .chart-toggle button.active { background: var(--blue); color: white; }
+    .chart-toggle button:hover { border-color: var(--blue); color: var(--blue); }
+    .chart-toggle button.active { background: var(--blue); color: white; border-color: var(--blue); }
 
     /* Side-by-side bar + pie */
     .chart-both { display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: flex-start; }
@@ -858,13 +862,13 @@ function renderChoiceChartHTML(q, responses) {
   }
 
   const num = q._matrixParent ? qRowNum(q._matrixParent, q._matrixRow) : qNum(q.name);
-  const chartType = chartTypeState["explorer_" + q.name] || "both";
+  const chartType = chartTypeState["explorer_" + q.name] || "pie";
   return `<div class="panel-body">
     <div class="response-rate">${num} · ${answered} of ${responses.length} answered (${Math.round(answered/responses.length*100)}%)</div>
     <div class="chart-toggle" style="margin-bottom:0.5rem;">
-      <button class="${chartType === 'both' ? 'active' : ''}" onclick="setExplorerChartType('${q.name}','both')">Both</button>
-      <button class="${chartType === 'bar' ? 'active' : ''}" onclick="setExplorerChartType('${q.name}','bar')">Bar</button>
-      <button class="${chartType === 'pie' ? 'active' : ''}" onclick="setExplorerChartType('${q.name}','pie')">Pie</button>
+      <button class="${chartType === 'both' ? 'active' : ''}" onclick="setExplorerChartType('${q.name}','both')" title="Both charts"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="9" width="3" height="6"/><rect x="6" y="5" width="3" height="10"/><circle cx="12" cy="6" r="3.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 2.5 A3.5 3.5 0 0 1 15.5 6 L12 6 Z"/></svg></button>
+      <button class="${chartType === 'bar' ? 'active' : ''}" onclick="setExplorerChartType('${q.name}','bar')" title="Bar chart"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="9" width="3" height="6"/><rect x="6" y="5" width="3" height="10"/><rect x="11" y="2" width="3" height="13"/></svg></button>
+      <button class="${chartType === 'pie' ? 'active' : ''}" onclick="setExplorerChartType('${q.name}','pie')" title="Pie chart"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1 A7 7 0 0 1 15 8 L8 8 Z"/></svg></button>
     </div>
     <div class="${chartType === 'both' ? 'chart-both' : ''}">
       ${chartType !== 'pie' ? `
@@ -1162,16 +1166,16 @@ function renderChoiceChart(q, responses) {
   }
 
   const num = qNum(q.name);
-  const chartType = chartTypeState[q.name] || "both";
+  const chartType = chartTypeState[q.name] || "pie";
   const panel = document.createElement("div");
   panel.className = "panel";
   panel.innerHTML = `
     <div class="panel-hdr">
       <span>${num ? `<span class="q-num">${num}</span>` : ""}${q.title || q.name}${q.type === "checkbox" ? " <span style='font-weight:400;color:#888;font-size:9pt'>(multi-select)</span>" : ""}</span>
       <div class="chart-toggle" data-q="${q.name}">
-        <button class="${chartType === 'both' ? 'active' : ''}" onclick="setChartType('${q.name}','both')">Both</button>
-        <button class="${chartType === 'bar' ? 'active' : ''}" onclick="setChartType('${q.name}','bar')">Bar</button>
-        <button class="${chartType === 'pie' ? 'active' : ''}" onclick="setChartType('${q.name}','pie')">Pie</button>
+        <button class="${chartType === 'both' ? 'active' : ''}" onclick="setChartType('${q.name}','both')" title="Both charts"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="9" width="3" height="6"/><rect x="6" y="5" width="3" height="10"/><circle cx="12" cy="6" r="3.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 2.5 A3.5 3.5 0 0 1 15.5 6 L12 6 Z"/></svg></button>
+        <button class="${chartType === 'bar' ? 'active' : ''}" onclick="setChartType('${q.name}','bar')" title="Bar chart"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="9" width="3" height="6"/><rect x="6" y="5" width="3" height="10"/><rect x="11" y="2" width="3" height="13"/></svg></button>
+        <button class="${chartType === 'pie' ? 'active' : ''}" onclick="setChartType('${q.name}','pie')" title="Pie chart"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1 A7 7 0 0 1 15 8 L8 8 Z"/></svg></button>
       </div>
     </div>
     <div class="panel-body">
@@ -1292,8 +1296,8 @@ function renderMatrixChart(q, responses) {
   let html = `<div class="panel-hdr">
     <span>${num ? `<span class="q-num">${num}</span>` : ""}${q.title || q.name}</span>
     <div class="chart-toggle" data-q="${q.name}">
-      <button class="${chartType === 'pie' ? 'active' : ''}" onclick="setChartType('${q.name}','pie')">Pie</button>
-      <button class="${chartType === 'bar' ? 'active' : ''}" onclick="setChartType('${q.name}','bar')">Bar</button>
+      <button class="${chartType === 'pie' ? 'active' : ''}" onclick="setChartType('${q.name}','pie')" title="Pie chart"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1 A7 7 0 0 1 15 8 L8 8 Z"/></svg></button>
+      <button class="${chartType === 'bar' ? 'active' : ''}" onclick="setChartType('${q.name}','bar')" title="Bar chart"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="9" width="3" height="6"/><rect x="6" y="5" width="3" height="10"/><rect x="11" y="2" width="3" height="13"/></svg></button>
     </div>
   </div>
   <div class="panel-body">

@@ -122,6 +122,13 @@ function ensureHeaders(sheet, keys) {
  */
 function doGet(e) {
   const params = (e && e.parameter) ? e.parameter : {};
+  if (params.key && params.action === "clear") {
+    const expectedToken = PropertiesService.getScriptProperties().getProperty("WEBHOOK_TOKEN");
+    if (!expectedToken || params.key !== expectedToken) {
+      return jsonResponse({ success: false, error: "Unauthorized" });
+    }
+    return jsonResponse(clearSheet());
+  }
   if (params.key && params.rows) {
     const expectedToken = PropertiesService.getScriptProperties().getProperty("WEBHOOK_TOKEN");
     if (!expectedToken || params.key !== expectedToken) {
@@ -170,4 +177,42 @@ function getRecentRows(maxRows) {
 
 function ping() {
   return "pong";
+}
+
+/**
+ * Clear all data rows and remove the webhook_token column.
+ * Triggered via doGet with ?key=TOKEN&action=clear
+ */
+function clearSheet() {
+  try {
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    const sheet = ss.getSheetByName(SHEET_NAME);
+    if (!sheet) return { error: "Sheet not found", sheetName: SHEET_NAME };
+
+    const lastRow = sheet.getLastRow();
+    const lastCol = sheet.getLastColumn();
+
+    // Find and delete the webhook_token column if it exists
+    if (lastCol > 0) {
+      const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+      const tokenCol = headers.indexOf("webhook_token");
+      if (tokenCol !== -1) {
+        sheet.deleteColumn(tokenCol + 1);
+      }
+    }
+
+    // Delete all data rows (keep row 1 = headers)
+    if (sheet.getLastRow() > 1) {
+      sheet.deleteRows(2, sheet.getLastRow() - 1);
+    }
+
+    return {
+      success: true,
+      message: "Cleared all data rows and removed webhook_token column",
+      remainingRows: sheet.getLastRow(),
+      remainingCols: sheet.getLastColumn()
+    };
+  } catch (err) {
+    return { error: err.message, stack: err.stack };
+  }
 }

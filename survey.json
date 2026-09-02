@@ -1397,12 +1397,10 @@
             {
               "value": "singing_telegram",
               "text": "Singing Telegram"
-            },
-            {
-              "value": "other",
-              "text": "Other"
             }
-          ]
+          ],
+          "hasOther": true,
+          "otherText": "Other"
         },
         {
           "type": "radiogroup",

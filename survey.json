@@ -1379,40 +1379,30 @@
           "title": "Which channels would you like Temple Shalom to use to reach you? (check all that apply)",
           "choices": [
             {
-              "value": "sms",
-              "text": "SMS / Text messaging"
-            },
-            {
-              "value": "whatsapp",
-              "text": "iMessage / WhatsApp"
-            },
-            {
-              "value": "facebook",
-              "text": "Facebook / Facebook Groups"
-            },
-            {
               "value": "email",
               "text": "Email"
             },
             {
               "value": "physical_mail",
-              "text": "Physical mail (postcards, letters)"
+              "text": "Physical Mail"
             },
             {
-              "value": "instagram",
-              "text": "Instagram"
+              "value": "text_messages",
+              "text": "Text messages"
             },
             {
-              "value": "website_push",
-              "text": "Temple website / push notifications"
+              "value": "social_media",
+              "text": "Social Media (Facebook, etc.)"
             },
             {
               "value": "singing_telegram",
               "text": "Singing Telegram"
+            },
+            {
+              "value": "other",
+              "text": "Other"
             }
-          ],
-          "hasOther": true,
-          "otherText": "Other"
+          ]
         },
         {
           "type": "radiogroup",

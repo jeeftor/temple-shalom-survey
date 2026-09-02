@@ -663,7 +663,7 @@
                     cursor:pointer;font-weight:bold;">
               Continue my response
             </button>
-            <button id="startOverBtn" style="background:white;color:var(--blue);
+            <button id="startOverResubmitBtn" style="background:white;color:var(--blue);
                     border:2px solid var(--blue);padding:0.6rem 2rem;border-radius:6px;font-size:11pt;
                     cursor:pointer;font-weight:bold;">
               Start over
@@ -687,7 +687,7 @@
         }
       });
 
-      document.getElementById("startOverBtn").addEventListener("click", () => {
+      document.getElementById("startOverResubmitBtn").addEventListener("click", () => {
         localStorage.removeItem(DRAFT_KEY);
         localStorage.removeItem(RESUBMIT_KEY);
         startFreshResubmit();

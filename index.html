@@ -653,13 +653,20 @@
       document.getElementById("surveyContainer").innerHTML = "";
       document.getElementById("skipBtn").style.display = "";
       document.getElementById("versionFooter").style.display = "";
-      fetch("survey.json")
-        .then(r => r.json())
-        .then(initSurvey)
-        .catch(err => {
-          document.getElementById("surveyContainer").innerHTML =
-            `<p style="color:red;padding:1rem">Failed to load survey: ${err.message}</p>`;
-        });
+      // Clear old draft so we start fresh (but keep session_id for linking)
+      localStorage.removeItem(DRAFT_KEY);
+      // Use cached survey JSON if available, otherwise fetch
+      if (cachedSurveyJson) {
+        initSurvey(cachedSurveyJson);
+      } else {
+        fetch("survey.json")
+          .then(r => r.json())
+          .then(json => { cachedSurveyJson = json; return initSurvey(json); })
+          .catch(err => {
+            document.getElementById("surveyContainer").innerHTML =
+              `<p style="color:red;padding:1rem">Failed to load survey: ${err.message}</p>`;
+          });
+      }
     });
   }
 
@@ -694,15 +701,20 @@
     });
 
   // ── Load survey ─────────────────────────────────────────────
-  if (!alreadySubmitted) {
-    fetch("survey.json")
-      .then(r => r.json())
-      .then(initSurvey)
-      .catch(err => {
+  let cachedSurveyJson = null;
+  // Always fetch survey.json so it's cached for instant re-submit
+  fetch("survey.json")
+    .then(r => r.json())
+    .then(json => {
+      cachedSurveyJson = json;
+      if (!alreadySubmitted) return initSurvey(json);
+    })
+    .catch(err => {
+      if (!alreadySubmitted) {
         document.getElementById("surveyContainer").innerHTML =
           `<p style="color:red;padding:1rem">Failed to load survey: ${err.message}</p>`;
-      });
-  }
+      }
+    });
 
   function initSurvey(surveyJson) {
     const survey = new Survey.Model(surveyJson);
@@ -719,6 +731,9 @@
     // ── Build section nav ──────────────────────────────────────
     const nav = document.getElementById("sectionPills");
     const sectionSelect = document.getElementById("sectionSelect");
+    // Clear any existing pills/options (from a prior initSurvey call)
+    nav.innerHTML = "";
+    sectionSelect.innerHTML = "";
     const pills = sectionLabels.map((label, i) => {
       const pill = document.createElement("button");
       pill.className = "nav-pill";

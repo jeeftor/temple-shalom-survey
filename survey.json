@@ -1288,6 +1288,10 @@
             {
               "value": "direct_mail",
               "text": "Other direct mail to my home"
+            },
+            {
+              "value": "board_announcements",
+              "text": "Board Announcements at Services"
             }
           ],
           "columns": [
@@ -1409,6 +1413,14 @@
             {
               "value": "website_push",
               "text": "Temple website / push notifications"
+            },
+            {
+              "value": "singing_telegram",
+              "text": "Singing Telegram"
+            },
+            {
+              "value": "other",
+              "text": "Other"
             }
           ],
           "hasOther": true,
@@ -1471,7 +1483,7 @@
         {
           "type": "comment",
           "name": "q15_comm_improvement",
-          "title": "Any other thoughts on how we should communicate with you?",
+          "title": "Any thoughts on how we can improve our member communications?",
           "maxLength": 1000,
           "rows": 4
         }

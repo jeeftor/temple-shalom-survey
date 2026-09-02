@@ -10,6 +10,9 @@
       --blue-pale: #dce8ff;
       --green:     #1a7f3c;
       --red:       #c0392b;
+      --border:    #c9d6e8;
+      --radius:    6px;
+      --text:      #111;
     }
     * { box-sizing: border-box; }
     body {
@@ -754,7 +757,7 @@ function explorerUpdate() {
   }
 
   // Handle matrix row sub-questions (name format: "qName|rowVal")
-  let q, matrixRowVal;
+  let q;
   if (qName.includes("|")) {
     const [parentName, rowVal] = qName.split("|");
     const parent = findQuestion(parentName);
@@ -769,7 +772,6 @@ function explorerUpdate() {
       _matrixParent: parentName,
       _matrixRow: rowVal,
     };
-    matrixRowVal = rowVal;
   } else {
     q = findQuestion(qName);
     if (!q) return;
@@ -1457,7 +1459,7 @@ function renderTable(rows) {
           <div><span class="dk">${k}</span><br/><span class="dv" style="font-size:8pt;color:#666;">${v}</span></div>
         `).join("") : ""}
         ${pairs.length ? pairs.map(([k, v]) => `
-          <div><span class="dk">${k}</span><br/><span class="dv">${Array.isArray(v) ? v.join(", ") : v}</span></div>
+          <div><span class="dk">${k}</span><br/><span class="dv">${Array.isArray(v) ? v.join(", ") : (typeof v === "object" ? Object.entries(v).map(([rk, rv]) => `${rk}: ${rv}`).join("; ") : v)}</span></div>
         `).join("") : "<em>No answers recorded.</em>"}
       </div>
     </td>`;

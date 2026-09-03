@@ -859,6 +859,11 @@
       draftReady = true;
       survey.data = savedDraft.data || {};
       if (savedDraft.pageNo != null) survey.currentPageNo = savedDraft.pageNo;
+    } else if (savedDraft) {
+      // Local draft exists — silently restore data + page (no prompt)
+      draftReady = true;
+      survey.data = savedDraft.data || {};
+      if (savedDraft.pageNo != null) survey.currentPageNo = savedDraft.pageNo;
     } else if (!savedDraft) {
       // No draft — but restore the last-visited page so refresh doesn't jump to page 1
       const savedPage = parseInt(localStorage.getItem(PAGE_KEY), 10);
@@ -1206,16 +1211,6 @@
 
     // ── Render ─────────────────────────────────────────────────
     survey.render(surveyContainer);
-    if (savedDraft) {
-      const savedDate = new Date(savedDraft.savedAt).toLocaleString([], {
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-      });
-      draftMessage.textContent = `A draft saved on this device on ${savedDate} contains unfinished responses.`;
-      setDraftPromptVisible(true);
-    }
   }
 </script>
 

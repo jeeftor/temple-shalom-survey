@@ -1497,6 +1497,10 @@
             {
               "value": "gluten_free",
               "text": "Any babka that is gluten-free"
+            },
+            {
+              "value": "no_carbs",
+              "text": "Who cares — I don't eat carbs"
             }
           ],
           "isRequired": false

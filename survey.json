@@ -1506,27 +1506,6 @@
           "isRequired": false
         },
         {
-          "type": "radiogroup",
-          "name": "q_joke",
-          "title": "Before you go — which of these jokes is funnier?",
-          "description": "A little survey humor to end on. (Yes, this is a real question.)",
-          "choices": [
-            {
-              "value": "joke1",
-              "text": "A Jewish mother gives her son two ties. He wears one to dinner. She says: \"What, you don't like the other one?\""
-            },
-            {
-              "value": "joke2",
-              "text": "A man asks his rabbi: \"Rabbi, is it okay to text on Shabbat?\" The rabbi replies: \"Only if you don't hit send.\""
-            },
-            {
-              "value": "joke3",
-              "text": "Why don't Jewish mothers drink water? Because their children are already full of guilt."
-            }
-          ],
-          "isRequired": false
-        },
-        {
           "type": "comment",
           "name": "q28_final_comments",
           "title": "What other feedback or comments would you like to share?",

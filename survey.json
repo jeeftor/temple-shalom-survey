@@ -1463,13 +1463,6 @@
               "text": "Fundraising & financial updates"
             }
           ]
-        },
-        {
-          "type": "comment",
-          "name": "q15_comm_improvement",
-          "title": "Any thoughts on how we can improve our member communications?",
-          "maxLength": 1000,
-          "rows": 4
         }
       ],
       "navigationTitle": "Communications"
@@ -1480,18 +1473,26 @@
       "description": "Almost done — thank you for taking the time to share your feedback.",
       "elements": [
         {
+          "type": "image",
+          "name": "q_babka_image",
+          "imageLink": "assets/babka.jpg",
+          "altText": "A chocolate babka with streusel topping",
+          "imageWidth": 350,
+          "imageHeight": 230
+        },
+        {
           "type": "radiogroup",
           "name": "q_babka",
           "title": "Chocolate Babka or Cinnamon Babka?",
-          "description": "In Seinfeld S5E13 \"The Dinner Party\", Jerry and George debate which is the greater babka. Where do you stand?",
+          "description": "In Seinfeld S5E13 \"The Dinner Party\", Jerry and Elaine miss out on the last chocolate babka and settle for cinnamon. Elaine calls it \"a lesser babka\" — Jerry disagrees. Where do you stand?",
           "choices": [
             {
               "value": "chocolate",
-              "text": "Chocolate Babka — the greater babka"
+              "text": "Chocolate Babka — the one they wanted (the bakery's specialty)"
             },
             {
               "value": "cinnamon",
-              "text": "Cinnamon Babka — the lesser babka (but still great)"
+              "text": "Cinnamon Babka — \"takes a back seat to no babka\" (Jerry's pick)"
             },
             {
               "value": "both",

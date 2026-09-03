@@ -634,6 +634,7 @@
   // ── Already-submitted guard ──────────────────────────────────
   const SUBMITTED_KEY = "ts_survey_submitted_2026";
   const DRAFT_KEY = "ts_survey_draft_2026";
+  const PAGE_KEY = "ts_survey_page_2026";
   const RESUBMIT_KEY = "ts_survey_resubmit_2026";
   const DRAFT_TTL_MS = 30 * 24 * 60 * 60 * 1000;
   const alreadySubmitted = Boolean(localStorage.getItem(SUBMITTED_KEY));
@@ -860,6 +861,13 @@
       draftReady = true;
       survey.data = savedDraft.data || {};
       if (savedDraft.pageNo != null) survey.currentPageNo = savedDraft.pageNo;
+    } else if (!savedDraft) {
+      // No draft — but restore the last-visited page so refresh doesn't jump to page 1
+      const savedPage = parseInt(localStorage.getItem(PAGE_KEY), 10);
+      const maxPage = (surveyJson.pages || []).length - 1;
+      if (!isNaN(savedPage) && savedPage > 0 && savedPage <= maxPage) {
+        survey.currentPageNo = savedPage;
+      }
     }
 
     // Check for server-side draft via ?draft=XXXX URL param (cross-device resume)
@@ -949,6 +957,7 @@
 
     document.getElementById("startOverBtn").addEventListener("click", () => {
       localStorage.removeItem(DRAFT_KEY);
+      localStorage.removeItem(PAGE_KEY);
       savedDraft = null;
       serverDraft = null;
       draftReady = true;
@@ -998,6 +1007,7 @@
       updateNav(cur);
       updateSkip(cur);
       saveDraft();
+      localStorage.setItem(PAGE_KEY, String(cur));
       window.scrollTo({ top: 0, behavior: "smooth" });
       setTimeout(wrapMatrixTables, 50);
     });
@@ -1124,8 +1134,9 @@
     }
 
     // Initialise
-    updateNav(0);
-    updateSkip(0);
+    const initPage = survey.currentPageNo;
+    updateNav(initPage);
+    updateSkip(initPage);
     setTimeout(wrapMatrixTables, 200);
 
     // Re-run on orientation change / resize so mobile↔desktop layout adapts
@@ -1171,6 +1182,7 @@
         if (result.success || result.error === "duplicate") {
           clearTimeout(draftTimer);
           localStorage.removeItem(DRAFT_KEY);
+          localStorage.removeItem(PAGE_KEY);
           localStorage.removeItem(RESUBMIT_KEY);
           draftStatus.hidden = true;
           localStorage.setItem(SUBMITTED_KEY, "1");

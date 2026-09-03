@@ -12,6 +12,12 @@ CREATE TABLE IF NOT EXISTS responses (
   sections_answered   TEXT,                       -- JSON array of section names
   user_agent          TEXT,
   referrer            TEXT,                       -- document.referrer — where the user came from
+  device_type         TEXT,                       -- mobile / tablet / desktop (parsed from UA)
+  browser             TEXT,                       -- Chrome / Safari / Firefox / Edge (parsed from UA)
+  os                  TEXT,                       -- iOS / Android / macOS / Windows / Linux (parsed from UA)
+  screen_size         TEXT,                       -- screen.width x screen.height
+  viewport_size       TEXT,                       -- window.innerWidth x window.innerHeight
+  started_at          TEXT,                       -- ISO timestamp when the survey page was loaded
   payload             TEXT    NOT NULL            -- full JSON response blob
 );
 

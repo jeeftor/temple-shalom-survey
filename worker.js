@@ -86,6 +86,12 @@ async function handleSubmit(request, env) {
     ? JSON.stringify(body._sections_answered) : null;
   const userAgent          = body._userAgent          || null;
   const referrer           = body._referrer           || null;
+  const deviceType         = body._device_type        || null;
+  const browser            = body._browser            || null;
+  const os                 = body._os                 || null;
+  const screenSize         = body._screen_size        || null;
+  const viewportSize       = body._viewport_size      || null;
+  const startedAt          = body._started_at         || null;
 
   const payload = JSON.stringify(body);
 
@@ -111,12 +117,14 @@ async function handleSubmit(request, env) {
       INSERT INTO responses
         (response_id, timestamp, session_id, submission_number, previous_response_id,
          survey_version, ip_country, cf_ray, completion_seconds, sections_answered,
-         user_agent, referrer, payload)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         user_agent, referrer, device_type, browser, os, screen_size, viewport_size,
+         started_at, payload)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       responseId, timestamp, sessionId, submissionNumber, previousResponseId,
       surveyVersion, ipCountry, cfRay, completionSeconds, sectionsAnswered,
-      userAgent, referrer, payload
+      userAgent, referrer, deviceType, browser, os, screenSize, viewportSize,
+      startedAt, payload
     ).run();
 
     // ── Dual-write to Google Sheets (best-effort, non-blocking) ────────────
@@ -137,6 +145,12 @@ async function handleSubmit(request, env) {
         sections_answered:    body._sections_answered || null,
         user_agent:           userAgent,
         referrer:             referrer,
+        device_type:          deviceType,
+        browser:              browser,
+        os:                   os,
+        screen_size:          screenSize,
+        viewport_size:        viewportSize,
+        started_at:           startedAt,
       };
       // Remove underscore-prefixed client metadata (already mapped above)
       for (const k of Object.keys(sheetPayload)) {
@@ -199,7 +213,8 @@ async function handleExport(request, env) {
 
   const rows = await env.DB.prepare(`
     SELECT id, response_id, timestamp, session_id, submission_number, previous_response_id,
-           survey_version, ip_country, completion_seconds, sections_answered, referrer, payload
+           survey_version, ip_country, completion_seconds, sections_answered, referrer,
+           device_type, browser, os, screen_size, viewport_size, started_at, payload
     FROM responses ORDER BY id
   `).all();
 
@@ -222,7 +237,8 @@ async function handleExport(request, env) {
     "id", "response_id", "timestamp", "session_id",
     "submission_number", "previous_response_id",
     "survey_version", "ip_country", "completion_seconds", "sections_answered",
-    "referrer",
+    "referrer", "device_type", "browser", "os", "screen_size", "viewport_size",
+    "started_at",
     ...qKeys
   ];
 
@@ -240,6 +256,12 @@ async function handleExport(request, env) {
       meta.completion_seconds ?? "",
       meta.sections_answered || "",
       meta.referrer          || "",
+      meta.device_type       || "",
+      meta.browser           || "",
+      meta.os                || "",
+      meta.screen_size       || "",
+      meta.viewport_size     || "",
+      meta.started_at        || "",
       ...qKeys.map(k => {
         const v = data[k];
         if (v == null) return "";
@@ -267,7 +289,8 @@ async function handleResults(request, env) {
 
   const rows = await env.DB.prepare(`
     SELECT id, response_id, timestamp, session_id, submission_number, previous_response_id,
-           survey_version, ip_country, completion_seconds, sections_answered, referrer, payload
+           survey_version, ip_country, completion_seconds, sections_answered, referrer,
+           device_type, browser, os, screen_size, viewport_size, started_at, payload
     FROM responses ORDER BY id DESC
   `).all();
 
@@ -283,6 +306,12 @@ async function handleResults(request, env) {
     completion_seconds: row.completion_seconds,
     sections_answered:  row.sections_answered ? JSON.parse(row.sections_answered) : null,
     referrer:           row.referrer,
+    device_type:        row.device_type,
+    browser:            row.browser,
+    os:                 row.os,
+    screen_size:        row.screen_size,
+    viewport_size:      row.viewport_size,
+    started_at:         row.started_at,
     answers:            (() => {
       const d = JSON.parse(row.payload || "{}");
       return Object.fromEntries(Object.entries(d).filter(([k]) => !k.startsWith("_") && k !== "timestamp"));

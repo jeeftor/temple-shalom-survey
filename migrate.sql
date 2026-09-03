@@ -11,6 +11,14 @@ ALTER TABLE responses ADD COLUMN submission_number   INTEGER DEFAULT 1;
 ALTER TABLE responses ADD COLUMN previous_response_id TEXT;
 ALTER TABLE responses ADD COLUMN referrer            TEXT;
 
+-- Device/browser metadata (parsed client-side)
+ALTER TABLE responses ADD COLUMN device_type         TEXT;
+ALTER TABLE responses ADD COLUMN browser             TEXT;
+ALTER TABLE responses ADD COLUMN os                  TEXT;
+ALTER TABLE responses ADD COLUMN screen_size         TEXT;
+ALTER TABLE responses ADD COLUMN viewport_size       TEXT;
+ALTER TABLE responses ADD COLUMN started_at          TEXT;
+
 -- Backfill response_id for any existing rows
 UPDATE responses SET response_id = hex(randomblob(16)) WHERE response_id IS NULL;
 

@@ -37,6 +37,13 @@ const META_COLUMNS = [
   "completion_seconds",
   "sections_answered",
   "user_agent",
+  "referrer",
+  "device_type",
+  "browser",
+  "os",
+  "screen_size",
+  "viewport_size",
+  "started_at",
 ];
 
 /**

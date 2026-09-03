@@ -749,7 +749,27 @@
 
   // Track survey start time for completion_seconds
   const surveyStartTime = Date.now();
+  const surveyStartedAt = new Date(surveyStartTime).toISOString();
   let surveyVersion = null;
+
+  // ── Device/browser metadata (parsed client-side for clean analysis fields) ──
+  const ua = navigator.userAgent;
+  const deviceType = /iPad|Tablet/i.test(ua) ? "tablet"
+    : /Mobile|Android|iPhone|iPod/i.test(ua) ? "mobile"
+    : "desktop";
+  const browser = /Edg\//.test(ua) ? "Edge"
+    : /Chrome\//.test(ua) ? "Chrome"
+    : /Firefox\//.test(ua) ? "Firefox"
+    : /Safari\//.test(ua) ? "Safari"
+    : "other";
+  const os = /iPhone|iPad|iPod/.test(ua) ? "iOS"
+    : /Android/.test(ua) ? "Android"
+    : /Mac OS X/.test(ua) ? "macOS"
+    : /Windows/.test(ua) ? "Windows"
+    : /Linux/.test(ua) ? "Linux"
+    : "other";
+  const screenSize = `${screen.width}x${screen.height}`;
+  const viewportSize = `${window.innerWidth}x${window.innerHeight}`;
 
   // ── Version footer ───────────────────────────────────────────
   fetch("version.json")
@@ -1169,6 +1189,12 @@
       _session:             sessionId,
       _survey_version:      surveyVersion,
       _userAgent:           navigator.userAgent,
+      _device_type:         deviceType,
+      _browser:             browser,
+      _os:                  os,
+      _screen_size:         screenSize,
+      _viewport_size:       viewportSize,
+      _started_at:          surveyStartedAt,
       _completion_seconds:  Math.round((Date.now() - surveyStartTime) / 1000),
       _sections_answered:   sectionsAnswered,
       _referrer:            document.referrer || null,

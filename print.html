@@ -299,7 +299,7 @@ function renderQuestion(el) {
   if (el.description) {
     const desc = document.createElement("div");
     desc.className = "question-desc";
-    desc.innerHTML = el.description;
+    desc.textContent = el.description;
     div.appendChild(desc);
   }
 

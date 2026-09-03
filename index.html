@@ -790,6 +790,8 @@
 
   function initSurvey(surveyJson, skipDraftPrompt) {
     const survey = new Survey.Model(surveyJson);
+    // Allow HTML in question descriptions (used for embedded images like the babka cartoon)
+    survey.onTextMarkdown.add((sender, options) => { options.html = options.text; });
     const intro = document.getElementById("surveyIntro");
     intro.textContent = surveyJson.description || "";
 

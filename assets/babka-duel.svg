@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 260" width="400" height="260">
+  <!-- background -->
+  <rect width="400" height="260" rx="12" fill="#fdf6ec"/>
+
+  <!-- vs burst -->
+  <text x="200" y="105" text-anchor="middle" font-family="Impact, sans-serif" font-size="28" fill="#d4a017" opacity="0.7">VS</text>
+
+  <!-- === CHOCOLATE BABKA (left) === -->
+  <g transform="translate(70,50)">
+    <!-- body: braided loaf -->
+    <ellipse cx="50" cy="90" rx="55" ry="75" fill="#3b2317"/>
+    <!-- braid swirls -->
+    <path d="M25,40 Q50,55 75,40 M20,65 Q50,82 80,65 M18,90 Q50,107 82,90 M20,115 Q50,132 80,115 M25,140 Q50,155 75,140"
+          stroke="#5c3a25" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <!-- streusel dots -->
+    <circle cx="35" cy="55" r="2.5" fill="#d4a574"/>
+    <circle cx="62" cy="70" r="2.5" fill="#d4a574"/>
+    <circle cx="40" cy="100" r="2.5" fill="#d4a574"/>
+    <circle cx="65" cy="120" r="2.5" fill="#d4a574"/>
+    <circle cx="38" cy="140" r="2.5" fill="#d4a574"/>
+    <!-- angry eyes -->
+    <path d="M30,25 L45,32" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+    <path d="M70,25 L55,32" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="37" cy="33" r="4" fill="#fff"/>
+    <circle cx="63" cy="33" r="4" fill="#fff"/>
+    <circle cx="37" cy="34" r="2" fill="#000"/>
+    <circle cx="63" cy="34" r="2" fill="#000"/>
+    <!-- angry mouth -->
+    <path d="M35,48 Q50,40 65,48" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <!-- left arm (recoiling) -->
+    <line x1="5" y1="80" x2="-15" y2="65" stroke="#3b2317" stroke-width="8" stroke-linecap="round"/>
+    <!-- right arm (punching toward cinnamon) -->
+    <line x1="95" y1="80" x2="130" y2="65" stroke="#3b2317" stroke-width="8" stroke-linecap="round"/>
+    <!-- boxing glove -->
+    <circle cx="135" cy="63" r="12" fill="#c0392b"/>
+    <path d="M130,58 L140,58" stroke="#a93226" stroke-width="2"/>
+    <!-- label -->
+    <text x="50" y="185" text-anchor="middle" font-family="Arial, sans-serif" font-weight="bold" font-size="14" fill="#3b2317">CHOCOLATE</text>
+  </g>
+
+  <!-- === CINNAMON BABKA (right) === -->
+  <g transform="translate(230,50)">
+    <!-- body: braided loaf -->
+    <ellipse cx="50" cy="90" rx="55" ry="75" fill="#c9995c"/>
+    <!-- braid swirls -->
+    <path d="M25,40 Q50,55 75,40 M20,65 Q50,82 80,65 M18,90 Q50,107 82,90 M20,115 Q50,132 80,115 M25,140 Q50,155 75,140"
+          stroke="#a67c45" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <!-- cinnamon swirl streaks -->
+    <path d="M30,50 Q50,60 70,50" stroke="#8b5a2b" stroke-width="3" fill="none" opacity="0.6"/>
+    <path d="M25,85 Q50,95 75,85" stroke="#8b5a2b" stroke-width="3" fill="none" opacity="0.6"/>
+    <path d="M28,125 Q50,135 72,125" stroke="#8b5a2b" stroke-width="3" fill="none" opacity="0.6"/>
+    <!-- determined eyes -->
+    <line x1="30" y1="28" x2="45" y2="30" stroke="#3b2317" stroke-width="3" stroke-linecap="round"/>
+    <line x1="70" y1="28" x2="55" y2="30" stroke="#3b2317" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="37" cy="33" r="4" fill="#fff"/>
+    <circle cx="63" cy="33" r="4" fill="#fff"/>
+    <circle cx="37" cy="33" r="2" fill="#000"/>
+    <circle cx="63" cy="33" r="2" fill="#000"/>
+    <!-- determined mouth (flat then grit) -->
+    <path d="M35,48 L65,48" stroke="#3b2317" stroke-width="3" stroke-linecap="round"/>
+    <line x1="40" y1="48" x2="40" y2="52" stroke="#3b2317" stroke-width="2"/>
+    <line x1="48" y1="48" x2="48" y2="52" stroke="#3b2317" stroke-width="2"/>
+    <line x1="56" y1="48" x2="56" y2="52" stroke="#3b2317" stroke-width="2"/>
+    <!-- right arm (recoiling) -->
+    <line x1="95" y1="80" x2="115" y2="65" stroke="#c9995c" stroke-width="8" stroke-linecap="round"/>
+    <!-- left arm (punching toward chocolate) -->
+    <line x1="5" y1="80" x2="-30" y2="65" stroke="#c9995c" stroke-width="8" stroke-linecap="round"/>
+    <!-- boxing glove -->
+    <circle cx="-35" cy="63" r="12" fill="#c0392b"/>
+    <path d="M-40,58 L-30,58" stroke="#a93226" stroke-width="2"/>
+    <!-- label -->
+    <text x="50" y="185" text-anchor="middle" font-family="Arial, sans-serif" font-weight="bold" font-size="14" fill="#8b5a2b">CINNAMON</text>
+  </g>
+
+  <!-- impact burst between them -->
+  <g transform="translate(200,70)">
+    <path d="M0,-18 L5,-5 L18,0 L5,5 L0,18 L-5,5 L-18,0 L-5,-5 Z" fill="#e74c3c" opacity="0.8"/>
+    <path d="M0,-12 L4,-4 L12,0 L4,4 L0,12 L-4,4 L-12,0 L-4,-4 Z" fill="#f39c12" opacity="0.9"/>
+  </g>
+  <path d="M185,85 L192,82 L189,90 Z" fill="#f39c12" opacity="0.7"/>
+  <path d="M215,88 L222,85 L219,93 Z" fill="#e74c3c" opacity="0.7"/>
+
+  <!-- caption -->
+  <text x="200" y="240" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#888" font-style="italic">"Cinnamon takes a back seat to no babka." — Jerry</text>
+</svg>

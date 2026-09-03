@@ -1473,18 +1473,10 @@
       "description": "Almost done — thank you for taking the time to share your feedback.",
       "elements": [
         {
-          "type": "image",
-          "name": "q_babka_image",
-          "imageLink": "assets/babka.jpg",
-          "altText": "A chocolate babka with streusel topping",
-          "imageWidth": 350,
-          "imageHeight": 230
-        },
-        {
           "type": "radiogroup",
           "name": "q_babka",
           "title": "Chocolate Babka or Cinnamon Babka?",
-          "description": "In Seinfeld S5E13 \"The Dinner Party\", Jerry and Elaine miss out on the last chocolate babka and settle for cinnamon. Elaine calls it \"a lesser babka\" — Jerry disagrees. Where do you stand?",
+          "description": "<img src=\"assets/babka-duel.svg\" alt=\"Chocolate vs Cinnamon babka duel\" style=\"width:100%;max-width:400px;border-radius:8px;margin-bottom:8px\" /><br/>In Seinfeld S5E13 \"The Dinner Party\", Jerry and Elaine miss out on the last chocolate babka and settle for cinnamon. Elaine calls it \"a lesser babka\" — Jerry disagrees. Where do you stand?",
           "choices": [
             {
               "value": "chocolate",

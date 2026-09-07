@@ -116,13 +116,15 @@
       padding: 0.3rem 0.4rem;
       text-align: center;
       font-weight: 600;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
     td {
       border: 1px solid #ccc;
       padding: 0.25rem 0.4rem;
       vertical-align: middle;
     }
-    tr:nth-child(even) td { background: #f0f5ff; }
+    tr:nth-child(even) td { background: #f0f5ff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     td.row-label { font-weight: 500; text-align: left; }
     td.radio-cell { text-align: center; }
 
@@ -211,6 +213,8 @@
         max-width: 100%;
         font-size: 11pt;
         padding: 0;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
       }
       #printBtn { display: none; }
       /* Sections can break freely */

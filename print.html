@@ -70,8 +70,8 @@
     }
     .question-desc {
       font-size: 9pt;
-      color: #555;
-      margin-bottom: 0.5rem;
+      color: #333;
+      margin-bottom: 0.4rem;
       font-style: italic;
     }
     .branch-note {
@@ -255,27 +255,9 @@ function buildQNumberMap(survey) {
 function buildPrintHTML(survey) {
   buildQNumberMap(survey);
 
-  const pageStartQ = [];
-  survey.pages.forEach(page => {
-    const firstEl = (page.elements || [])[0];
-    pageStartQ.push(firstEl ? qNumberMap[firstEl.name] : null);
-  });
-
   let html = "";
-  survey.pages.forEach((page, pageIdx) => {
-    const isLast     = pageIdx === survey.pages.length - 1;
-    const isOptional = !isLast;
-    const nextPageQ  = pageStartQ[pageIdx + 1];
-
+  survey.pages.forEach((page) => {
     html += '<div class="section">';
-    html += `<div class="section-header">${esc(page.title || `Section ${pageIdx + 1}`)}`;
-    if (isOptional) html += '<span class="section-optional">— OPTIONAL</span>';
-    html += '</div>';
-
-    if (isOptional && nextPageQ) {
-      html += `<div class="section-skip">If you prefer to skip this section, go to Question ${nextPageQ}.</div>`;
-    }
-
     html += '<div class="section-body">';
     (page.elements || []).forEach(el => {
       html += renderQuestionHTML(el);

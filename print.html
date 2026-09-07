@@ -142,6 +142,52 @@
       margin: 0.3rem 0;
     }
 
+    /* Collapsed contact block (print mode only) */
+    .contact-block {
+      margin: 0.6rem 0;
+      padding: 0.5rem 0.8rem;
+      border: 1.5px solid #0038b8;
+      border-radius: 6px;
+      page-break-inside: avoid;
+    }
+    .contact-title {
+      font-weight: bold;
+      font-size: 10.5pt;
+      color: #00277d;
+      margin-bottom: 0.4rem;
+    }
+    .contact-lines {
+      display: flex;
+      gap: 1.5rem;
+      margin-bottom: 0.4rem;
+    }
+    .contact-line {
+      flex: 1;
+      display: flex;
+      align-items: baseline;
+      gap: 0.3rem;
+    }
+    .contact-label {
+      font-weight: 500;
+      font-size: 10pt;
+      white-space: nowrap;
+    }
+    .contact-blank {
+      flex: 1;
+      border-bottom: 1px solid #999;
+      min-width: 60px;
+    }
+    .contact-choices {
+      display: flex;
+      gap: 1.5rem;
+      font-size: 10pt;
+    }
+    .contact-choice {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
     /* Print button */
     #printBtn {
       position: fixed;
@@ -255,15 +301,43 @@ function buildQNumberMap(survey) {
 function buildPrintHTML(survey) {
   buildQNumberMap(survey);
 
+  // Contact fields to collapse into a single compact block
+  const CONTACT_FIELDS = ['q_contact_name', 'q_contact_email', 'q_contact_phone', 'q_contact_request'];
+
   let html = "";
   survey.pages.forEach((page) => {
     html += '<div class="section">';
     html += '<div class="section-body">';
     (page.elements || []).forEach(el => {
+      if (CONTACT_FIELDS.includes(el.name)) return; // skip — rendered as a block at the end
       html += renderQuestionHTML(el);
     });
     html += '</div></div>';
   });
+
+  // Render collapsed contact block
+  const contactQs = {};
+  survey.pages.forEach(p => (p.elements || []).forEach(el => {
+    if (CONTACT_FIELDS.includes(el.name)) contactQs[el.name] = el;
+  }));
+
+  if (contactQs.q_contact_name) {
+    html += '<div class="contact-block">';
+    html += '<div class="contact-title">Contact information (optional)</div>';
+    html += '<div class="contact-lines">';
+    html += '<span class="contact-line"><span class="contact-label">Name:</span> <span class="contact-blank"></span></span>';
+    html += '<span class="contact-line"><span class="contact-label">Email:</span> <span class="contact-blank"></span></span>';
+    html += '<span class="contact-line"><span class="contact-label">Phone:</span> <span class="contact-blank"></span></span>';
+    html += '</div>';
+    if (contactQs.q_contact_request) {
+      const choices = (contactQs.q_contact_request.choices || []).map(c =>
+        `<span class="contact-choice"><span class="box"></span> ${esc(c.text || c.value)}</span>`
+      ).join(' ');
+      html += `<div class="contact-choices">${choices}</div>`;
+    }
+    html += '</div>';
+  }
+
   return html;
 }
 

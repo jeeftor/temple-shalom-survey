@@ -185,7 +185,7 @@
 </head>
 <body>
 
-<button id="printBtn" onclick="window.print()">Print / Save PDF</button>
+<button id="printBtn" onclick="window.print()" disabled style="opacity:0.5">Loading…</button>
 
 <header>
   <h1>Temple Shalom Member Survey 2026</h1>
@@ -211,7 +211,6 @@ fetch("survey.json")
 const SUB_QUESTIONS = {
   'q4_ada_limits':           'q3_ada',
   'q13_children_activities': 'q12_children',
-  'q_contact_request':       'q_contact_phone',
 };
 
 // Pre-compute question numbers (letter suffixes for conditional follow-ups)
@@ -282,6 +281,12 @@ function renderPrint(survey) {
     section.appendChild(body);
     container.appendChild(section);
   });
+
+  // Enable print button after all content is rendered
+  const btn = document.getElementById("printBtn");
+  btn.disabled = false;
+  btn.style.opacity = "1";
+  btn.textContent = "Print / Save PDF";
 }
 
 function renderQuestion(el) {

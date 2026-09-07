@@ -119,7 +119,7 @@ async function handleSubmit(request, env) {
          survey_version, ip_country, cf_ray, completion_seconds, sections_answered,
          user_agent, referrer, device_type, browser, os, screen_size, viewport_size,
          started_at, payload)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       responseId, timestamp, sessionId, submissionNumber, previousResponseId,
       surveyVersion, ipCountry, cfRay, completionSeconds, sectionsAnswered,

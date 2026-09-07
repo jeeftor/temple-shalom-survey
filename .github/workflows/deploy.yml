@@ -51,6 +51,13 @@ jobs:
           apiToken: ${{ secrets.CF_WORKER_TOKEN }}
           accountId: ${{ secrets.CF_ACCOUNT_ID }}
           command: d1 execute temple-shalom-responses --file=schema.sql --remote
+      - name: Apply migrations
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_WORKER_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          command: d1 execute temple-shalom-responses --file=migrate.sql --remote
+        continue-on-error: true
 
   # ── 3. Deploy Worker (if worker.js or wrangler.toml changed) ──────────────
   deploy-worker:

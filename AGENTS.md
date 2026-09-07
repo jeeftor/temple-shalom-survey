@@ -24,7 +24,7 @@ A static survey site for the Temple Shalom (Colorado Springs) member survey, dep
 | `wrangler.toml` | Worker config + D1 binding. `account_id` and `database_id` are committed (not secrets). |
 | `schema.sql` | Canonical D1 schema for the `responses` table. Applied by CI when changed. |
 | `migrate.sql` | Additive `ALTER TABLE` migration for older deployments. |
-| `submit.gs` | Google Apps Script web app — receives dual-write POSTs from the Worker and appends rows (with metadata) to a Google Sheet. Deploy via Apps Script; URL stored as `GS_WEBHOOK_URL` Worker secret. |
+| `apps-script/Code.js` | Google Apps Script web app — receives dual-write POSTs from the Worker and appends rows (with metadata) to a Google Sheet. Deploy via Apps Script; URL stored as `GS_WEBHOOK_URL` Worker secret. `META_COLUMNS` must match `META_FIELDS` in `worker.js`. |
 | `build.sh` | CF Pages build script; stamps `version.json` with commit SHA/branch/date. |
 | `Makefile` | `make deploy` (Pages) and `make open`. Reads `CF_API_TOKEN` from `.env`. |
 | `test_submit.sh` | End-to-end smoke test: hits `/health`, POSTs a `_test:true` response, checks for `success:true`. Sources `.env` for `WORKER_URL`. |

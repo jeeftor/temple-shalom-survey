@@ -13,6 +13,15 @@ const CORS = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
+// Metadata columns shared across INSERT, SELECT, CSV export, JSON results, and Sheets payload.
+// Update this list when adding/removing metadata fields — everything else derives from it.
+const META_FIELDS = [
+  "response_id", "timestamp", "session_id", "submission_number", "previous_response_id",
+  "survey_version", "ip_country", "cf_ray", "completion_seconds", "sections_answered",
+  "user_agent", "referrer", "device_type", "browser", "os", "screen_size", "viewport_size",
+  "started_at",
+];
+
 // Simple in-memory rate limit: max 5 submits per IP per minute
 const rateLimitMap = new Map();
 function isRateLimited(ip) {
@@ -112,19 +121,36 @@ async function handleSubmit(request, env) {
     }
   }
 
+  // Build metadata values in the same order as META_FIELDS
+  const metaValues = {
+    response_id:          responseId,
+    timestamp:            timestamp,
+    session_id:           sessionId,
+    submission_number:    submissionNumber,
+    previous_response_id: previousResponseId,
+    survey_version:       surveyVersion,
+    ip_country:           ipCountry,
+    cf_ray:               cfRay,
+    completion_seconds:   completionSeconds,
+    sections_answered:    sectionsAnswered,
+    user_agent:           userAgent,
+    referrer:             referrer,
+    device_type:          deviceType,
+    browser:              browser,
+    os:                   os,
+    screen_size:          screenSize,
+    viewport_size:        viewportSize,
+    started_at:           startedAt,
+  };
+
   try {
-    await env.DB.prepare(`
-      INSERT INTO responses
-        (response_id, timestamp, session_id, submission_number, previous_response_id,
-         survey_version, ip_country, cf_ray, completion_seconds, sections_answered,
-         user_agent, referrer, device_type, browser, os, screen_size, viewport_size,
-         started_at, payload)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).bind(
-      responseId, timestamp, sessionId, submissionNumber, previousResponseId,
-      surveyVersion, ipCountry, cfRay, completionSeconds, sectionsAnswered,
-      userAgent, referrer, deviceType, browser, os, screenSize, viewportSize,
-      startedAt, payload
+    const cols = [...META_FIELDS, "payload"];
+    const placeholders = cols.map(() => "?").join(", ");
+    await env.DB.prepare(
+      `INSERT INTO responses (${cols.join(", ")}) VALUES (${placeholders})`
+    ).bind(
+      ...META_FIELDS.map(f => metaValues[f]),
+      payload
     ).run();
 
     // ── Dual-write to Google Sheets (best-effort, non-blocking) ────────────
@@ -132,25 +158,9 @@ async function handleSubmit(request, env) {
     if (env.GS_WEBHOOK_URL && env.GS_WEBHOOK_TOKEN) {
       const sheetPayload = {
         ...body,
-        webhook_token:        env.GS_WEBHOOK_TOKEN,
-        response_id:          responseId,
-        timestamp:            timestamp,
-        session_id:           sessionId,
-        submission_number:    submissionNumber,
-        previous_response_id: previousResponseId,
-        survey_version:       surveyVersion,
-        ip_country:           ipCountry,
-        cf_ray:               cfRay,
-        completion_seconds:   completionSeconds,
-        sections_answered:    body._sections_answered || null,
-        user_agent:           userAgent,
-        referrer:             referrer,
-        device_type:          deviceType,
-        browser:              browser,
-        os:                   os,
-        screen_size:          screenSize,
-        viewport_size:        viewportSize,
-        started_at:           startedAt,
+        webhook_token: env.GS_WEBHOOK_TOKEN,
+        ...metaValues,
+        sections_answered: body._sections_answered || null,
       };
       // Remove underscore-prefixed client metadata (already mapped above)
       for (const k of Object.keys(sheetPayload)) {
@@ -211,12 +221,10 @@ async function handleExport(request, env) {
     return new Response("Unauthorized — supply ?key=YOUR_EXPORT_KEY", { status: 401 });
   }
 
-  const rows = await env.DB.prepare(`
-    SELECT id, response_id, timestamp, session_id, submission_number, previous_response_id,
-           survey_version, ip_country, completion_seconds, sections_answered, referrer,
-           device_type, browser, os, screen_size, viewport_size, started_at, payload
-    FROM responses ORDER BY id
-  `).all();
+  const selectCols = ["id", ...META_FIELDS, "payload"];
+  const rows = await env.DB.prepare(
+    `SELECT ${selectCols.join(", ")} FROM responses ORDER BY id`
+  ).all();
 
   if (!rows.results.length) {
     return new Response("No responses yet.", { headers: { "Content-Type": "text/plain" } });
@@ -233,35 +241,13 @@ async function handleExport(request, env) {
   });
 
   const qKeys   = [...keySet].sort();
-  const headers = [
-    "id", "response_id", "timestamp", "session_id",
-    "submission_number", "previous_response_id",
-    "survey_version", "ip_country", "completion_seconds", "sections_answered",
-    "referrer", "device_type", "browser", "os", "screen_size", "viewport_size",
-    "started_at",
-    ...qKeys
-  ];
+  const headers = ["id", ...META_FIELDS, ...qKeys];
 
   const csvRows = [headers.map(csvEsc).join(",")];
   for (const { meta, data } of parsed) {
     const row = [
       meta.id,
-      meta.response_id   || "",
-      meta.timestamp     || "",
-      meta.session_id    || "",
-      meta.submission_number || "",
-      meta.previous_response_id || "",
-      meta.survey_version    || "",
-      meta.ip_country        || "",
-      meta.completion_seconds ?? "",
-      meta.sections_answered || "",
-      meta.referrer          || "",
-      meta.device_type       || "",
-      meta.browser           || "",
-      meta.os                || "",
-      meta.screen_size       || "",
-      meta.viewport_size     || "",
-      meta.started_at        || "",
+      ...META_FIELDS.map(f => meta[f] ?? ""),
       ...qKeys.map(k => {
         const v = data[k];
         if (v == null) return "";
@@ -287,36 +273,25 @@ async function handleResults(request, env) {
     return json({ error: "Unauthorized" }, 401);
   }
 
-  const rows = await env.DB.prepare(`
-    SELECT id, response_id, timestamp, session_id, submission_number, previous_response_id,
-           survey_version, ip_country, completion_seconds, sections_answered, referrer,
-           device_type, browser, os, screen_size, viewport_size, started_at, payload
-    FROM responses ORDER BY id DESC
-  `).all();
+  const selectCols = ["id", ...META_FIELDS, "payload"];
+  const rows = await env.DB.prepare(
+    `SELECT ${selectCols.join(", ")} FROM responses ORDER BY id DESC`
+  ).all();
 
-  const responses = (rows.results || []).map(row => ({
-    id:                 row.id,
-    response_id:        row.response_id,
-    timestamp:          row.timestamp,
-    session_id:         row.session_id,
-    submission_number:  row.submission_number,
-    previous_response_id: row.previous_response_id,
-    survey_version:     row.survey_version,
-    ip_country:         row.ip_country,
-    completion_seconds: row.completion_seconds,
-    sections_answered:  row.sections_answered ? JSON.parse(row.sections_answered) : null,
-    referrer:           row.referrer,
-    device_type:        row.device_type,
-    browser:            row.browser,
-    os:                 row.os,
-    screen_size:        row.screen_size,
-    viewport_size:      row.viewport_size,
-    started_at:         row.started_at,
-    answers:            (() => {
-      const d = JSON.parse(row.payload || "{}");
-      return Object.fromEntries(Object.entries(d).filter(([k]) => !k.startsWith("_") && k !== "timestamp"));
-    })(),
-  }));
+  const responses = (rows.results || []).map(row => {
+    const meta = { id: row.id };
+    for (const f of META_FIELDS) {
+      meta[f] = row[f];
+    }
+    if (row.sections_answered) {
+      meta.sections_answered = JSON.parse(row.sections_answered);
+    }
+    const d = JSON.parse(row.payload || "{}");
+    meta.answers = Object.fromEntries(
+      Object.entries(d).filter(([k]) => !k.startsWith("_") && k !== "timestamp")
+    );
+    return meta;
+  });
 
   return json({ count: responses.length, responses });
 }

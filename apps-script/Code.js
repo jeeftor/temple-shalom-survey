@@ -27,10 +27,13 @@ const SHEET_NAME = "Responses";  // tab name inside the spreadsheet
 
 // Metadata columns that always come first (in this order).
 // These are sent by the Cloudflare Worker, not the browser.
+// Must match META_FIELDS in worker.js.
 const META_COLUMNS = [
   "response_id",
   "timestamp",
   "session_id",
+  "submission_number",
+  "previous_response_id",
   "survey_version",
   "ip_country",
   "cf_ray",

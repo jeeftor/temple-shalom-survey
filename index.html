@@ -194,6 +194,29 @@
     #skipBtn:hover { background: var(--blue); color: var(--white); }
     #skipBtn.hidden { visibility: hidden; }
 
+    /* ── Undo button ──────────────────────────────────────────── */
+    #undoBtn {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      z-index: 1000;
+      padding: 0.5rem 1.2rem;
+      background: var(--blue);
+      color: var(--white);
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      transition: all 0.15s;
+      opacity: 0;
+      visibility: hidden;
+    }
+    #undoBtn.visible { opacity: 1; visibility: visible; }
+    #undoBtn:hover { background: var(--blue-dark); transform: translateY(-1px); }
+    #undoBtn:disabled { opacity: 0.4; cursor: default; }
+
     /* ── SurveyJS overrides ──────────────────────────────────── */
 
     /* Page title */
@@ -589,6 +612,7 @@
 
 <header>
   <div>
+    <img src="logo.webp" alt="Temple Shalom" height="60" />
     <h1>Temple Shalom Member Survey 2026</h1>
     <p>Colorado Springs, Colorado &nbsp;·&nbsp; Confidential</p>
   </div>
@@ -627,6 +651,8 @@
 </div>
 
 <div id="versionFooter">Loading version…</div>
+
+<button id="undoBtn" type="button">&#x21A9; Undo</button>
 
 <script>
   // ── Config ──────────────────────────────────────────────────
@@ -1038,6 +1064,37 @@
 
     survey.onAfterRenderQuestion.add(() => setTimeout(wrapMatrixTables, 30));
     survey.onValueChanged.add(saveDraft);
+
+    // ── Undo: snapshot survey data before each change ─────────────────────
+    const undoStack = [];
+    const MAX_UNDO = 20;
+    let preChangeSnapshot = null;
+    survey.onValueChanging.add(() => {
+      preChangeSnapshot = JSON.stringify(survey.data);
+    });
+    survey.onValueChanged.add(() => {
+      if (preChangeSnapshot !== null) {
+        undoStack.push(preChangeSnapshot);
+        if (undoStack.length > MAX_UNDO) undoStack.shift();
+        preChangeSnapshot = null;
+      }
+      updateUndoButton();
+    });
+
+    const undoBtn = document.getElementById("undoBtn");
+    function updateUndoButton() {
+      if (undoStack.length > 0) {
+        undoBtn.classList.add("visible");
+      } else {
+        undoBtn.classList.remove("visible");
+      }
+    }
+    undoBtn.addEventListener("click", () => {
+      if (undoStack.length === 0) return;
+      const prev = undoStack.pop();
+      survey.data = JSON.parse(prev);
+      updateUndoButton();
+    });
 
     // ── Custom question numbering (letter suffixes for conditional questions) ──
     // Conditional follow-ups get "3a", "11a", "41a" instead of causing renumbering

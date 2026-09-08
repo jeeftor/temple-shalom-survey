@@ -1008,6 +1008,7 @@
     });
 
     document.getElementById("startOverBtn").addEventListener("click", () => {
+      if (!confirm("Are you sure? This will clear all your saved answers and start a new survey from the beginning.")) return;
       localStorage.removeItem(DRAFT_KEY);
       localStorage.removeItem(PAGE_KEY);
       savedDraft = null;

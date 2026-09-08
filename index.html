@@ -1071,10 +1071,13 @@
     const undoStack = [];
     const MAX_UNDO = 20;
     let preChangeSnapshot = null;
+    let isUndoing = false;
     survey.onValueChanging.add(() => {
+      if (isUndoing) return;
       preChangeSnapshot = JSON.stringify(survey.data);
     });
     survey.onValueChanged.add(() => {
+      if (isUndoing) return;
       if (preChangeSnapshot !== null) {
         undoStack.push(preChangeSnapshot);
         if (undoStack.length > MAX_UNDO) undoStack.shift();
@@ -1094,7 +1097,9 @@
     undoBtn.addEventListener("click", () => {
       if (undoStack.length === 0) return;
       const prev = undoStack.pop();
+      isUndoing = true;
       survey.data = JSON.parse(prev);
+      isUndoing = false;
       updateUndoButton();
     });
 

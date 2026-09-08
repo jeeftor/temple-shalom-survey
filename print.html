@@ -38,13 +38,13 @@
     header p  { font-size: 8.5pt; color: #555; margin: 0.2rem 0 0; }
 
     .section {
-      margin: 0.5rem 0;
+      margin: 0.4rem 0;
     }
     .section-header {
       background: #0038b8;
       color: white;
-      padding: 0.25rem 0.8rem;
-      font-size: 10pt;
+      padding: 0.15rem 0.6rem;
+      font-size: 9.5pt;
       font-weight: bold;
       border-radius: 4px;
     }
@@ -62,9 +62,9 @@
       font-style: italic;
       border-radius: 0 0 4px 4px;
     }
-    .section-body { padding: 0.3rem 0.8rem; }
+    .section-body { padding: 0.2rem 0.6rem; }
 
-    .question { margin: 0.4rem 0; }
+    .question { margin: 0.3rem 0; }
     .question-text {
       font-weight: bold;
       font-size: 10pt;
@@ -317,8 +317,13 @@ function buildPrintHTML(survey) {
   const CONTACT_FIELDS = ['q_contact_name', 'q_contact_email', 'q_contact_phone', 'q_contact_request'];
 
   let html = "";
-  survey.pages.forEach((page) => {
+  survey.pages.forEach((page, pageIdx) => {
+    const isLast = pageIdx === survey.pages.length - 1;
+    const title = page.title || `Section ${pageIdx + 1}`;
     html += '<div class="section">';
+    html += `<div class="section-header">${esc(title)}`;
+    if (!isLast) html += '<span class="section-optional">— OPTIONAL</span>';
+    html += '</div>';
     html += '<div class="section-body">';
     (page.elements || []).forEach(el => {
       if (CONTACT_FIELDS.includes(el.name)) return; // skip — rendered as a block at the end

@@ -737,12 +737,12 @@
         <h2 style="color:#2e7d32">You've already submitted this survey</h2>
         <p style="margin-top:1rem;color:#444">
           Thank you! Your response has been recorded.<br>
-          If your answers have changed or you'd like to submit again, click below.
+          If you'd like to start over and submit a new response, click below.
         </p>
         <button id="resubmitBtn" style="margin-top:1.5rem;background:var(--blue);color:white;
                 border:none;padding:0.6rem 2rem;border-radius:6px;font-size:11pt;
                 cursor:pointer;font-weight:bold;">
-          Submit again
+          Start over
         </button>
       </div>`;
     document.getElementById("skipBtn").style.display = "none";
@@ -1284,7 +1284,7 @@
           statusEl.textContent = result.error === "duplicate"
             ? "It looks like we already received your response — thank you!"
             : alreadySubmitted
-              ? "Your updated response has been saved. Thank you for completing the survey again!"
+              ? "Your new response has been saved. Thank you!"
               : "Your response has been saved. Thank you for completing the survey!";
           completedPages.add(lastPage);
           updateNav(lastPage);

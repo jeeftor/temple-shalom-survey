@@ -29,8 +29,10 @@
       margin-bottom: 0.8rem;
       display: flex;
       align-items: flex-start;
+      justify-content: space-between;
       gap: 1rem;
     }
+    header > div { flex: 1; }
     header img { height: 40px; width: auto; flex-shrink: 0; margin-top: 0.2rem; }
     header h1 { font-size: 18pt; margin: 0; color: #00277d; }
     header p  { font-size: 9pt; color: #555; margin: 0.3rem 0 0; }
@@ -248,13 +250,15 @@
 <button id="printBtn" onclick="window.print()" disabled style="opacity:0.5">Loading…</button>
 
 <header>
+  <div>
+    <h1>Temple Shalom Member Survey 2026</h1>
+    <p>
+      Colorado Springs, Colorado &nbsp;·&nbsp; Confidential<br>
+      Thank you for sharing your thoughts with us. This survey is confidential unless you choose to identify yourself in an open-ended response.<br>
+      Each adult member of the household should complete a separate survey.
+    </p>
+  </div>
   <img src="logo.webp" alt="Temple Shalom" height="50" />
-  <h1>Temple Shalom Member Survey 2026</h1>
-  <p>
-    Colorado Springs, Colorado &nbsp;·&nbsp; Confidential<br>
-    Thank you for sharing your thoughts with us. This survey is confidential unless you choose to identify yourself in an open-ended response.<br>
-    Each adult member of the household should complete a separate survey.
-  </p>
 </header>
 
 <div id="surveyPrint">Loading survey…</div>

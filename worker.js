@@ -202,6 +202,29 @@ async function handleSubmit(request, env) {
       }
     }
 
+    // ── Telegram notification (best-effort, non-blocking) ──────────────────
+    if (env.TG_BOT_TOKEN && env.TG_CHAT_ID) {
+      try {
+        const mins = completionSeconds ? Math.round(completionSeconds / 60) : null;
+        const timeStr = mins ? `${mins}m ${completionSeconds - mins * 60}s` : "unknown";
+        const device = [deviceType, browser, os].filter(Boolean).join(" / ") || "unknown";
+        const msg = `\u2705 Survey submitted! #${submissionNumber}\n`
+          + `Time: ${timeStr}\n`
+          + `Device: ${device}\n`
+          + `Sections: ${(body._sections_answered || []).length} answered`;
+        await fetch(
+          `https://api.telegram.org/bot${env.TG_BOT_TOKEN}/sendMessage`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ chat_id: env.TG_CHAT_ID, text: msg }),
+          }
+        );
+      } catch (tgErr) {
+        console.error("Telegram notification failed:", tgErr.message);
+      }
+    }
+
     return json({ success: true, response_id: responseId });
   } catch (err) {
     // Duplicate session within same day = likely dupe submission

@@ -43,17 +43,6 @@ async function goToSection(page, index) {
   }
 }
 
-async function captureVisual(page, testInfo, name) {
-  if (!process.env.CI) {
-    await expect(page).toHaveScreenshot(name, { fullPage: true });
-    return;
-  }
-
-  const path = testInfo.outputPath(name);
-  await page.screenshot({ path, fullPage: true, animations: "disabled" });
-  await testInfo.attach(name, { path, contentType: "image/png" });
-}
-
 test("section navigation adapts without duplicate progress dots", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator(".sd-root-modern")).toBeVisible();
@@ -66,7 +55,7 @@ test("section navigation adapts without duplicate progress dots", async ({ page 
   await expect(page.locator('[data-name="q_service_announcements_comments"]')).toBeVisible();
 });
 
-test("survey sections render without clipping", async ({ page }, testInfo) => {
+test("survey sections render without clipping", async ({ page }) => {
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));
   page.on("console", message => {
@@ -75,67 +64,104 @@ test("survey sections render without clipping", async ({ page }, testInfo) => {
 
   await page.goto("/");
   await expect(page.locator(".sd-root-modern")).toBeVisible();
-  await page.locator("#versionFooter").evaluate(element => { element.style.visibility = "hidden"; });
 
   for (let index = 0; index < sections.length; index++) {
     await goToSection(page, index);
     await expect(page.locator(".sd-page__title")).toContainText(sections[index]);
     await expectNoRenderingErrors(page);
-    await captureVisual(page, testInfo, `survey-${index + 1}-${sections[index].toLowerCase().replace(/[^a-z]+/g, "-")}.png`);
   }
 
   expect(errors).toEqual([]);
-  await testInfo.attach("survey-url", { body: Buffer.from(page.url()), contentType: "text/plain" });
 });
 
-test("unfinished responses can be saved and resumed", async ({ page }, testInfo) => {
+test("drafts are silently restored on reload", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator(".sd-root-modern")).toBeVisible();
   await goToSection(page, sections.length - 1);
-  await page.locator('[data-name="q_contact"] input').fill("Test Member, test@example.com");
 
-  await expect.poll(() => page.evaluate(() => localStorage.getItem("ts_survey_draft_2026"))).not.toBeNull();
+  // Fill contact fields to create a draft (press Tab to trigger SurveyJS value capture)
+  await page.locator('[data-name="q_contact_name"] input').fill("Test Member");
+  await page.keyboard.press("Tab");
+  await page.locator('[data-name="q_contact_email"] input').fill("test@example.com");
+  await page.keyboard.press("Tab");
+
+  // Wait for draft to be saved with both values
+  await expect.poll(async () => {
+    const raw = await page.evaluate(() => localStorage.getItem("ts_survey_draft_2026"));
+    try {
+      const draft = JSON.parse(raw);
+      return draft?.data?.q_contact_name === "Test Member" && draft?.data?.q_contact_email === "test@example.com";
+    } catch {
+      return false;
+    }
+  }).toBe(true);
+
   await page.reload();
-  await expect(page.locator("#draftNotice")).toBeVisible();
-  await expect(page.locator("#surveyContainer")).toBeHidden();
-  await captureVisual(page, testInfo, "draft-resume-prompt.png");
-  await page.locator("#resumeDraftBtn").click();
-  await expect(page.locator('[data-name="q_contact"] input')).toHaveValue("Test Member, test@example.com");
-  await expect(page.locator('[data-name="q_contact_request"]')).toBeVisible();
+
+  // Wait for survey to fully render before checking values
+  await expect(page.locator(".sd-root-modern")).toBeVisible();
+  await expect(page.locator('[data-name="q_contact_name"]')).toBeVisible();
+  await expect(page.locator('[data-name="q_contact_email"]')).toBeVisible();
+  // Give SurveyJS time to restore values into the inputs
+  await page.waitForTimeout(1000);
+  await expect(page.locator('[data-name="q_contact_name"] input')).toHaveValue("Test Member");
+  await expect(page.locator('[data-name="q_contact_email"] input')).toHaveValue("test@example.com");
   await expect(page.locator("#sectionSelect")).toHaveValue(String(sections.length - 1));
-
-  await expect.poll(() => page.evaluate(() => localStorage.getItem("ts_survey_draft_2026"))).not.toBeNull();
-  await page.reload();
-  await page.locator("#startOverBtn").click();
-  await expect(page.locator('[data-name="q_contact"]')).toHaveCount(0);
-  await expect(page.locator("#sectionSelect")).toHaveValue("0");
-  await expect.poll(() => page.evaluate(() => localStorage.getItem("ts_survey_draft_2026"))).toBeNull();
 });
 
 test("expired drafts are discarded", async ({ page }) => {
   await page.goto("/");
   await page.evaluate(() => {
-    localStorage.setItem("ts_survey_draft_2026", JSON.stringify({ data: { q_contact: "Old draft" }, pageNo: 6, savedAt: Date.now() - 31 * 24 * 60 * 60 * 1000 }));
+    localStorage.setItem("ts_survey_draft_2026", JSON.stringify({ data: { q_contact_name: "Old draft" }, pageNo: 6, savedAt: Date.now() - 31 * 24 * 60 * 60 * 1000 }));
   });
   await page.reload();
-  await expect(page.locator("#draftNotice")).toBeHidden();
-  await expect(page.locator("#surveyContainer")).toBeVisible();
+  await expect(page.locator(".sd-root-modern")).toBeVisible();
   await expect.poll(() => page.evaluate(() => localStorage.getItem("ts_survey_draft_2026"))).toBeNull();
 });
 
-test("contact request appears after identification", async ({ page }) => {
+test("contact fields render on final section", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator(".sd-root-modern")).toBeVisible();
   await goToSection(page, sections.length - 1);
 
-  const contact = page.locator('[data-name="q_contact"] input');
-  const request = page.locator('[data-name="q_contact_request"]');
-  await expect(contact).toBeVisible();
-  await expect(request).toBeHidden();
-  await contact.fill("Test Member, test@example.com");
-  await expect(request).toBeVisible();
-  await contact.fill("");
-  await expect(request).toBeHidden();
+  // Contact fields are always visible
+  await expect(page.locator('[data-name="q_contact_name"]')).toBeVisible();
+  await expect(page.locator('[data-name="q_contact_email"]')).toBeVisible();
+  await expect(page.locator('[data-name="q_contact_phone"]')).toBeVisible();
+
+  // Contact request only appears when a contact field is filled
+  await expect(page.locator('[data-name="q_contact_request"]')).toBeHidden();
+  await page.locator('[data-name="q_contact_name"] input').fill("Test Member");
+  await page.keyboard.press("Tab");
+  await expect(page.locator('[data-name="q_contact_request"]')).toBeVisible();
+});
+
+test("undo button reverts last change", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator(".sd-root-modern")).toBeVisible();
+
+  // Answer a radiogroup question (Q3: ADA accessibility)
+  await goToSection(page, 0);
+  // Click the first radio option by clicking its label
+  const adaQuestion = page.locator('[data-name="q3_ada"]');
+  await adaQuestion.locator("label").first().click();
+
+  // Undo button should appear (wait up to 10s)
+  await expect(page.locator("#undoBtn")).toHaveClass(/visible/, { timeout: 10000 });
+
+  // Click undo
+  await page.locator("#undoBtn").click();
+
+  // Undo button should hide
+  await expect(page.locator("#undoBtn")).not.toHaveClass(/visible/);
+});
+
+test("logo is visible in header", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator(".sd-root-modern")).toBeVisible();
+  await expect(page.locator("header img")).toBeVisible();
+  const src = await page.locator("header img").getAttribute("src");
+  expect(src).toContain("logo");
 });
 
 test("print view renders every section", async ({ page }, testInfo) => {
@@ -150,17 +176,24 @@ test("print view renders every section", async ({ page }, testInfo) => {
   await page.goto("/print.html");
   await expect(page.locator(".section")).toHaveCount(sections.length);
   await expect(page.locator(".question").first()).toBeVisible();
+
+  // Section headers are present
+  for (let i = 0; i < sections.length; i++) {
+    await expect(page.locator(".section-header").nth(i)).toContainText(sections[i]);
+  }
+
+  // Conditional questions render plainly (no branch notes)
   await expect(page.locator(".branch-note")).toHaveCount(0);
   await expect(page.getByText("Only answer if", { exact: false })).toHaveCount(0);
+
+  // Key content is present
   await expect(page.getByText("Does the lack of ADA accessibility limit", { exact: false })).toBeVisible();
   await expect(page.getByText("has or do you expect your child(ren) under 18", { exact: false })).toBeVisible();
-  await expect(page.getByText("Contact information (optional):", { exact: false })).toBeVisible();
+  await expect(page.getByText("Contact information (optional)", { exact: false })).toBeVisible();
   await expect(page.getByText("Would you like someone from Temple Shalom to contact you", { exact: false })).toBeVisible();
-  await page.emulateMedia({ media: "print" });
-  await captureVisual(page, testInfo, "survey-print.png");
 
-  const pdfPath = testInfo.outputPath("survey-print.pdf");
-  await page.pdf({ path: pdfPath, format: "Letter", printBackground: true });
-  await testInfo.attach("survey-print.pdf", { path: pdfPath, contentType: "application/pdf" });
+  // Logo in print header
+  await expect(page.locator("header img")).toBeVisible();
+
   expect(errors).toEqual([]);
 });

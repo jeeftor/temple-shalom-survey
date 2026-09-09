@@ -190,6 +190,11 @@
       gap: 1.5rem;
       font-size: 10pt;
     }
+    .contact-request-text {
+      font-weight: bold;
+      font-size: 10pt;
+      margin: 0.4rem 0 0.3rem;
+    }
     .contact-choice {
       display: flex;
       align-items: center;
@@ -350,6 +355,7 @@ function buildPrintHTML(survey) {
       const choices = (contactQs.q_contact_request.choices || []).map(c =>
         `<span class="contact-choice"><span class="box"></span> ${esc(c.text || c.value)}</span>`
       ).join(' ');
+      html += `<div class="contact-request-text">${esc(contactQs.q_contact_request.title || '')}</div>`;
       html += `<div class="contact-choices">${choices}</div>`;
     }
     html += '</div>';

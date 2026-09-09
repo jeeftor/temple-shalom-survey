@@ -678,11 +678,24 @@
                   background:#f0faf0;border:2px solid #a5d6a7;border-radius:8px;">
         <h2 style="color:#2e7d32">You've already submitted this survey</h2>
         <p style="margin-top:1rem;color:#444">
-          Thank you! Your response has been recorded.
+          Thank you! Your response has been recorded.<br>
+          Each adult member of the household should complete a separate survey.
         </p>
+        <button id="startOverBtn" style="margin-top:1.5rem;background:var(--blue);color:white;
+                border:none;padding:0.6rem 2rem;border-radius:6px;font-size:11pt;
+                cursor:pointer;font-weight:bold;">
+          Start over
+        </button>
       </div>`;
     document.getElementById("skipBtn").style.display = "none";
     document.getElementById("versionFooter").style.display = "none";
+    document.getElementById("startOverBtn").addEventListener("click", () => {
+      if (!confirm("Are you sure? This will clear the current submission and start a new survey from the beginning.")) return;
+      localStorage.removeItem(SUBMITTED_KEY);
+      localStorage.removeItem(DRAFT_KEY);
+      localStorage.removeItem(PAGE_KEY);
+      location.reload();
+    });
   }
 
   if (alreadySubmitted) {

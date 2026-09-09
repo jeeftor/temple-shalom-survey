@@ -197,3 +197,81 @@ test("print view renders every section", async ({ page }, testInfo) => {
 
   expect(errors).toEqual([]);
 });
+
+test("already-submitted Start over button clears state and reloads survey", async ({ page }) => {
+  // Simulate a prior submission
+  await page.goto("/");
+  await page.evaluate(() => {
+    localStorage.setItem("ts_survey_submitted_2026", "1");
+    localStorage.setItem("ts_survey_draft_2026", JSON.stringify({
+      data: { q_contact_name: "Should be gone" },
+      pageNo: 6,
+      savedAt: Date.now(),
+    }));
+    localStorage.setItem("ts_survey_page_2026", "6");
+  });
+
+  await page.reload();
+
+  // Should see the "already submitted" notice, not the survey
+  await expect(page.locator("text=You've already submitted this survey")).toBeVisible();
+  await expect(page.locator(".sd-root-modern")).toHaveCount(0);
+
+  // The Start over button should be clickable (this was the bug — wrong element got the listener)
+  page.once("dialog", dialog => dialog.accept());
+  await page.locator("#startOverSubmittedBtn").click();
+
+  // Page reloads; survey should be visible and empty (no draft restored)
+  await expect(page.locator(".sd-root-modern")).toBeVisible();
+  await expect(page.locator("#sectionSelect")).toHaveValue("0");
+
+  // localStorage should be cleared
+  const submitted = await page.evaluate(() => localStorage.getItem("ts_survey_submitted_2026"));
+  expect(submitted).toBeNull();
+  const draft = await page.evaluate(() => localStorage.getItem("ts_survey_draft_2026"));
+  expect(draft).toBeNull();
+  const savedPage = await page.evaluate(() => localStorage.getItem("ts_survey_page_2026"));
+  expect(savedPage).toBeNull();
+});
+
+test("Start over from draft-notice clears survey answers", async ({ page }) => {
+  // Pre-seed a local draft so the survey has data loaded
+  await page.goto("/");
+  await page.evaluate(() => {
+    localStorage.setItem("ts_survey_draft_2026", JSON.stringify({
+      data: { q3_ada: "sometimes", q_contact_name: "Draft User" },
+      pageNo: 0,
+      savedAt: Date.now(),
+    }));
+  });
+  await page.reload();
+  await expect(page.locator(".sd-root-modern")).toBeVisible();
+
+  // Simulate a server draft found via ?draft=XXXX by injecting the draft notice
+  // and making it visible (mirrors what setDraftPromptVisible(true) does)
+  await page.evaluate(() => {
+    document.getElementById("draftMessage").textContent = "A saved draft was found. Would you like to resume?";
+    document.getElementById("draftNotice").hidden = false;
+    document.getElementById("surveyContainer").hidden = true;
+    document.getElementById("actionBar").hidden = true;
+  });
+
+  await expect(page.locator("#draftNotice")).toBeVisible();
+  await expect(page.locator("#startOverBtn")).toBeVisible();
+
+  // Click Start over (accept the confirm dialog)
+  page.once("dialog", dialog => dialog.accept());
+  await page.locator("#startOverBtn").click();
+
+  // Survey should be visible again, on page 0, with no answers
+  await expect(page.locator(".sd-root-modern")).toBeVisible();
+  await expect(page.locator("#sectionSelect")).toHaveValue("0");
+
+  // The previously-loaded draft answers should be gone from the survey
+  const adaInput = page.locator('[data-name="q3_ada"] input:checked');
+  await expect(adaInput).toHaveCount(0);
+
+  // localStorage draft should be cleared
+  const draft = await page.evaluate(() => localStorage.getItem("ts_survey_draft_2026"));
+  expect(draft).toBeNull();
+});

@@ -681,7 +681,7 @@
           Thank you! Your response has been recorded.<br>
           Each adult member of the household should complete a separate survey.
         </p>
-        <button id="startOverBtn" style="margin-top:1.5rem;background:var(--blue);color:white;
+        <button id="startOverSubmittedBtn" style="margin-top:1.5rem;background:var(--blue);color:white;
                 border:none;padding:0.6rem 2rem;border-radius:6px;font-size:11pt;
                 cursor:pointer;font-weight:bold;">
           Start over
@@ -689,7 +689,7 @@
       </div>`;
     document.getElementById("skipBtn").style.display = "none";
     document.getElementById("versionFooter").style.display = "none";
-    document.getElementById("startOverBtn").addEventListener("click", () => {
+    document.getElementById("startOverSubmittedBtn").addEventListener("click", () => {
       if (!confirm("Are you sure? This will clear the current submission and start a new survey from the beginning.")) return;
       localStorage.removeItem(SUBMITTED_KEY);
       localStorage.removeItem(DRAFT_KEY);
@@ -940,6 +940,8 @@
       savedDraft = null;
       serverDraft = null;
       draftReady = true;
+      survey.clear();
+      survey.currentPageNo = 0;
       setDraftPromptVisible(false);
       updateNav(0);
       updateSkip(0);

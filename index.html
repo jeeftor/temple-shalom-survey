@@ -689,7 +689,7 @@
                     background:#f0f7ff;border:2px solid var(--blue-light);border-radius:8px;">
           <h2 style="color:var(--blue-dark)">You have an in-progress response</h2>
           <p style="margin-top:1rem;color:#444">
-            You started submitting a new response but didn't finish.<br>
+            You started a new response but didn't finish.<br>
             Your draft is saved — would you like to continue?
           </p>
           <div style="margin-top:1.5rem;display:flex;gap:0.75rem;justify-content:center;">
@@ -723,6 +723,7 @@
       });
 
       document.getElementById("startOverResubmitBtn").addEventListener("click", () => {
+        if (!confirm("Are you sure? This will clear your saved draft and start a new survey from the beginning.")) return;
         localStorage.removeItem(DRAFT_KEY);
         localStorage.removeItem(RESUBMIT_KEY);
         startFreshResubmit();
@@ -736,8 +737,7 @@
                   background:#f0faf0;border:2px solid #a5d6a7;border-radius:8px;">
         <h2 style="color:#2e7d32">You've already submitted this survey</h2>
         <p style="margin-top:1rem;color:#444">
-          Thank you! Your response has been recorded.<br>
-          If you'd like to start over and submit a new response, click below.
+          Thank you! Your response has been recorded.
         </p>
         <button id="resubmitBtn" style="margin-top:1.5rem;background:var(--blue);color:white;
                 border:none;padding:0.6rem 2rem;border-radius:6px;font-size:11pt;

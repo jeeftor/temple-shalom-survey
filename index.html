@@ -766,24 +766,16 @@
 
   function initSurvey(surveyJson, skipDraftPrompt) {
     const survey = new Survey.Model(surveyJson);
-    survey.showPreview = "showAnsweredQuestions";
+    survey.showPreviewBeforeComplete = "showAnsweredQuestions";
 
     // Hide custom section nav / skip / undo while the review screen is shown,
     // restore them if the member goes back to edit. SurveyJS shows its own
     // Submit / Back buttons on the preview page.
-    survey.onShowingPreviewChanged.add(() => {
-      const showing = survey.isShowingPreview;
-      document.getElementById("sectionNav").hidden = showing;
-      document.getElementById("actionBar").hidden = showing;
-      const undoBtnEl = document.getElementById("undoBtn");
-      if (showing) {
-        undoBtnEl.classList.remove("visible");
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      } else {
-        if (undoStack.length > 0) undoBtnEl.classList.add("visible");
-        updateNav(survey.currentPageNo);
-        updateSkip(survey.currentPageNo);
-      }
+    survey.onShowingPreview.add(() => {
+      document.getElementById("sectionNav").hidden = true;
+      document.getElementById("actionBar").hidden = true;
+      document.getElementById("undoBtn").classList.remove("visible");
+      window.scrollTo({ top: 0, behavior: "smooth" });
     });
 
     const intro = document.getElementById("surveyIntro");
@@ -1002,7 +994,7 @@
 
     // ── Page change ────────────────────────────────────────────
     survey.onCurrentPageChanged.add((_, opts) => {
-      if (survey.isShowingPreview) return;
+      if (survey.state === "preview") return;
       const prev = opts.oldCurrentPage ? survey.pages.indexOf(opts.oldCurrentPage) : -1;
       if (prev >= 0) completedPages.add(prev);
       const cur = survey.currentPageNo;
@@ -1126,6 +1118,18 @@
       });
     }
     survey.onAfterRenderPage.add(() => setTimeout(bindProgressNav, 80));
+
+    // Restore custom nav when leaving preview (cancelPreview fires no
+    // dedicated event, but onAfterRenderPage fires when the edit page
+    // re-renders after going back).
+    survey.onAfterRenderPage.add(() => setTimeout(() => {
+      const inPreview = survey.state === "preview";
+      document.getElementById("sectionNav").hidden = inPreview;
+      document.getElementById("actionBar").hidden = inPreview;
+      if (!inPreview && survey.state === "running" && undoStack.length > 0) {
+        document.getElementById("undoBtn").classList.add("visible");
+      }
+    }, 50));
 
     // Make every matrix scrollable on desktop; on mobile, inject column labels
     // for the stacked card layout (header is hidden via CSS on narrow screens)

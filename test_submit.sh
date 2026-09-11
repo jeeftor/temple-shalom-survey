@@ -18,9 +18,11 @@ RESPONSE=$(curl -s -X POST "$WORKER_URL/submit" \
   -d "{
     \"timestamp\": \"$TIMESTAMP\",
     \"_test\": true,
+    \"q_contact_name\": \"TEST USER\",
+    \"q_contact_email\": \"test@test.com\",
     \"q5_religious_identity\": \"just_jewish\",
     \"q_nps\": 9,
-    \"q28_final_comments\": \"Automated test — safe to delete.\"
+    \"q28_final_comments\": \"TEST DATA — automated test, safe to delete.\"
   }")
 
 echo "  Response: $RESPONSE"
@@ -34,6 +36,10 @@ if echo "$RESPONSE" | grep -q '"success":true'; then
   echo ""
   echo "To export as CSV:"
   echo "  curl '$WORKER_URL/export' -o responses.csv"
+  echo ""
+  echo "To DELETE all test rows from D1 (tagged _test / TEST USER):"
+  echo "  CLOUDFLARE_API_TOKEN=\$CF_WORKER_TOKEN npx wrangler d1 execute temple-shalom-responses --remote --command \"DELETE FROM responses WHERE json_extract(payload, '\$._test') = 1\""
+  echo "  (In Google Sheets, filter q_contact_name = 'TEST USER' and delete those rows.)"
 else
   echo ""
   echo "FAILED — check worker logs:"

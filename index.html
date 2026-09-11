@@ -659,6 +659,7 @@
 <script>
   // ── Config ──────────────────────────────────────────────────
   const SUBMIT_URL = "https://temple-shalom-survey.jeffstein.workers.dev/submit";
+  const DRAFT_URL  = SUBMIT_URL.replace("/submit", "/draft");
 
   // ── Already-submitted guard ──────────────────────────────────
   const SUBMITTED_KEY = "ts_survey_submitted_2026";
@@ -766,7 +767,7 @@
 
   function initSurvey(surveyJson, skipDraftPrompt) {
     const survey = new Survey.Model(surveyJson);
-    survey.showPreviewBeforeComplete = "showAnsweredQuestions";
+    survey.showPreviewBeforeComplete = "showAllQuestions";
 
     // Hide custom section nav / skip / undo while the review screen is shown,
     // restore them if the member goes back to edit. SurveyJS shows its own
@@ -776,6 +777,15 @@
       document.getElementById("actionBar").hidden = true;
       document.getElementById("undoBtn").classList.remove("visible");
       window.scrollTo({ top: 0, behavior: "smooth" });
+      // Force-save the full survey as a draft so data isn't lost if the
+      // user closes the tab without clicking Submit on the preview.
+      if (sessionId && Object.keys(survey.data).length > 0) {
+        fetch(DRAFT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ _session: sessionId, _page_no: survey.currentPageNo, _preview: true, data: survey.data }),
+        }).catch(() => {});
+      }
     });
 
     const intro = document.getElementById("surveyIntro");
@@ -841,17 +851,12 @@
     }
     let draftReady = !savedDraft;
 
-    // When resuming a resubmission, load the draft directly without prompting
-    if (skipDraftPrompt && savedDraft) {
+    // Restore draft data + page (whether resuming or fresh load)
+    if (savedDraft) {
       draftReady = true;
       survey.data = savedDraft.data || {};
       if (savedDraft.pageNo != null) survey.currentPageNo = savedDraft.pageNo;
-    } else if (savedDraft) {
-      // Local draft exists — silently restore data + page (no prompt)
-      draftReady = true;
-      survey.data = savedDraft.data || {};
-      if (savedDraft.pageNo != null) survey.currentPageNo = savedDraft.pageNo;
-    } else if (!savedDraft) {
+    } else {
       // No draft — but restore the last-visited page so refresh doesn't jump to page 1
       const savedPage = parseInt(localStorage.getItem(PAGE_KEY), 10);
       const maxPage = (surveyJson.pages || []).length - 1;
@@ -865,7 +870,7 @@
     let serverDraft = null;
     if (urlDraftId) {
       // Fetch async; will show prompt if found
-      fetch(`${SUBMIT_URL.replace("/submit", "/draft")}?id=${urlDraftId}`)
+      fetch(`${DRAFT_URL}?id=${urlDraftId}`)
         .then(r => r.json())
         .then(result => {
           if (result.success && result.data) {
@@ -912,7 +917,7 @@
       clearTimeout(serverDraftTimer);
       serverDraftTimer = setTimeout(async () => {
         try {
-          const res = await fetch(SUBMIT_URL.replace("/submit", "/draft"), {
+          const res = await fetch(DRAFT_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -1006,7 +1011,11 @@
       setTimeout(wrapMatrixTables, 50);
     });
 
-    survey.onAfterRenderQuestion.add(() => setTimeout(wrapMatrixTables, 30));
+    let matrixTimer;
+    survey.onAfterRenderQuestion.add(() => {
+      clearTimeout(matrixTimer);
+      matrixTimer = setTimeout(wrapMatrixTables, 30);
+    });
     survey.onValueChanged.add(saveDraft);
 
     // ── Undo: snapshot survey data before each change ─────────────────────
@@ -1072,7 +1081,20 @@
       return numbers;
     }
 
-    function updateQuestionNumbers() {
+    function updateQuestionNumber(name) {
+      const num = computeQuestionNumbers()[name];
+      if (!num) return;
+      const titleEl = document.querySelector(`[data-name="${name}"] .sd-question__title`);
+      if (!titleEl) return;
+      const existing = titleEl.querySelector('.custom-q-num');
+      if (existing) existing.remove();
+      const span = document.createElement('span');
+      span.className = 'custom-q-num';
+      span.textContent = num + '.';
+      titleEl.insertBefore(span, titleEl.firstChild);
+    }
+
+    function updateAllQuestionNumbers() {
       const numbers = computeQuestionNumbers();
       Object.entries(numbers).forEach(([name, num]) => {
         const titleEl = document.querySelector(`[data-name="${name}"] .sd-question__title`);
@@ -1085,28 +1107,24 @@
         titleEl.insertBefore(span, titleEl.firstChild);
       });
     }
-    survey.onAfterRenderQuestion.add(updateQuestionNumbers);
-    survey.onValueChanged.add(updateQuestionNumbers);
+    survey.onAfterRenderQuestion.add((_, opts) => updateQuestionNumber(opts.question.name));
+    survey.onQuestionVisibleChanged.add(() => setTimeout(updateAllQuestionNumbers, 0));
 
     // ── Live selection counter for maxSelectedChoices questions ──
-    function updateSelectionCounters() {
-      const page = survey.currentPage;
-      if (!page) return;
-      page.questions.forEach(q => {
-        if (!q.maxSelectedChoices) return;
-        const val = q.value;
-        const count = Array.isArray(val) ? val.length : (val ? 1 : 0);
-        const max = q.maxSelectedChoices;
-        const el = document.querySelector(`[data-name="${q.name}"] .sd-question__description`);
-        if (el) {
-          el.textContent = `Selected: ${count} of ${max}${count >= max ? " — limit reached" : ""}`;
-          el.style.color = count >= max ? "#b00020" : "var(--text-muted)";
-          el.style.fontWeight = count >= max ? "600" : "400";
-        }
-      });
+    function updateSelectionCounter(q) {
+      if (!q.maxSelectedChoices) return;
+      const val = q.value;
+      const count = Array.isArray(val) ? val.length : (val ? 1 : 0);
+      const max = q.maxSelectedChoices;
+      const el = document.querySelector(`[data-name="${q.name}"] .sd-question__description`);
+      if (el) {
+        el.textContent = `Selected: ${count} of ${max}${count >= max ? " — limit reached" : ""}`;
+        el.style.color = count >= max ? "#b00020" : "var(--text-muted)";
+        el.style.fontWeight = count >= max ? "600" : "400";
+      }
     }
-    survey.onValueChanged.add(updateSelectionCounters);
-    survey.onAfterRenderQuestion.add(updateSelectionCounters);
+    survey.onValueChanged.add((_, opts) => { if (opts.question) updateSelectionCounter(opts.question); });
+    survey.onAfterRenderQuestion.add((_, opts) => { if (opts.question) updateSelectionCounter(opts.question); });
 
     // Make progress bar buttons navigable by click
     function bindProgressNav() {
@@ -1121,9 +1139,12 @@
 
     // Restore custom nav when leaving preview (cancelPreview fires no
     // dedicated event, but onAfterRenderPage fires when the edit page
-    // re-renders after going back).
+    // re-renders after going back). Only act on the transition, not every render.
+    let wasInPreview = false;
     survey.onAfterRenderPage.add(() => setTimeout(() => {
       const inPreview = survey.state === "preview";
+      if (inPreview === wasInPreview) return;
+      wasInPreview = inPreview;
       document.getElementById("sectionNav").hidden = inPreview;
       document.getElementById("actionBar").hidden = inPreview;
       if (!inPreview && survey.state === "running" && undoStack.length > 0) {
@@ -1194,30 +1215,30 @@
       statusEl.className = "sending";
       statusEl.textContent = "Sending your response…";
 
-    // Which sections had any answers?
-    const sectionsAnswered = (surveyJson.pages || [])
-      .map(p => p.title)
-      .filter((_, i) => {
-        const page = survey.pages[i];
-        return page?.questions?.some(q => sender.data[q.name] !== undefined);
-      });
+      // Which sections had any answers?
+      const sectionsAnswered = (surveyJson.pages || [])
+        .map(p => p.title)
+        .filter((_, i) => {
+          const page = survey.pages[i];
+          return page?.questions?.some(q => sender.data[q.name] !== undefined);
+        });
 
-    const payload = {
-      timestamp:            new Date().toISOString(),
-      _session:             sessionId,
-      _survey_version:      surveyVersion,
-      _userAgent:           navigator.userAgent,
-      _device_type:         deviceType,
-      _browser:             browser,
-      _os:                  os,
-      _screen_size:         screenSize,
-      _viewport_size:       viewportSize,
-      _started_at:          surveyStartedAt,
-      _completion_seconds:  Math.round((Date.now() - surveyStartTime) / 1000),
-      _sections_answered:   sectionsAnswered,
-      _referrer:            document.referrer || null,
-      ...sender.data
-    };
+      const payload = {
+        timestamp:            new Date().toISOString(),
+        _session:             sessionId,
+        _survey_version:      surveyVersion,
+        _userAgent:           navigator.userAgent,
+        _device_type:         deviceType,
+        _browser:             browser,
+        _os:                  os,
+        _screen_size:         screenSize,
+        _viewport_size:       viewportSize,
+        _started_at:          surveyStartedAt,
+        _completion_seconds:  Math.round((Date.now() - surveyStartTime) / 1000),
+        _sections_answered:   sectionsAnswered,
+        _referrer:            document.referrer || null,
+        ...sender.data
+      };
 
       fetch(SUBMIT_URL, {
         method: "POST",
@@ -1228,10 +1249,15 @@
       .then(result => {
         if (result.success || result.error === "duplicate") {
           clearTimeout(draftTimer);
+          clearTimeout(serverDraftTimer);
           localStorage.removeItem(DRAFT_KEY);
           localStorage.removeItem(PAGE_KEY);
           draftStatus.hidden = true;
           localStorage.setItem(SUBMITTED_KEY, "1");
+          // Clean up the server-side draft (best-effort)
+          if (sessionId) {
+            fetch(`${DRAFT_URL}?session=${encodeURIComponent(sessionId)}`, { method: "DELETE" }).catch(() => {});
+          }
           statusEl.className = "success";
           statusEl.textContent = result.error === "duplicate"
             ? "It looks like we already received your response — thank you!"

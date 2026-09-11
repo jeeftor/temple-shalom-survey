@@ -234,6 +234,88 @@ test("already-submitted Start over button clears state and reloads survey", asyn
   expect(savedPage).toBeNull();
 });
 
+// ── Preview-before-submit flow ────────────────────────────────────────────────
+// All worker calls are intercepted so these tests never touch production.
+
+async function interceptWorker(page, calls) {
+  await page.route("**/temple-shalom-survey.jeffstein.workers.dev/**", async route => {
+    const req = route.request();
+    const url = new URL(req.url());
+    calls.push({ method: req.method(), path: url.pathname, body: req.postDataJSON?.() ?? null });
+    if (url.pathname === "/submit") {
+      return route.fulfill({ json: { success: true, response_id: "test-uuid" } });
+    }
+    if (url.pathname === "/draft") {
+      return route.fulfill({ json: { success: true, draft_id: "testdraft", expires_at: new Date(Date.now() + 86400000).toISOString() } });
+    }
+    return route.fulfill({ json: { success: true } });
+  });
+}
+
+test("Preview button shows review screen, saves draft, and Complete submits", async ({ page }) => {
+  const calls = [];
+  await interceptWorker(page, calls);
+
+  await page.goto("/");
+  await expect(page.locator(".sd-root-modern")).toBeVisible();
+
+  // Answer one question so the draft save has data
+  await goToSection(page, 0);
+  await page.locator('[data-name="q3_ada"] label').first().click();
+
+  // Go to the last section — the nav button should be "Preview", not "Complete"
+  await goToSection(page, sections.length - 1);
+  const previewBtn = page.locator('input[value="Preview"], button:has-text("Preview")');
+  await expect(previewBtn.first()).toBeVisible();
+  await previewBtn.first().click();
+
+  // Preview state: custom section nav and action bar are hidden
+  await expect(page.locator("#sectionNav")).toBeHidden();
+  await expect(page.locator("#actionBar")).toBeHidden();
+
+  // The force-save draft POST fired with _preview flag
+  await expect.poll(() =>
+    calls.some(c => c.method === "POST" && c.path === "/draft" && c.body?._preview === true)
+  ).toBe(true);
+
+  // Complete from the preview screen → real submit + draft cleanup
+  const completeBtn = page.locator('input[value="Complete"], button:has-text("Complete")');
+  await completeBtn.first().click();
+
+  await expect.poll(() => calls.some(c => c.method === "POST" && c.path === "/submit")).toBe(true);
+  await expect(page.locator("#submitStatus")).toHaveClass(/success/);
+  await expect.poll(() => calls.some(c => c.method === "DELETE" && c.path === "/draft")).toBe(true);
+
+  // Ghost-draft regression guard: once submit succeeded (timers cleared,
+  // DELETE sent), no NEW draft POST may fire. A debounced save can still
+  // land between the submit request and its response, so we snapshot here.
+  const baseline = calls.length;
+  await page.waitForTimeout(3000);
+  const lateDrafts = calls.slice(baseline).filter(c => c.method === "POST" && c.path === "/draft");
+  expect(lateDrafts).toEqual([]);
+});
+
+test("Edit from preview restores section navigation", async ({ page }) => {
+  const calls = [];
+  await interceptWorker(page, calls);
+
+  await page.goto("/");
+  await expect(page.locator(".sd-root-modern")).toBeVisible();
+  await goToSection(page, 0);
+  await page.locator('[data-name="q3_ada"] label').first().click();
+  await goToSection(page, sections.length - 1);
+
+  await page.locator('input[value="Preview"], button:has-text("Preview")').first().click();
+  await expect(page.locator("#sectionNav")).toBeHidden();
+
+  // Go back to editing via the first Edit button on the preview
+  await page.locator('input[value="Edit"], button:has-text("Edit")').first().click();
+
+  // Custom nav must come back
+  await expect(page.locator("#sectionNav")).toBeVisible();
+  await expect(page.locator("#actionBar")).toBeVisible();
+});
+
 test("Start over from draft-notice clears survey answers", async ({ page }) => {
   // Pre-seed a local draft so the survey has data loaded
   await page.goto("/");

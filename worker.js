@@ -9,7 +9,7 @@
 
 const CORS = {
   "Access-Control-Allow-Origin":  "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
@@ -34,7 +34,7 @@ function isRateLimited(ip) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url    = new URL(request.url);
     const method = request.method.toUpperCase();
 
@@ -43,13 +43,16 @@ export default {
     }
 
     if (url.pathname === "/submit" && method === "POST") {
-      return handleSubmit(request, env);
+      return handleSubmit(request, env, ctx);
     }
     if (url.pathname === "/draft" && method === "POST") {
-      return handleDraftSave(request, env);
+      return handleDraftSave(request, env, ctx);
     }
     if (url.pathname === "/draft" && method === "GET") {
       return handleDraftLoad(request, env);
+    }
+    if (url.pathname === "/draft" && method === "DELETE") {
+      return handleDraftDelete(request, env, ctx);
     }
     if (url.pathname === "/export" && method === "GET") {
       return handleExport(request, env);
@@ -67,7 +70,7 @@ export default {
 
 // ── Submit ────────────────────────────────────────────────────────────────────
 
-async function handleSubmit(request, env) {
+async function handleSubmit(request, env, ctx) {
   const ip = request.headers.get("CF-Connecting-IP") || "unknown";
 
   if (isRateLimited(ip)) {
@@ -109,15 +112,13 @@ async function handleSubmit(request, env) {
   let previousResponseId = null;
   if (sessionId) {
     const prior = await env.DB.prepare(
-      `SELECT response_id FROM responses
-       WHERE session_id = ? ORDER BY id DESC LIMIT 1`
+      `SELECT response_id, COUNT(*) OVER() AS total
+       FROM responses WHERE session_id = ?
+       ORDER BY id DESC LIMIT 1`
     ).bind(sessionId).first();
     if (prior) {
       previousResponseId = prior.response_id;
-      const count = await env.DB.prepare(
-        `SELECT COUNT(*) as n FROM responses WHERE session_id = ?`
-      ).bind(sessionId).first();
-      submissionNumber = (count?.n || 0) + 1;
+      submissionNumber   = (prior.total || 0) + 1;
     }
   }
 
@@ -153,8 +154,9 @@ async function handleSubmit(request, env) {
       payload
     ).run();
 
-    // ── Dual-write to Google Sheets (best-effort, non-blocking) ────────────
+    // ── Dual-write to Google Sheets (best-effort, background) ──────────────
     // D1 is the source of truth. If Sheets fails, we log but still succeed.
+    // ctx.waitUntil lets us respond to the user immediately.
     if (env.GS_WEBHOOK_URL && env.GS_WEBHOOK_TOKEN) {
       const sheetPayload = {
         ...body,
@@ -167,62 +169,32 @@ async function handleSubmit(request, env) {
         if (k.startsWith("_")) delete sheetPayload[k];
       }
 
-      try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 15000);
-        // Apps Script returns a 302 redirect after POST; fetch() follows it
-        // but converts POST→GET, landing on a "Page Not Found" HTML page.
-        // Use redirect:"manual" and follow the Location header ourselves.
-        const gsResponse = await fetch(env.GS_WEBHOOK_URL, {
-          method:  "POST",
-          headers: { "Content-Type": "application/json" },
-          body:    JSON.stringify(sheetPayload),
-          redirect: "manual",
-          signal:  controller.signal,
-        });
-        clearTimeout(timeout);
-
-        let finalResponse = gsResponse;
-        if (gsResponse.status === 302) {
-          const redirectUrl = gsResponse.headers.get("location");
-          if (redirectUrl) {
-            finalResponse = await fetch(redirectUrl, {
-              signal: controller.signal,
-            });
-          }
-        }
-
-        const gsResult = await finalResponse.json();
-        if (!finalResponse.ok || !gsResult.success) {
-          throw new Error(gsResult.error || `HTTP ${finalResponse.status}`);
-        }
-      } catch (gsErr) {
-        // Sheets write failed — log but don't fail the submission
-        console.error("Google Sheets write failed:", gsErr.message);
-      }
+      ctx.waitUntil(
+        postToSheets(env, sheetPayload).catch(gsErr =>
+          console.error("Google Sheets write failed:", gsErr.message))
+      );
     }
 
-    // ── Telegram notification (best-effort, non-blocking) ──────────────────
+    // ── Telegram notification (best-effort, background) ────────────────────
     if (env.TG_BOT_TOKEN && env.TG_CHAT_ID) {
-      try {
-        const mins = completionSeconds ? Math.round(completionSeconds / 60) : null;
-        const timeStr = mins ? `${mins}m ${completionSeconds - mins * 60}s` : "unknown";
-        const device = [deviceType, browser, os].filter(Boolean).join(" / ") || "unknown";
-        const msg = `\u2705 Survey submitted! #${submissionNumber}\n`
-          + `Time: ${timeStr}\n`
-          + `Device: ${device}\n`
-          + `Sections: ${(body._sections_answered || []).length} answered`;
-        await fetch(
+      const mins = completionSeconds ? Math.round(completionSeconds / 60) : null;
+      const timeStr = mins ? `${mins}m ${completionSeconds - mins * 60}s` : "unknown";
+      const device = [deviceType, browser, os].filter(Boolean).join(" / ") || "unknown";
+      const msg = `\u2705 Survey submitted! #${submissionNumber}\n`
+        + `Time: ${timeStr}\n`
+        + `Device: ${device}\n`
+        + `Sections: ${(body._sections_answered || []).length} answered`;
+      ctx.waitUntil(
+        fetch(
           `https://api.telegram.org/bot${env.TG_BOT_TOKEN}/sendMessage`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ chat_id: env.TG_CHAT_ID, text: msg }),
+            signal: AbortSignal.timeout(10000),
           }
-        );
-      } catch (tgErr) {
-        console.error("Telegram notification failed:", tgErr.message);
-      }
+        ).catch(tgErr => console.error("Telegram notification failed:", tgErr.message))
+      );
     }
 
     return json({ success: true, response_id: responseId });
@@ -270,7 +242,7 @@ async function handleExport(request, env) {
   for (const { meta, data } of parsed) {
     const row = [
       meta.id,
-      ...META_FIELDS.map(f => meta[f] ?? ""),
+      ...META_FIELDS.map(f => csvEsc(meta[f] ?? "")),
       ...qKeys.map(k => {
         const v = data[k];
         if (v == null) return "";
@@ -323,7 +295,7 @@ async function handleResults(request, env) {
 
 const DRAFT_TTL_DAYS = 30;
 
-async function handleDraftSave(request, env) {
+async function handleDraftSave(request, env, ctx) {
   let body;
   try {
     body = await request.json();
@@ -357,6 +329,7 @@ async function handleDraftSave(request, env) {
       await env.DB.prepare(
         `UPDATE drafts SET payload = ?, page_no = ?, updated_at = ?, expires_at = ? WHERE draft_id = ?`
       ).bind(payload, pageNo, nowIso, expIso, existing.draft_id).run();
+      if (body._preview) ctx.waitUntil(syncDraftToSheets(env, sessionId, pageNo, nowIso, data));
       return json({ success: true, draft_id: existing.draft_id, expires_at: expIso });
     }
 
@@ -364,6 +337,7 @@ async function handleDraftSave(request, env) {
       `INSERT INTO drafts (draft_id, session_id, page_no, payload, created_at, updated_at, expires_at)
        VALUES (?, ?, ?, ?, ?, ?, ?)`
     ).bind(draftId, sessionId, pageNo, payload, nowIso, nowIso, expIso).run();
+    if (body._preview) ctx.waitUntil(syncDraftToSheets(env, sessionId, pageNo, nowIso, data));
     return json({ success: true, draft_id: draftId, expires_at: expIso });
   } catch (err) {
     console.error("Draft save failed:", err.message);
@@ -407,6 +381,32 @@ async function handleDraftLoad(request, env) {
   }
 }
 
+async function handleDraftDelete(request, env, ctx) {
+  const url = new URL(request.url);
+  const sessionId = url.searchParams.get("session");
+  if (!sessionId) {
+    return json({ success: false, error: "Missing session" }, 400);
+  }
+
+  try {
+    await env.DB.prepare("DELETE FROM drafts WHERE session_id = ?").bind(sessionId).run();
+    // Best-effort: remove from the Drafts tab in Google Sheets (background)
+    if (env.GS_WEBHOOK_URL && env.GS_WEBHOOK_TOKEN) {
+      ctx.waitUntil(
+        postToSheets(env, {
+          webhook_token: env.GS_WEBHOOK_TOKEN,
+          _draft_action: "delete",
+          session_id: sessionId,
+        }).catch(gsErr => console.error("Google Sheets draft delete failed:", gsErr.message))
+      );
+    }
+    return json({ success: true });
+  } catch (err) {
+    console.error("Draft delete failed:", err.message);
+    return json({ success: false, error: "server_error" }, 500);
+  }
+}
+
 // ── Health ────────────────────────────────────────────────────────────────────
 
 async function handleHealth(env) {
@@ -420,6 +420,55 @@ async function handleHealth(env) {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+async function syncDraftToSheets(env, sessionId, pageNo, updatedAt, data) {
+  if (!env.GS_WEBHOOK_URL || !env.GS_WEBHOOK_TOKEN) return;
+  const payload = {
+    webhook_token: env.GS_WEBHOOK_TOKEN,
+    _draft_action: "save",
+    session_id: sessionId,
+    page_no: pageNo,
+    updated_at: updatedAt,
+    ...data,
+  };
+  try {
+    await postToSheets(env, payload);
+  } catch (gsErr) {
+    console.error("Google Sheets draft sync failed:", gsErr.message);
+  }
+}
+
+async function postToSheets(env, payload) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    // Apps Script returns a 302 redirect after POST; fetch() follows it
+    // but converts POST→GET, landing on a "Page Not Found" HTML page.
+    // Use redirect:"manual" and follow the Location header ourselves.
+    const gsResponse = await fetch(env.GS_WEBHOOK_URL, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify(payload),
+      redirect: "manual",
+      signal:  controller.signal,
+    });
+
+    let finalResponse = gsResponse;
+    if (gsResponse.status === 302) {
+      const redirectUrl = gsResponse.headers.get("location");
+      if (redirectUrl) {
+        finalResponse = await fetch(redirectUrl, { signal: controller.signal });
+      }
+    }
+
+    const gsResult = await finalResponse.json();
+    if (!finalResponse.ok || !gsResult.success) {
+      throw new Error(gsResult.error || `HTTP ${finalResponse.status}`);
+    }
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 
 function json(obj, status = 200) {
   return new Response(JSON.stringify(obj), {

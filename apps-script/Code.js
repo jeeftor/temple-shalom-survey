@@ -24,6 +24,7 @@
 
 const SHEET_ID   = "1U4yxBRCslfJtbCOx--HwfagQd0pu8Ys4G8H1FCmrBk4";
 const SHEET_NAME = "Responses";  // tab name inside the spreadsheet
+const DRAFT_SHEET_NAME = "Drafts";  // tab for in-progress/preview saves
 
 // Metadata columns that always come first (in this order).
 // These are sent by the Cloudflare Worker, not the browser.
@@ -63,6 +64,16 @@ function doPost(e) {
     }
     delete data.webhook_token;
 
+    // Route draft actions to the Drafts tab
+    if (data._draft_action === "save") {
+      delete data._draft_action;
+      return upsertDraft(data);
+    }
+    if (data._draft_action === "delete") {
+      delete data._draft_action;
+      return deleteDraft(data);
+    }
+
     const ss    = SpreadsheetApp.openById(SHEET_ID);
     let   sheet = ss.getSheetByName(SHEET_NAME);
     if (!sheet) sheet = ss.insertSheet(SHEET_NAME);
@@ -92,6 +103,90 @@ function doPost(e) {
 
   } catch (err) {
     console.error("Survey submit error:", err);
+    return jsonResponse({ success: false, error: err.message });
+  }
+}
+
+// ── Draft tab: upsert (find by session_id, update or append) ─────────────────
+
+const DRAFT_META_COLUMNS = ["session_id", "page_no", "updated_at"];
+
+function upsertDraft(data) {
+  try {
+    const ss    = SpreadsheetApp.openById(SHEET_ID);
+    let   sheet = ss.getSheetByName(DRAFT_SHEET_NAME);
+    if (!sheet) sheet = ss.insertSheet(DRAFT_SHEET_NAME);
+
+    const reservedKeys = [...DRAFT_META_COLUMNS];
+    const dataKeys     = Object.keys(data)
+      .filter(k => !reservedKeys.includes(k) && !k.startsWith("_"))
+      .sort();
+    const allKeys      = [...DRAFT_META_COLUMNS, ...dataKeys];
+
+    ensureHeaders(sheet, allKeys);
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+
+    // Find existing row by session_id
+    const sessionId = data.session_id;
+    if (sessionId) {
+      const sidCol = headers.indexOf("session_id") + 1;
+      if (sidCol > 0 && sheet.getLastRow() > 1) {
+        const sidValues = sheet.getRange(2, sidCol, sheet.getLastRow() - 1, 1).getValues();
+        for (let i = 0; i < sidValues.length; i++) {
+          if (sidValues[i][0] === sessionId) {
+            const rowNum = i + 2;
+            const row = headers.map(h => {
+              const val = data[h];
+              if (val === undefined || val === null) return "";
+              if (typeof val === "object") return JSON.stringify(val);
+              return val;
+            });
+            sheet.getRange(rowNum, 1, 1, headers.length).setValues([row]);
+            return jsonResponse({ success: true, action: "updated" });
+          }
+        }
+      }
+    }
+
+    // Not found — append
+    const row = headers.map(h => {
+      const val = data[h];
+      if (val === undefined || val === null) return "";
+      if (typeof val === "object") return JSON.stringify(val);
+      return val;
+    });
+    sheet.appendRow(row);
+    return jsonResponse({ success: true, action: "inserted" });
+
+  } catch (err) {
+    console.error("Draft upsert error:", err);
+    return jsonResponse({ success: false, error: err.message });
+  }
+}
+
+function deleteDraft(data) {
+  try {
+    const ss    = SpreadsheetApp.openById(SHEET_ID);
+    const sheet = ss.getSheetByName(DRAFT_SHEET_NAME);
+    if (!sheet || sheet.getLastRow() < 2) {
+      return jsonResponse({ success: true, action: "noop" });
+    }
+
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    const sidCol = headers.indexOf("session_id") + 1;
+    if (sidCol === 0) return jsonResponse({ success: true, action: "noop" });
+
+    const sessionId = data.session_id;
+    const sidValues = sheet.getRange(2, sidCol, sheet.getLastRow() - 1, 1).getValues();
+    for (let i = sidValues.length - 1; i >= 0; i--) {
+      if (sidValues[i][0] === sessionId) {
+        sheet.deleteRow(i + 2);
+      }
+    }
+    return jsonResponse({ success: true, action: "deleted" });
+
+  } catch (err) {
+    console.error("Draft delete error:", err);
     return jsonResponse({ success: false, error: err.message });
   }
 }

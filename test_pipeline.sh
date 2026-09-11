@@ -155,9 +155,11 @@ E2E_RESPONSE=$(curl -sS --max-time 30 -X POST "$WORKER_URL/submit" \
     \"timestamp\": \"E2E-$STAMP\",
     \"_session\": \"test-session-$STAMP\",
     \"_referrer\": \"https://example.com/test\",
+    \"q_contact_name\": \"TEST USER\",
+    \"q_contact_email\": \"test@test.com\",
     \"q5_religious_identity\": \"just_jewish\",
     \"q_nps\": 9,
-    \"q28_final_comments\": \"Automated E2E pipeline test — safe to delete.\"
+    \"q28_final_comments\": \"TEST DATA — automated E2E pipeline test, safe to delete.\"
   }" 2>/dev/null || echo "CURL_FAILED")
 
 if echo "$E2E_RESPONSE" | grep -q '"success":true'; then
@@ -180,9 +182,11 @@ E2E_RESPONSE2=$(curl -sS --max-time 30 -X POST "$WORKER_URL/submit" \
     \"timestamp\": \"E2E2-$STAMP\",
     \"_session\": \"test-session-$STAMP\",
     \"_referrer\": \"https://example.com/test\",
+    \"q_contact_name\": \"TEST USER\",
+    \"q_contact_email\": \"test@test.com\",
     \"q5_religious_identity\": \"reform\",
     \"q_nps\": 7,
-    \"q28_final_comments\": \"Automated re-submission test — safe to delete.\"
+    \"q28_final_comments\": \"TEST DATA — automated re-submission test, safe to delete.\"
   }" 2>/dev/null || echo "CURL_FAILED")
 
 if echo "$E2E_RESPONSE2" | grep -q '"success":true'; then

@@ -252,7 +252,8 @@ async function interceptWorker(page, calls) {
   });
 }
 
-test("Preview button shows review screen, saves draft, and Complete submits", async ({ page }) => {
+test("Preview button shows review screen, saves draft, and Complete submits", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === "mobile", "Mobile skips preview — tested separately");
   const calls = [];
   await interceptWorker(page, calls);
 
@@ -273,7 +274,7 @@ test("Preview button shows review screen, saves draft, and Complete submits", as
   await expect(page.locator("#sectionNav")).toBeHidden();
   await expect(page.locator("#actionBar")).toBeHidden();
 
-  // Sticky submit bar is visible at the top of the preview
+  // Floating submit bar is visible at the top of the preview
   await expect(page.locator("#previewSubmitBar")).toBeVisible();
   await expect(page.locator("#previewSubmitBtn")).toBeVisible();
 
@@ -282,7 +283,7 @@ test("Preview button shows review screen, saves draft, and Complete submits", as
     calls.some(c => c.method === "POST" && c.path === "/draft" && c.body?._preview === true)
   ).toBe(true);
 
-  // Complete from the preview screen via the sticky top submit button
+  // Complete from the preview screen via the floating top submit button
   await page.locator("#previewSubmitBtn").click();
 
   await expect.poll(() => calls.some(c => c.method === "POST" && c.path === "/submit")).toBe(true);
@@ -298,7 +299,35 @@ test("Preview button shows review screen, saves draft, and Complete submits", as
   expect(lateDrafts).toEqual([]);
 });
 
-test("Edit from preview restores section navigation", async ({ page }) => {
+test("Mobile goes straight to submit without preview", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile", "Mobile-only test");
+  const calls = [];
+  await interceptWorker(page, calls);
+
+  await page.goto("/");
+  await expect(page.locator(".sd-root-modern")).toBeVisible();
+
+  // Answer one question
+  await goToSection(page, 0);
+  await page.locator('[data-name="q3_ada"] label').first().click();
+
+  // Go to the last section — should be "Complete", not "Preview"
+  await goToSection(page, sections.length - 1);
+  const completeBtn = page.locator('input[value="Complete"], button:has-text("Complete")');
+  await expect(completeBtn.first()).toBeVisible();
+
+  // No preview submit bar should be visible
+  await expect(page.locator("#previewSubmitBar")).toBeHidden();
+
+  // Complete goes straight to submit
+  await completeBtn.first().click();
+
+  await expect.poll(() => calls.some(c => c.method === "POST" && c.path === "/submit")).toBe(true);
+  await expect(page.locator("#submitStatus")).toHaveClass(/success/);
+});
+
+test("Edit from preview restores section navigation", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === "mobile", "Mobile has no preview");
   const calls = [];
   await interceptWorker(page, calls);
 

@@ -812,7 +812,10 @@
 
   function initSurvey(surveyJson, skipDraftPrompt) {
     const survey = new Survey.Model(surveyJson);
-    survey.showPreviewBeforeComplete = "showAllQuestions";
+    // Skip the review step on mobile — scrolling through all questions
+    // on a small screen is tedious. Desktop gets the full preview.
+    const isMobile = window.matchMedia("(max-width: 600px)").matches;
+    survey.showPreviewBeforeComplete = isMobile ? "none" : "showAllQuestions";
 
     // Hide custom section nav / skip / undo while the review screen is shown,
     // restore them if the member goes back to edit. SurveyJS shows its own

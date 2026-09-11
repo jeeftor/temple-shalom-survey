@@ -273,14 +273,17 @@ test("Preview button shows review screen, saves draft, and Complete submits", as
   await expect(page.locator("#sectionNav")).toBeHidden();
   await expect(page.locator("#actionBar")).toBeHidden();
 
+  // Sticky submit bar is visible at the top of the preview
+  await expect(page.locator("#previewSubmitBar")).toBeVisible();
+  await expect(page.locator("#previewSubmitBtn")).toBeVisible();
+
   // The force-save draft POST fired with _preview flag
   await expect.poll(() =>
     calls.some(c => c.method === "POST" && c.path === "/draft" && c.body?._preview === true)
   ).toBe(true);
 
-  // Complete from the preview screen → real submit + draft cleanup
-  const completeBtn = page.locator('input[value="Complete"], button:has-text("Complete")');
-  await completeBtn.first().click();
+  // Complete from the preview screen via the sticky top submit button
+  await page.locator("#previewSubmitBtn").click();
 
   await expect.poll(() => calls.some(c => c.method === "POST" && c.path === "/submit")).toBe(true);
   await expect(page.locator("#submitStatus")).toHaveClass(/success/);

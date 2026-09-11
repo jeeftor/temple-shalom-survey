@@ -196,6 +196,39 @@
     #skipBtn:hover { background: var(--blue); color: var(--white); }
     #skipBtn.hidden { visibility: hidden; }
 
+    /* Sticky submit bar for preview mode */
+    #previewSubmitBar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.6rem 1.25rem;
+      background: var(--white);
+      border-bottom: 2px solid var(--blue);
+      box-shadow: 0 2px 8px rgba(0,56,184,0.12);
+    }
+    #previewSubmitBar[hidden] { display: none; }
+    #previewSubmitBar .preview-label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    #previewSubmitBtn {
+      padding: 0.5rem 1.5rem;
+      background: var(--blue);
+      color: var(--white);
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 700;
+      transition: background 0.15s;
+    }
+    #previewSubmitBtn:hover { background: #002a8a; }
+
     /* ── Undo button ──────────────────────────────────────────── */
     #undoBtn {
       position: fixed;
@@ -645,6 +678,10 @@
     </div>
   </div>
   <div id="draftStatus" hidden></div>
+  <div id="previewSubmitBar" hidden>
+    <span class="preview-label">Review your answers below</span>
+    <button id="previewSubmitBtn" type="button">Submit Survey</button>
+  </div>
   <div id="actionBar">
     <button id="skipBtn" class="hidden">Skip this section &rarr;</button>
   </div>
@@ -776,6 +813,7 @@
       document.getElementById("sectionNav").hidden = true;
       document.getElementById("actionBar").hidden = true;
       document.getElementById("undoBtn").classList.remove("visible");
+      document.getElementById("previewSubmitBar").hidden = false;
       window.scrollTo({ top: 0, behavior: "smooth" });
       // Force-save the full survey as a draft so data isn't lost if the
       // user closes the tab without clicking Submit on the preview.
@@ -786,6 +824,12 @@
           body: JSON.stringify({ _session: sessionId, _page_no: survey.currentPageNo, _preview: true, data: survey.data }),
         }).catch(() => {});
       }
+    });
+
+    // Sticky top submit button in preview mode — calls the SurveyJS API
+    // directly so we don't need to find/click the bottom button.
+    document.getElementById("previewSubmitBtn").addEventListener("click", () => {
+      survey.completeLastPage();
     });
 
     const intro = document.getElementById("surveyIntro");
@@ -1147,6 +1191,7 @@
       wasInPreview = inPreview;
       document.getElementById("sectionNav").hidden = inPreview;
       document.getElementById("actionBar").hidden = inPreview;
+      document.getElementById("previewSubmitBar").hidden = !inPreview;
       if (!inPreview && survey.state === "running" && undoStack.length > 0) {
         document.getElementById("undoBtn").classList.add("visible");
       }

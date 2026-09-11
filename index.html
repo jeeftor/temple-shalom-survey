@@ -128,9 +128,9 @@
     }
     .nav-pill:hover        { color: var(--blue); background: var(--blue-faint); border-color: var(--blue-light); }
     .nav-pill.active       { background: var(--blue); color: var(--white); font-weight: 700; border-color: var(--blue); }
-    .nav-pill.done         { color: #2e7d32; background: #f0faf0; border-color: #a5d6a7; }
+    .nav-pill.done         { color: var(--blue-dark); background: var(--blue-faint); border-color: var(--blue-light); }
     .nav-pill.done::before { content: "\2713 "; font-weight: 700; }
-    .nav-pill.done:hover   { background: #e0f5e0; }
+    .nav-pill.done:hover   { background: var(--blue-light); }
 
     /* ── Main layout ─────────────────────────────────────────── */
     #main {
@@ -517,7 +517,7 @@
       display: none;
     }
     #submitStatus.sending { display:block; background:#f0f5ff; color: var(--blue); border: 1px solid var(--blue-light); }
-    #submitStatus.success { display:block; background:#f0faf0; color: #2e7d32; border: 1px solid #a5d6a7; font-weight:600; }
+    #submitStatus.success { display:block; background:var(--blue-faint); color: var(--blue-dark); border: 1px solid var(--blue-light); font-weight:600; }
     #submitStatus.error   { display:block; background:#fff0f0; color: #b00020; border: 1px solid #ffcdd2; font-weight:600; }
 
     /* ── Version footer ──────────────────────────────────────── */
@@ -736,8 +736,8 @@
   function showAlreadySubmittedNotice() {
     document.getElementById("surveyContainer").innerHTML = `
       <div style="max-width:600px;margin:4rem auto;padding:2rem;text-align:center;
-                  background:#f0faf0;border:2px solid #a5d6a7;border-radius:8px;">
-        <h2 style="color:#2e7d32">You've already submitted this survey</h2>
+                  background:var(--blue-faint);border:2px solid var(--blue-light);border-radius:8px;">
+        <h2 style="color:var(--blue-dark)">You've already submitted this survey</h2>
         <p style="margin-top:1rem;color:#444">
           Thank you! Your response has been recorded.<br>
           Each adult member of the household should complete a separate survey.

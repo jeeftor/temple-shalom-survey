@@ -766,6 +766,26 @@
 
   function initSurvey(surveyJson, skipDraftPrompt) {
     const survey = new Survey.Model(surveyJson);
+    survey.showPreview = "showAnsweredQuestions";
+
+    // Hide custom section nav / skip / undo while the review screen is shown,
+    // restore them if the member goes back to edit. SurveyJS shows its own
+    // Submit / Back buttons on the preview page.
+    survey.onShowingPreviewChanged.add(() => {
+      const showing = survey.isShowingPreview;
+      document.getElementById("sectionNav").hidden = showing;
+      document.getElementById("actionBar").hidden = showing;
+      const undoBtnEl = document.getElementById("undoBtn");
+      if (showing) {
+        undoBtnEl.classList.remove("visible");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else {
+        if (undoStack.length > 0) undoBtnEl.classList.add("visible");
+        updateNav(survey.currentPageNo);
+        updateSkip(survey.currentPageNo);
+      }
+    });
+
     const intro = document.getElementById("surveyIntro");
     intro.textContent = surveyJson.description || "";
 
@@ -982,6 +1002,7 @@
 
     // ── Page change ────────────────────────────────────────────
     survey.onCurrentPageChanged.add((_, opts) => {
+      if (survey.isShowingPreview) return;
       const prev = opts.oldCurrentPage ? survey.pages.indexOf(opts.oldCurrentPage) : -1;
       if (prev >= 0) completedPages.add(prev);
       const cur = survey.currentPageNo;

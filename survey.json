@@ -238,7 +238,7 @@
           "name": "q7_jewish_growth",
           "title": "How can Temple Shalom help you grow Jewishly?",
           "description": "Share what is helping you currently, what is missing, or any other thoughts about your Jewish journey.",
-          "maxLength": 1000,
+          "maxLength": 8000,
           "rows": 5
         }
       ],
@@ -743,7 +743,7 @@
           "name": "q21_engagement_comments",
           "title": "Any other comments on engagement?",
           "description": "What are you looking for? What is missing? What prevents you from engaging?",
-          "maxLength": 1000,
+          "maxLength": 8000,
           "rows": 4
         }
       ]
@@ -1063,14 +1063,14 @@
           "name": "q25_service_comments",
           "title": "Comments on religious services (Friday night, Saturday morning, High Holidays, etc.):",
           "description": "Please be specific about which services you are addressing and why. Enter N/A if you have no comments.",
-          "maxLength": 1000,
+          "maxLength": 8000,
           "rows": 4
         },
         {
           "type": "comment",
           "name": "q26_leadership_comments",
           "title": "General comments or feedback on the Board of Directors, Rabbi, Executive Director, Director of Youth Education, or Strategic Direction:",
-          "maxLength": 1000,
+          "maxLength": 8000,
           "rows": 4
         }
       ],
@@ -1340,7 +1340,7 @@
           "type": "comment",
           "name": "q_service_announcements_comments",
           "title": "What comments or suggestions do you have about announcements during services?",
-          "maxLength": 1000,
+          "maxLength": 8000,
           "rows": 4
         },
         {
@@ -1378,7 +1378,7 @@
           "type": "comment",
           "name": "q_comm_effectiveness",
           "title": "How effective are Temple Shalom's current communications? What's working well, and what needs improvement?",
-          "maxLength": 1000,
+          "maxLength": 8000,
           "rows": 4
         },
         {
@@ -1509,7 +1509,7 @@
           "type": "comment",
           "name": "q28_final_comments",
           "title": "What other feedback or comments would you like to share?",
-          "maxLength": 1000,
+          "maxLength": 8000,
           "rows": 5
         },
         {

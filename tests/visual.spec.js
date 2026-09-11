@@ -337,11 +337,11 @@ test("Submit Now button skips preview and submits directly", async ({ page }, te
   await page.locator('[data-name="q3_ada"] label').first().click();
   await goToSection(page, sections.length - 1);
 
-  // "Submit Now" button should be visible alongside the "Review & Submit" button
-  await expect(page.locator("#submitNowBtn")).toBeVisible();
+  // "Submit Now" button should be visible in the nav row
+  await expect(page.locator("#submitNowNavBtn")).toBeVisible();
 
   // Click it — should go straight to submit, no preview
-  await page.locator("#submitNowBtn").click();
+  await page.locator("#submitNowNavBtn").click();
 
   await expect.poll(() => calls.some(c => c.method === "POST" && c.path === "/submit")).toBe(true);
   await expect(page.locator("#submitStatus")).toHaveClass(/success/);

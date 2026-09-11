@@ -195,19 +195,6 @@
     }
     #skipBtn:hover { background: var(--blue); color: var(--white); }
     #skipBtn.hidden { visibility: hidden; }
-    #submitNowBtn {
-      padding: 0.4rem 1.1rem;
-      background: var(--blue);
-      color: var(--white);
-      border: 2px solid var(--blue);
-      border-radius: var(--radius);
-      cursor: pointer;
-      font-size: 0.85rem;
-      font-weight: 600;
-      transition: all 0.15s;
-    }
-    #submitNowBtn:hover { background: #002a8a; }
-    #submitNowBtn.hidden { display: none; }
 
     /* Floating submit button for preview mode */
     #previewSubmitBar {
@@ -706,7 +693,6 @@
   </div>
   <div id="actionBar">
     <button id="skipBtn" class="hidden">Skip this section &rarr;</button>
-    <button id="submitNowBtn" type="button" class="hidden">Submit Now</button>
   </div>
   <div id="submitStatus"></div>
   <div id="surveyContainer"></div>
@@ -1056,23 +1042,18 @@
 
     // ── Skip button ────────────────────────────────────────────
     const skipBtn  = document.getElementById("skipBtn");
-    const submitNowBtn = document.getElementById("submitNowBtn");
     const lastPage = (surveyJson.pages || []).length - 1;
 
     function updateSkip(pageNo) {
       intro.hidden = pageNo !== 0;
       if (pageNo >= lastPage) {
         skipBtn.classList.add("hidden");
-        // Show "Submit Now" only on desktop (mobile has no preview to skip)
-        if (!isMobile) submitNowBtn.classList.remove("hidden");
       } else {
         skipBtn.classList.remove("hidden");
-        submitNowBtn.classList.add("hidden");
       }
     }
 
     skipBtn.addEventListener("click", () => survey.nextPage());
-    submitNowBtn.addEventListener("click", () => survey.completeLastPage());
 
     // ── Page change ────────────────────────────────────────────
     survey.onCurrentPageChanged.add((_, opts) => {
@@ -1213,6 +1194,33 @@
       });
     }
     survey.onAfterRenderPage.add(() => setTimeout(bindProgressNav, 80));
+
+    // Inject "Submit Now" button into the SurveyJS nav row on the last page
+    // so it sits next to "Previous" and "Review & Submit" (desktop only).
+    function injectSubmitNow() {
+      if (isMobile || survey.state === "preview") return;
+      const previewBtn = document.querySelector(".sd-navigation__preview-btn, .sd-navigation__complete");
+      if (!previewBtn || !previewBtn.parentElement) return;
+      const nav = previewBtn.parentElement;
+      const existing = nav.querySelector("#submitNowNavBtn");
+      const isLast = survey.currentPageNo >= lastPage;
+      if (!isLast) {
+        if (existing) existing.remove();
+        return;
+      }
+      if (existing) return;
+      const btn = document.createElement("input");
+      btn.type = "button";
+      btn.id = "submitNowNavBtn";
+      btn.value = "Submit Now";
+      btn.className = "sd-btn sd-btn--action";
+      btn.style.marginLeft = "auto";
+      btn.style.marginRight = "0.5rem";
+      btn.addEventListener("click", () => survey.completeLastPage());
+      nav.insertBefore(btn, previewBtn);
+    }
+    survey.onAfterRenderPage.add(() => setTimeout(injectSubmitNow, 100));
+    survey.onCurrentPageChanged.add(() => setTimeout(injectSubmitNow, 100));
 
     // Restore custom nav when leaving preview (cancelPreview fires no
     // dedicated event, but onAfterRenderPage fires when the edit page

@@ -199,7 +199,7 @@
     /* Floating submit button for preview mode */
     #previewSubmitBar {
       position: fixed;
-      top: 5.5rem;
+      top: 6.5rem;
       left: 50%;
       transform: translateX(-50%);
       z-index: 100;
@@ -208,8 +208,9 @@
       gap: 0.75rem;
       padding: 0.6rem 1.25rem;
       background: var(--blue);
+      border: 3px solid var(--blue-dark);
       border-radius: var(--radius);
-      box-shadow: 0 4px 16px rgba(0,56,184,0.3);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.35);
       max-width: calc(100vw - 1rem);
     }
     #previewSubmitBar[hidden] { display: none; }
@@ -527,7 +528,7 @@
       #printBtn { font-size: 0.75rem; padding: 0.35rem 0.8rem; }
 
       /* Preview submit bar: just the button on mobile */
-      #previewSubmitBar { top: 4rem; padding: 0.4rem 0.5rem; }
+      #previewSubmitBar { top: 5rem; padding: 0.4rem 0.5rem; }
       #previewSubmitBar .preview-label { display: none; }
       #previewSubmitBtn { padding: 0.45rem 1.2rem; font-size: 0.9rem; }
 
@@ -816,6 +817,8 @@
     // on a small screen is tedious. Desktop gets the full preview.
     const isMobile = window.matchMedia("(max-width: 600px)").matches;
     survey.showPreviewBeforeComplete = isMobile ? "none" : "showAllQuestions";
+    survey.previewText = "Review & Submit";
+    survey.completeText = "Submit Survey";
 
     // Hide custom section nav / skip / undo while the review screen is shown,
     // restore them if the member goes back to edit. SurveyJS shows its own

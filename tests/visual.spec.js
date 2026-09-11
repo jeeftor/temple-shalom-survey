@@ -264,9 +264,9 @@ test("Preview button shows review screen, saves draft, and Complete submits", as
   await goToSection(page, 0);
   await page.locator('[data-name="q3_ada"] label').first().click();
 
-  // Go to the last section — the nav button should be "Preview", not "Complete"
+  // Go to the last section — the nav button should be "Review & Submit"
   await goToSection(page, sections.length - 1);
-  const previewBtn = page.locator('input[value="Preview"], button:has-text("Preview")');
+  const previewBtn = page.locator('input[value="Review & Submit"], button:has-text("Review & Submit")');
   await expect(previewBtn.first()).toBeVisible();
   await previewBtn.first().click();
 
@@ -311,10 +311,10 @@ test("Mobile goes straight to submit without preview", async ({ page }, testInfo
   await goToSection(page, 0);
   await page.locator('[data-name="q3_ada"] label').first().click();
 
-  // Go to the last section — should be "Complete", not "Preview"
+  // Go to the last section — should be "Submit Survey", not "Review & Submit"
   await goToSection(page, sections.length - 1);
-  const completeBtn = page.locator('input[value="Complete"], button:has-text("Complete")');
-  await expect(completeBtn.first()).toBeVisible();
+  const completeBtn = page.locator('.sd-navigation__complete:has-text("Submit Survey"), input[value="Submit Survey"]').first();
+  await expect(completeBtn).toBeVisible();
 
   // No preview submit bar should be visible
   await expect(page.locator("#previewSubmitBar")).toBeHidden();
@@ -337,7 +337,7 @@ test("Edit from preview restores section navigation", async ({ page }, testInfo)
   await page.locator('[data-name="q3_ada"] label').first().click();
   await goToSection(page, sections.length - 1);
 
-  await page.locator('input[value="Preview"], button:has-text("Preview")').first().click();
+  await page.locator('input[value="Review & Submit"], button:has-text("Review & Submit")').first().click();
   await expect(page.locator("#sectionNav")).toBeHidden();
 
   // Go back to editing via the first Edit button on the preview

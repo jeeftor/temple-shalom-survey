@@ -195,6 +195,19 @@
     }
     #skipBtn:hover { background: var(--blue); color: var(--white); }
     #skipBtn.hidden { visibility: hidden; }
+    #submitNowBtn {
+      padding: 0.4rem 1.1rem;
+      background: var(--blue);
+      color: var(--white);
+      border: 2px solid var(--blue);
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: all 0.15s;
+    }
+    #submitNowBtn:hover { background: #002a8a; }
+    #submitNowBtn.hidden { display: none; }
 
     /* Floating submit button for preview mode */
     #previewSubmitBar {
@@ -693,6 +706,7 @@
   </div>
   <div id="actionBar">
     <button id="skipBtn" class="hidden">Skip this section &rarr;</button>
+    <button id="submitNowBtn" type="button" class="hidden">Submit Now</button>
   </div>
   <div id="submitStatus"></div>
   <div id="surveyContainer"></div>
@@ -1042,18 +1056,23 @@
 
     // ── Skip button ────────────────────────────────────────────
     const skipBtn  = document.getElementById("skipBtn");
+    const submitNowBtn = document.getElementById("submitNowBtn");
     const lastPage = (surveyJson.pages || []).length - 1;
 
     function updateSkip(pageNo) {
       intro.hidden = pageNo !== 0;
       if (pageNo >= lastPage) {
         skipBtn.classList.add("hidden");
+        // Show "Submit Now" only on desktop (mobile has no preview to skip)
+        if (!isMobile) submitNowBtn.classList.remove("hidden");
       } else {
         skipBtn.classList.remove("hidden");
+        submitNowBtn.classList.add("hidden");
       }
     }
 
     skipBtn.addEventListener("click", () => survey.nextPage());
+    submitNowBtn.addEventListener("click", () => survey.completeLastPage());
 
     // ── Page change ────────────────────────────────────────────
     survey.onCurrentPageChanged.add((_, opts) => {

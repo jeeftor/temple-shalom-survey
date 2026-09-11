@@ -326,6 +326,29 @@ test("Mobile goes straight to submit without preview", async ({ page }, testInfo
   await expect(page.locator("#submitStatus")).toHaveClass(/success/);
 });
 
+test("Submit Now button skips preview and submits directly", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === "mobile", "Desktop-only — mobile has no preview");
+  const calls = [];
+  await interceptWorker(page, calls);
+
+  await page.goto("/");
+  await expect(page.locator(".sd-root-modern")).toBeVisible();
+  await goToSection(page, 0);
+  await page.locator('[data-name="q3_ada"] label').first().click();
+  await goToSection(page, sections.length - 1);
+
+  // "Submit Now" button should be visible alongside the "Review & Submit" button
+  await expect(page.locator("#submitNowBtn")).toBeVisible();
+
+  // Click it — should go straight to submit, no preview
+  await page.locator("#submitNowBtn").click();
+
+  await expect.poll(() => calls.some(c => c.method === "POST" && c.path === "/submit")).toBe(true);
+  await expect(page.locator("#submitStatus")).toHaveClass(/success/);
+  // No preview draft should have been saved
+  expect(calls.some(c => c.method === "POST" && c.path === "/draft" && c.body?._preview === true)).toBe(false);
+});
+
 test("Edit from preview restores section navigation", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === "mobile", "Mobile has no preview");
   const calls = [];

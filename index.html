@@ -621,6 +621,15 @@
         color: var(--text-muted) !important;
         margin-left: 0.4rem !important;
       }
+      /* Hide SurveyJS's built-in responsive title and radio label on mobile
+         to avoid duplication with our injected .mobile-col-label */
+      .sd-matrix .sd-table__responsive-title,
+      .sd-matrix .sd-matrix__responsive-title {
+        display: none !important;
+      }
+      .sd-matrix .sd-radio__label {
+        display: none !important;
+      }
 
       /* SurveyJS progress bar dots — smaller, scrollable */
       .sd-progress-buttons__list {
@@ -1260,23 +1269,27 @@
         document.querySelectorAll(".sd-matrix").forEach(table => {
           const headerCells = table.querySelectorAll("thead th");
           if (headerCells.length === 0) return;
-          const colLabels = [...headerCells].map(th => th.textContent.trim());
+          // Filter out empty corner cell so labels align with radio cells
+          const colLabels = [...headerCells]
+            .map(th => th.textContent.trim())
+            .filter(t => t);
 
           table.querySelectorAll("tr").forEach(tr => {
             const cells = tr.querySelectorAll("td");
-            cells.forEach((cell, i) => {
-              if (i === 0) return; // skip row label
-              if (!colLabels[i]) return;
+            let labelIdx = 0;
+            cells.forEach((cell) => {
+              // Skip row label cells (no radio inside)
+              const radio = cell.querySelector(".sd-radio");
+              if (!radio) return;
               // Remove stale label if re-rendered
               const existing = cell.querySelector(".mobile-col-label");
               if (existing) existing.remove();
-              const radio = cell.querySelector(".sd-radio");
-              if (radio) {
-                const label = document.createElement("span");
-                label.className = "mobile-col-label";
-                label.textContent = colLabels[i];
-                radio.appendChild(label);
-              }
+              if (!colLabels[labelIdx]) { labelIdx++; return; }
+              const label = document.createElement("span");
+              label.className = "mobile-col-label";
+              label.textContent = colLabels[labelIdx];
+              radio.appendChild(label);
+              labelIdx++;
             });
           });
         });

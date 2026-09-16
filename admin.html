@@ -38,6 +38,25 @@
     header img { height: 40px; width: auto; flex-shrink: 0; }
     header h1 { margin: 0; font-size: 18pt; }
     header p  { margin: 0; font-size: 9pt; opacity: 0.75; }
+    header .hdr-export {
+      margin-left: auto;
+      display: none;
+    }
+    header .hdr-export button {
+      background: white;
+      color: var(--blue);
+      border: 2px solid white;
+      padding: 0.5rem 1.2rem;
+      border-radius: 6px;
+      font-size: 10pt;
+      font-weight: bold;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    header .hdr-export button:hover { background: var(--blue-pale); border-color: var(--blue-pale); }
 
     /* ── Auth screen ── */
     #authScreen {
@@ -351,6 +370,69 @@
     .toolbar .btn-outline:hover { background: var(--blue-pale); }
 
     .empty { color: #888; font-style: italic; padding: 1rem; text-align: center; }
+
+    /* ── Trend chart ── */
+    .trend-chart-wrap { overflow-x: auto; }
+    .trend-chart-wrap svg { display: block; }
+    .trend-legend { display: flex; gap: 1.5rem; flex-wrap: wrap; font-size: 9pt; color: #555; margin-top: 0.5rem; }
+    .trend-legend-item { display: flex; align-items: center; gap: 0.3rem; }
+    .trend-legend-swatch { width: 16px; height: 3px; border-radius: 1px; }
+    .trend-stats { display: flex; gap: 1.5rem; flex-wrap: wrap; font-size: 9pt; color: #666; margin-bottom: 0.5rem; }
+    .trend-stats span strong { color: var(--blue-dark); }
+
+    /* ── Funnel ── */
+    .funnel-item { display: flex; align-items: center; gap: 0.5rem; margin: 0.35rem 0; font-size: 10pt; }
+    .funnel-item .funnel-lbl { width: 220px; flex-shrink: 0; font-size: 9pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .funnel-item .funnel-track { flex: 1; background: var(--blue-pale); border-radius: 4px; height: 22px; position: relative; }
+    .funnel-item .funnel-fill { background: var(--blue); border-radius: 4px; height: 100%; transition: width 0.4s; }
+    .funnel-item .funnel-count { width: 80px; text-align: right; color: #555; flex-shrink: 0; font-size: 9pt; }
+    .funnel-drop { color: var(--red); font-size: 8pt; margin-left: 0.3rem; }
+
+    /* ── Donut (anonymous/contactable) ── */
+    .donut-wrap { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .donut-center { font-size: 14pt; font-weight: bold; fill: var(--blue-dark); }
+
+    /* ── Comments tab ── */
+    .comments-toolbar { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; }
+    .comments-toolbar button {
+      padding: 0.4rem 1rem; background: var(--blue); color: white; border: none;
+      border-radius: 6px; cursor: pointer; font-size: 10pt;
+    }
+    .comments-toolbar button:hover { background: var(--blue-dark); }
+    .comments-toolbar button.btn-outline {
+      background: white; color: var(--blue); border: 1.5px solid var(--blue);
+    }
+    .comments-toolbar button.btn-outline:hover { background: var(--blue-pale); }
+    .comments-toolbar .copied-msg { color: var(--green); font-size: 9pt; opacity: 0; transition: opacity 0.3s; }
+    .comments-toolbar .copied-msg.show { opacity: 1; }
+    .comment-group { margin-bottom: 1.5rem; }
+    .comment-group-hdr {
+      font-size: 11pt; font-weight: bold; color: var(--blue-dark);
+      margin-bottom: 0.4rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .comment-group-hdr .copy-q-btn {
+      background: none; border: 1px solid var(--blue); color: var(--blue);
+      border-radius: 4px; padding: 0.2rem 0.6rem; font-size: 8pt; cursor: pointer;
+    }
+    .comment-group-hdr .copy-q-btn:hover { background: var(--blue-pale); }
+    .comment-count-badge { font-weight: 400; color: #888; font-size: 9pt; }
+
+    /* ── Follow-up queue ── */
+    .followup-card {
+      background: #f8f9fc; border-left: 3px solid var(--green);
+      border-radius: 0 6px 6px 0; padding: 0.7rem 1rem; margin: 0.5rem 0;
+      font-size: 10pt;
+    }
+    .followup-name { font-weight: bold; color: var(--blue-dark); }
+    .followup-contact { color: #555; font-size: 9pt; margin: 0.2rem 0; }
+    .followup-contact a { color: var(--blue); text-decoration: none; }
+    .followup-meta { font-size: 8pt; color: #999; margin-top: 0.3rem; }
+    .followup-toggle { cursor: pointer; color: var(--blue); font-size: 9pt; background: none; border: none; padding: 0; }
+    .followup-detail { display: none; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed #d0d8e8; font-size: 9pt; }
+    .followup-detail.show { display: block; }
+    .followup-detail .dk { color: #888; }
+    .followup-detail .dv { word-break: break-word; }
   </style>
 </head>
 <body>
@@ -360,6 +442,11 @@
     <img src="logo.webp" alt="Temple Shalom" height="50" />
     <h1>Temple Shalom Survey — Admin</h1>
     <p id="hdrSub">Loading…</p>
+    <div class="hdr-export" id="hdrExport">
+      <a id="hdrCsvBtn" href="#" download="responses.csv">
+        <button type="button">Download CSV</button>
+      </a>
+    </div>
   </div>
 </header>
 
@@ -382,6 +469,9 @@
   <!-- Tab bar -->
   <div class="tab-bar">
     <button class="active" onclick="switchTab('dashboard', this)">Dashboard</button>
+    <button onclick="switchTab('trends', this)">Trends</button>
+    <button onclick="switchTab('comments', this)">Comments</button>
+    <button onclick="switchTab('followup', this)">Follow-up Queue</button>
     <button onclick="switchTab('responses', this)">Individual Responses</button>
   </div>
 
@@ -416,6 +506,26 @@
   <div id="charts"></div>
 
   </div><!-- /tab-dashboard -->
+
+  <!-- Trends tab -->
+  <div id="tab-trends" class="tab-content">
+    <div id="trendsContent"></div>
+  </div><!-- /tab-trends -->
+
+  <!-- Comments tab -->
+  <div id="tab-comments" class="tab-content">
+    <div class="comments-toolbar">
+      <button onclick="copyAllCommentsForLLM()">Copy all comments for LLM</button>
+      <button class="btn-outline" onclick="downloadCommentsJSON()">Download comments JSON</button>
+      <span class="copied-msg" id="commentsCopiedMsg">Copied to clipboard</span>
+    </div>
+    <div id="commentsContent"></div>
+  </div><!-- /tab-comments -->
+
+  <!-- Follow-up tab -->
+  <div id="tab-followup" class="tab-content">
+    <div id="followupContent"></div>
+  </div><!-- /tab-followup -->
 
   <!-- Responses tab -->
   <div id="tab-responses" class="tab-content">
@@ -535,10 +645,16 @@ async function loadData(key) {
     document.getElementById("csvLink").href = `${WORKER}/export?key=${encodeURIComponent(key)}`;
     document.getElementById("csvLink").download = "responses.csv";
 
+    document.getElementById("hdrCsvBtn").href = `${WORKER}/export?key=${encodeURIComponent(key)}`;
+    document.getElementById("hdrExport").style.display = "block";
+
     renderStats(displayResponses);
     initExplorer();
     renderCharts(displayResponses);
     renderTable(displayResponses);
+    renderTrends();
+    renderComments();
+    renderFollowUp();
   } catch (e) {
     document.getElementById("authError").textContent = "Error: " + e.message;
   }
@@ -580,6 +696,9 @@ function toggleLatestOnly() {
   renderStats(dr);
   renderCharts(dr);
   renderTable(dr);
+  renderTrends();
+  renderComments();
+  renderFollowUp();
 }
 
 // ── Stats cards ───────────────────────────────────────────────────────────────
@@ -590,12 +709,18 @@ function renderStats(responses) {
   const avgMin = responses.filter(x => x.completion_seconds)
     .reduce((s, x, _, a) => s + x.completion_seconds / a.length, 0) / 60;
   const resubmits = allResponses.filter(x => (x.submission_number || 1) > 1).length;
+  const contactable = responses.filter(x =>
+    x.answers?.q_contact_name || x.answers?.q_contact_email || x.answers?.q_contact_phone
+  ).length;
+  const anonCount = responses.length - contactable;
+  const anonPct = responses.length ? Math.round(anonCount / responses.length * 100) : 0;
 
   const cards = [
     { val: responses.length, lbl: latestOnly ? "Unique Respondents" : "Total Responses" },
     { val: nps != null ? nps : "—", lbl: "NPS Score", extra: npsBar(npsVals) },
     { val: avgMin ? avgMin.toFixed(1) + "m" : "—", lbl: "Avg Completion" },
     { val: resubmits, lbl: "Re-submissions" },
+    { val: `${anonPct}%`, lbl: "Anonymous", extra: `<div style="font-size:8pt;color:#888;margin-top:2px">${anonCount} anon · ${contactable} contactable</div>` },
   ];
 
   document.getElementById("statRow").innerHTML = cards.map(c => `
@@ -1346,6 +1471,446 @@ function filterTable() {
 function clearSearch() {
   document.getElementById("searchBox").value = "";
   renderTable(getDisplayResponses());
+}
+
+// ── Trends tab: submissions over time + completion funnel ──────────────────────
+
+function renderTrends() {
+  const wrap = document.getElementById("trendsContent");
+  const responses = getDisplayResponses();
+  if (!responses.length) {
+    wrap.innerHTML = '<div class="empty">No responses to chart yet.</div>';
+    return;
+  }
+
+  let html = '';
+
+  // ── Submissions over time ──
+  html += `<div class="panel">
+    <div class="panel-hdr">Submissions Over Time</div>
+    <div class="panel-body">${renderTrendChartHTML(responses)}</div>
+  </div>`;
+
+  // ── Completion funnel ──
+  html += `<div class="panel">
+    <div class="panel-hdr">Completion Funnel <span style="font-weight:400;font-size:9pt;color:#b8d0ff">— how far respondents get</span></div>
+    <div class="panel-body">${renderFunnelHTML(responses)}</div>
+  </div>`;
+
+  // ── Anonymous vs contactable donut ──
+  html += `<div class="panel">
+    <div class="panel-hdr">Anonymous vs. Contactable</div>
+    <div class="panel-body">${renderAnonDonutHTML(responses)}</div>
+  </div>`;
+
+  wrap.innerHTML = html;
+}
+
+function renderTrendChartHTML(responses) {
+  // Group by day
+  const byDay = {};
+  responses.forEach(r => {
+    if (!r.timestamp) return;
+    const day = r.timestamp.slice(0, 10); // YYYY-MM-DD
+    byDay[day] = (byDay[day] || 0) + 1;
+  });
+
+  const days = Object.keys(byDay).sort();
+  if (days.length < 2) {
+    return '<div class="explorer-empty">Need at least 2 days of data to show a trend.</div>';
+  }
+
+  // Fill in gaps (days with zero submissions)
+  const first = new Date(days[0]);
+  const last = new Date(days[days.length - 1]);
+  const allDays = [];
+  for (let d = new Date(first); d <= last; d.setDate(d.getDate() + 1)) {
+    const ds = d.toISOString().slice(0, 10);
+    allDays.push({ day: ds, count: byDay[ds] || 0 });
+  }
+
+  const maxCount = Math.max(...allDays.map(d => d.count), 1);
+  const total = allDays.reduce((s, d) => s + d.count, 0);
+  const peakDay = allDays.reduce((m, d) => d.count > m.count ? d : m, allDays[0]);
+  const avgPerDay = (total / allDays.length).toFixed(1);
+
+  // Chart dimensions
+  const W = Math.max(600, allDays.length * 12);
+  const H = 240;
+  const padL = 40, padR = 15, padT = 15, padB = 40;
+  const chartW = W - padL - padR;
+  const chartH = H - padT - padB;
+
+  const xStep = allDays.length > 1 ? chartW / (allDays.length - 1) : chartW;
+  const yScale = (v) => chartH - (v / maxCount) * chartH + padT;
+
+  // Build line path + area path + bars
+  let linePath = "";
+  let areaPath = "";
+  const bars = [];
+  const labels = [];
+
+  allDays.forEach((d, i) => {
+    const x = padL + i * xStep;
+    const y = yScale(d.count);
+    if (i === 0) {
+      linePath += `M${x},${y}`;
+      areaPath += `M${x},${padT + chartH} L${x},${y}`;
+    } else {
+      linePath += ` L${x},${y}`;
+      areaPath += ` L${x},${y}`;
+    }
+    bars.push(`<rect x="${x - 3}" y="${y}" width="6" height="${padT + chartH - y}" fill="var(--blue-pale)" rx="1"/>`);
+    if (d.count > 0) {
+      bars.push(`<circle cx="${x}" cy="${y}" r="3" fill="var(--blue)"/>`);
+    }
+  });
+  areaPath += ` L${padL + (allDays.length - 1) * xStep},${padT + chartH} Z`;
+
+  // Y axis labels (0, max/2, max)
+  const yLabels = [0, Math.round(maxCount / 2), maxCount].map(v => {
+    const y = yScale(v);
+    return `<text x="${padL - 6}" y="${y + 3}" text-anchor="end" font-size="9" fill="#888">${v}</text>
+            <line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="#e8ecf5" stroke-width="1"/>`;
+  }).join("");
+
+  // X axis labels (first, middle, last, peak)
+  const labelDays = new Set([0, Math.floor(allDays.length / 2), allDays.length - 1]);
+  const peakIdx = allDays.indexOf(peakDay);
+  labelDays.add(peakIdx);
+  [...labelDays].forEach(i => {
+    if (i < 0 || i >= allDays.length) return;
+    const x = padL + i * xStep;
+    const label = allDays[i].day;
+    labels.push(`<text x="${x}" y="${H - padB + 15}" text-anchor="middle" font-size="9" fill="#888" transform="rotate(-30 ${x} ${H - padB + 15})">${label}</text>`);
+  });
+
+  const svg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+    <path d="${areaPath}" fill="rgba(0,56,184,0.08)"/>
+    ${bars.join("")}
+    <path d="${linePath}" fill="none" stroke="var(--blue)" stroke-width="2"/>
+    ${yLabels}
+    ${labels.join("")}
+  </svg>`;
+
+  return `<div class="trend-stats">
+      <span>Total: <strong>${total}</strong></span>
+      <span>Peak: <strong>${peakDay.count}</strong> on ${peakDay.day}</span>
+      <span>Avg/day: <strong>${avgPerDay}</strong></span>
+      <span>Span: <strong>${allDays.length}</strong> days</span>
+    </div>
+    <div class="trend-chart-wrap">${svg}</div>
+    <div class="trend-legend">
+      <div class="trend-legend-item"><div class="trend-legend-swatch" style="background:var(--blue)"></div>Submissions per day</div>
+    </div>`;
+}
+
+function renderFunnelHTML(responses) {
+  if (!surveyDef || !surveyDef.pages) {
+    return '<div class="explorer-empty">Survey definition not loaded.</div>';
+  }
+
+  // Count how many responses reached each section (via sections_answered array)
+  const sectionCounts = {};
+  const sectionTitles = surveyDef.pages.map((p, i) => p.title || `Section ${i + 1}`);
+  sectionTitles.forEach(t => sectionCounts[t] = 0);
+
+  responses.forEach(r => {
+    const sa = Array.isArray(r.sections_answered) ? r.sections_answered : [];
+    sa.forEach(s => {
+      if (sectionCounts[s] !== undefined) sectionCounts[s]++;
+    });
+  });
+
+  const maxCount = Math.max(...Object.values(sectionCounts), 1);
+  let prevCount = null;
+  let html = '';
+
+  sectionTitles.forEach((title, i) => {
+    const count = sectionCounts[title] || 0;
+    const pct = maxCount ? Math.round(count / maxCount * 100) : 0;
+    let dropNote = '';
+    if (prevCount !== null && prevCount > 0) {
+      const dropPct = Math.round((1 - count / prevCount) * 100);
+      if (dropPct > 0) dropNote = `<span class="funnel-drop">-${dropPct}%</span>`;
+    }
+    html += `<div class="funnel-item">
+      <div class="funnel-lbl" title="${title}">${i + 1}. ${title}</div>
+      <div class="funnel-track"><div class="funnel-fill" style="width:${pct}%"></div></div>
+      <div class="funnel-count">${count}${dropNote}</div>
+    </div>`;
+    prevCount = count;
+  });
+
+  return html;
+}
+
+function renderAnonDonutHTML(responses) {
+  const contactable = responses.filter(x =>
+    x.answers?.q_contact_name || x.answers?.q_contact_email || x.answers?.q_contact_phone
+  ).length;
+  const anon = responses.length - contactable;
+  const total = responses.length;
+  if (total === 0) return '<div class="explorer-empty">No data.</div>';
+
+  const r = 60, cx = 70, cy = 70;
+  const anonPct = anon / total;
+  const conPct = contactable / total;
+  let angle = -Math.PI / 2;
+
+  // Anonymous slice
+  const anonEnd = angle + anonPct * 2 * Math.PI;
+  const ax1 = cx + r * Math.cos(angle), ay1 = cy + r * Math.sin(angle);
+  const ax2 = cx + r * Math.cos(anonEnd), ay2 = cy + r * Math.sin(anonEnd);
+  const anonLarge = anonPct > 0.5 ? 1 : 0;
+  const anonSlice = anonPct === 1
+    ? `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#bbb" stroke="white" stroke-width="1"/>`
+    : anonPct === 0 ? "" : `<path d="M${cx},${cy} L${ax1},${ay1} A${r},${r} 0 ${anonLarge} 1 ${ax2},${ay2} Z" fill="#bbb" stroke="white" stroke-width="1"/>`;
+  angle = anonEnd;
+
+  // Contactable slice
+  const conEnd = angle + conPct * 2 * Math.PI;
+  const cx1 = cx + r * Math.cos(angle), cy1 = cy + r * Math.sin(angle);
+  const cx2 = cx + r * Math.cos(conEnd), cy2 = cy + r * Math.sin(conEnd);
+  const conLarge = conPct > 0.5 ? 1 : 0;
+  const conSlice = conPct === 1
+    ? `<circle cx="${cx}" cy="${cy}" r="${r}" fill="var(--green)" stroke="white" stroke-width="1"/>`
+    : conPct === 0 ? "" : `<path d="M${cx},${cy} L${cx1},${cy1} A${r},${r} 0 ${conLarge} 1 ${cx2},${cy2} Z" fill="#1a7f3c" stroke="white" stroke-width="1"/>`;
+
+  // Donut hole
+  const hole = `<circle cx="${cx}" cy="${cy}" r="32" fill="white"/>`;
+  const centerText = `<text x="${cx}" y="${cy - 2}" text-anchor="middle" class="donut-center">${total}</text>
+    <text x="${cx}" y="${cy + 12}" text-anchor="middle" font-size="8" fill="#888">total</text>`;
+
+  return `<div class="donut-wrap">
+    <svg width="140" height="140" viewBox="0 0 140 140">${anonSlice}${conSlice}${hole}${centerText}</svg>
+    <div class="pie-legend">
+      <div class="pie-legend-item"><div class="pie-legend-swatch" style="background:#bbb"></div>Anonymous: ${anon} (${Math.round(anonPct*100)}%)</div>
+      <div class="pie-legend-item"><div class="pie-legend-swatch" style="background:#1a7f3c"></div>Contactable: ${contactable} (${Math.round(conPct*100)}%)</div>
+    </div>
+  </div>`;
+}
+
+// ── Comments tab ───────────────────────────────────────────────────────────────
+
+const CONTACT_FIELDS = ["q_contact_name", "q_contact_email", "q_contact_phone", "q_contact_request"];
+
+function getCommentQuestions() {
+  return getAllQuestions().filter(q => q.type === "comment");
+}
+
+function renderComments() {
+  const wrap = document.getElementById("commentsContent");
+  const responses = getDisplayResponses();
+  if (!responses.length) {
+    wrap.innerHTML = '<div class="empty">No responses yet.</div>';
+    return;
+  }
+
+  const commentQs = getCommentQuestions();
+  if (!commentQs.length) {
+    wrap.innerHTML = '<div class="empty">No comment questions found in survey definition.</div>';
+    return;
+  }
+
+  let html = '';
+  commentQs.forEach(q => {
+    const comments = responses
+      .map(r => ({ text: r.answers?.[q.name], date: r.timestamp, sub: r.submission_number }))
+      .filter(a => a.text && a.text.trim())
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    const num = qNum(q.name);
+    const label = `${num ? num + " · " : ""}${q.title || q.name}`;
+
+    html += `<div class="comment-group">
+      <div class="comment-group-hdr">
+        <span>${escapeHtml(label)} <span class="comment-count-badge">(${comments.length} comment${comments.length !== 1 ? "s" : ""})</span></span>
+        <button class="copy-q-btn" onclick="copyQuestionComments('${q.name}')">Copy</button>
+      </div>
+      <div class="comment-list">
+        ${comments.length ? comments.map(a => `
+          <div class="comment-item">
+            ${escapeHtml(a.text)}
+            <div class="comment-meta">${new Date(a.date).toLocaleDateString()}${a.sub > 1 ? " · resubmission #" + a.sub : ""}</div>
+          </div>`).join("") : '<div class="explorer-empty" style="padding:0.5rem;">No comments for this question.</div>'}
+      </div>
+    </div>`;
+  });
+
+  wrap.innerHTML = html;
+}
+
+function buildCommentsForLLM() {
+  const responses = getDisplayResponses();
+  const commentQs = getCommentQuestions();
+  const sections = [];
+
+  commentQs.forEach(q => {
+    const comments = responses
+      .map(r => r.answers?.[q.name])
+      .filter(t => t && t.trim());
+    if (!comments.length) return;
+    const num = qNum(q.name);
+    const label = `${num ? num + " · " : ""}${q.title || q.name}`;
+    sections.push({ question: label, comments });
+  });
+
+  return sections;
+}
+
+function copyAllCommentsForLLM() {
+  const sections = buildCommentsForLLM();
+  if (!sections.length) {
+    flashCopiedMsg("No comments to copy.");
+    return;
+  }
+  let text = "";
+  sections.forEach(s => {
+    text += `## ${s.question}\n\n`;
+    s.comments.forEach((c, i) => {
+      text += `${i + 1}. ${c}\n\n`;
+    });
+    text += "\n";
+  });
+  copyToClipboard(text);
+  flashCopiedMsg("All comments copied to clipboard");
+}
+
+function copyQuestionComments(qName) {
+  const q = findQuestion(qName);
+  if (!q) return;
+  const responses = getDisplayResponses();
+  const comments = responses
+    .map(r => r.answers?.[qName])
+    .filter(t => t && t.trim());
+  if (!comments.length) {
+    flashCopiedMsg("No comments for this question.");
+    return;
+  }
+  const num = qNum(qName);
+  const label = `${num ? num + " · " : ""}${q.title || qName}`;
+  let text = `## ${label}\n\n`;
+  comments.forEach((c, i) => { text += `${i + 1}. ${c}\n\n`; });
+  copyToClipboard(text);
+  flashCopiedMsg(`Copied ${comments.length} comment${comments.length !== 1 ? "s" : ""}`);
+}
+
+function downloadCommentsJSON() {
+  const sections = buildCommentsForLLM();
+  if (!sections.length) {
+    flashCopiedMsg("No comments to download.");
+    return;
+  }
+  const data = {
+    generated_at: new Date().toISOString(),
+    total_comments: sections.reduce((s, x) => s + x.comments.length, 0),
+    sections,
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `survey-comments-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  flashCopiedMsg("Downloaded comments JSON");
+}
+
+function copyToClipboard(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text);
+  } else {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+  }
+}
+
+function flashCopiedMsg(msg) {
+  const el = document.getElementById("commentsCopiedMsg");
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), 2500);
+}
+
+// ── Follow-up queue tab ─────────────────────────────────────────────────────────
+
+function renderFollowUp() {
+  const wrap = document.getElementById("followupContent");
+  const responses = getDisplayResponses();
+
+  const contactable = responses.filter(x =>
+    x.answers?.q_contact_name || x.answers?.q_contact_email || x.answers?.q_contact_phone
+  );
+
+  if (!contactable.length) {
+    wrap.innerHTML = '<div class="empty">No respondents have left contact information yet.</div>';
+    return;
+  }
+
+  // Sort: those who explicitly requested contact first, then by date
+  contactable.sort((a, b) => {
+    const aReq = a.answers?.q_contact_request === "yes" ? 0 : 1;
+    const bReq = b.answers?.q_contact_request === "yes" ? 0 : 1;
+    if (aReq !== bReq) return aReq - bReq;
+    return new Date(b.timestamp) - new Date(a.timestamp);
+  });
+
+  const wantContact = contactable.filter(x => x.answers?.q_contact_request === "yes").length;
+  let html = `<div class="explorer-subtitle">${contactable.length} respondent${contactable.length !== 1 ? "s" : ""} left contact info · ${wantContact} explicitly requested follow-up</div>`;
+
+  contactable.forEach((r, idx) => {
+    const name = r.answers?.q_contact_name || "(no name)";
+    const email = r.answers?.q_contact_email;
+    const phone = r.answers?.q_contact_phone;
+    const requested = r.answers?.q_contact_request === "yes";
+    const date = r.timestamp ? new Date(r.timestamp).toLocaleString() : "—";
+    const sub = r.submission_number || 1;
+
+    const contactLines = [];
+    if (email) contactLines.push(`<a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a>`);
+    if (phone) contactLines.push(escapeHtml(phone));
+    if (!contactLines.length) contactLines.push('<em style="color:#999">No email/phone</em>');
+
+    const borderColor = requested ? "var(--green)" : "#ccc";
+    const badge = requested
+      ? '<span class="badge badge-ok">Requested</span>'
+      : '<span class="badge" style="background:#eee;color:#888;">Info only</span>';
+
+    // Collect non-contact, non-empty answers for the detail view
+    const answerPairs = Object.entries(r.answers || {})
+      .filter(([k, v]) => !CONTACT_FIELDS.includes(k) && v != null && v !== "" &&
+        !(typeof v === "object" && Object.keys(v).length === 0));
+
+    const detailHtml = answerPairs.length
+      ? answerPairs.map(([k, v]) => {
+        const q = findQuestion(k);
+        const label = q ? (qNum(k) ? qNum(k) + " · " : "") + (q.title || k) : k;
+        let valStr;
+        if (Array.isArray(v)) valStr = v.join(", ");
+        else if (typeof v === "object") valStr = Object.entries(v).map(([rk, rv]) => `${rk}: ${rv}`).join("; ");
+        else valStr = String(v);
+        return `<div><span class="dk">${escapeHtml(label)}</span><br/><span class="dv">${escapeHtml(valStr)}</span></div>`;
+      }).join("")
+      : '<em>No other answers recorded.</em>';
+
+    html += `<div class="followup-card" style="border-left-color:${borderColor}">
+      <div class="followup-name">${escapeHtml(name)} ${badge}</div>
+      <div class="followup-contact">${contactLines.join(" · ")}</div>
+      <div class="followup-meta">Submitted ${date}${sub > 1 ? " · resubmission #" + sub : ""}${r.ip_country ? " · " + r.ip_country : ""}</div>
+      <button class="followup-toggle" onclick="this.nextElementSibling.classList.toggle('show');this.textContent=this.nextElementSibling.classList.contains('show')?'▼ Hide answers':'▶ Show answers'">▶ Show answers</button>
+      <div class="followup-detail"><div class="detail-grid">${detailHtml}</div></div>
+    </div>`;
+  });
+
+  wrap.innerHTML = html;
 }
 </script>
 </body>

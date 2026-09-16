@@ -74,6 +74,110 @@ test("survey sections render without clipping", async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+// ── Mobile matrix label tests ────────────────────────────────────────────────
+// These verify the custom label injection (wrapMatrixTables) that replaces
+// the hidden <thead> on mobile. Regression guards for off-by-one shifts and
+// duplicate labels from SurveyJS's built-in responsive rendering.
+
+async function collectMatrixLabels(page) {
+  return page.evaluate(() => {
+    const matrices = [...document.querySelectorAll(".sd-matrix")];
+    return matrices.map(matrix => {
+      const headerCells = [...matrix.querySelectorAll("thead th")];
+      const headerLabels = headerCells
+        .map(th => th.textContent.trim())
+        .filter(t => t);
+
+      const rows = [...matrix.querySelectorAll("tr")];
+      const rowLabels = rows.map(tr =>
+        [...tr.querySelectorAll(".mobile-col-label")].map(el => el.textContent.trim())
+      ).filter(r => r.length > 0);
+
+      const injectedLabels = [...matrix.querySelectorAll(".mobile-col-label")]
+        .map(el => el.textContent.trim());
+
+      const responsiveTitles = [...matrix.querySelectorAll(".sd-table__responsive-title, .sd-matrix__responsive-title")]
+        .filter(el => getComputedStyle(el).display !== "none")
+        .map(el => el.textContent.trim());
+
+      const radioLabels = [...matrix.querySelectorAll(".sd-radio__label")]
+        .filter(el => getComputedStyle(el).display !== "none")
+        .map(el => el.textContent.trim());
+
+      return { headerLabels, rowLabels, injectedLabels, responsiveTitles, radioLabels };
+    });
+  });
+}
+
+function assertMatrixLabels(matrixData) {
+  for (const matrix of matrixData) {
+    expect(matrix.injectedLabels.length).toBeGreaterThan(0);
+    for (const rowLabel of matrix.rowLabels) {
+      expect(rowLabel).toEqual(matrix.headerLabels);
+    }
+    expect(matrix.responsiveTitles).toEqual([]);
+    expect(matrix.radioLabels).toEqual([]);
+  }
+}
+
+test("mobile matrix labels match column headers across all sections", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile", "Mobile-only — desktop keeps the table layout");
+
+  await page.goto("/");
+  await expect(page.locator(".sd-root-modern")).toBeVisible();
+
+  for (let index = 0; index < sections.length; index++) {
+    await goToSection(page, index);
+    await expect(page.locator(".sd-page__title")).toContainText(sections[index]);
+    await page.waitForTimeout(500);
+
+    const matrixData = await collectMatrixLabels(page);
+    if (matrixData.length === 0) continue;
+
+    // Assert each matrix on this section has correct, non-duplicated labels
+    expect(matrixData.length).toBeGreaterThan(0);
+    assertMatrixLabels(matrixData);
+  }
+});
+
+test("mobile matrix labels stay correct after re-render (navigate away and back)", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile", "Mobile-only — desktop keeps the table layout");
+
+  await page.goto("/");
+  await expect(page.locator(".sd-root-modern")).toBeVisible();
+
+  // Section 5 (Member Satisfaction) has the most matrix questions
+  const targetSection = 4;
+  await goToSection(page, targetSection);
+  await expect(page.locator(".sd-page__title")).toContainText("Member Satisfaction");
+  await page.waitForTimeout(500);
+
+  // First pass: collect labels
+  const firstPass = await collectMatrixLabels(page);
+  expect(firstPass.length).toBeGreaterThan(0);
+  assertMatrixLabels(firstPass);
+
+  // Navigate away to Section 1 and back — triggers SurveyJS re-render
+  await goToSection(page, 0);
+  await expect(page.locator(".sd-page__title")).toContainText("Demographics");
+  await page.waitForTimeout(300);
+
+  await goToSection(page, targetSection);
+  await expect(page.locator(".sd-page__title")).toContainText("Member Satisfaction");
+  await page.waitForTimeout(500);
+
+  // Second pass: labels must still be correct, no duplicates from re-render
+  const secondPass = await collectMatrixLabels(page);
+  expect(secondPass.length).toBeGreaterThan(0);
+  assertMatrixLabels(secondPass);
+
+  // Same number of matrices and labels (no accumulation from re-render)
+  expect(secondPass.length).toBe(firstPass.length);
+  for (let i = 0; i < firstPass.length; i++) {
+    expect(secondPass[i].injectedLabels).toEqual(firstPass[i].injectedLabels);
+  }
+});
+
 test("drafts are silently restored on reload", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator(".sd-root-modern")).toBeVisible();
@@ -411,4 +515,163 @@ test("Start over from draft-notice clears survey answers", async ({ page }) => {
   // localStorage draft should be cleared
   const draft = await page.evaluate(() => localStorage.getItem("ts_survey_draft_2026"));
   expect(draft).toBeNull();
+});
+
+// ── Admin page smoke tests ───────────────────────────────────────────────────
+// Mock /results so tests never touch production data. Verifies all tabs render
+// without JS errors and the CSV export button is wired up.
+
+const MOCK_KEY = "test-export-key";
+
+function mockResponses() {
+  const now = new Date().toISOString();
+  const dayAgo = new Date(Date.now() - 86400000).toISOString();
+  const twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString();
+  return {
+    count: 3,
+    responses: [
+      {
+        id: 1, response_id: "r1", timestamp: now, session_id: "s1",
+        submission_number: 1, previous_response_id: null, survey_version: "abc",
+        ip_country: "US", cf_ray: "ray1", completion_seconds: 300,
+        sections_answered: ["Section 1: Demographics", "Section 2: Your Jewish Journey", "Section 3: Worship & Programs"],
+        user_agent: "Mozilla/5.0", referrer: "https://example.com",
+        device_type: "desktop", browser: "Chrome", os: "macOS",
+        screen_size: "1920x1080", viewport_size: "1440x900", started_at: now,
+        answers: {
+          q_nps: 9,
+          q7_jewish_growth: "I love the community here.",
+          q25_service_comments: "Services are meaningful.",
+          q28_final_comments: "Keep up the great work.",
+          q_contact_name: "Test Member",
+          q_contact_email: "test@example.com",
+          q_contact_request: "yes",
+        },
+      },
+      {
+        id: 2, response_id: "r2", timestamp: dayAgo, session_id: "s2",
+        submission_number: 1, previous_response_id: null, survey_version: "abc",
+        ip_country: "US", cf_ray: "ray2", completion_seconds: 120,
+        sections_answered: ["Section 1: Demographics", "Section 2: Your Jewish Journey"],
+        user_agent: "Mozilla/5.0 (iPhone)", referrer: "",
+        device_type: "mobile", browser: "Safari", os: "iOS",
+        screen_size: "390x844", viewport_size: "390x844", started_at: dayAgo,
+        answers: {
+          q_nps: 7,
+          q7_jewish_growth: "Could use more programming.",
+          q28_final_comments: "",
+        },
+      },
+      {
+        id: 3, response_id: "r3", timestamp: twoDaysAgo, session_id: "s1",
+        submission_number: 2, previous_response_id: "r1", survey_version: "abc",
+        ip_country: "US", cf_ray: "ray3", completion_seconds: 240,
+        sections_answered: ["Section 1: Demographics", "Section 2: Your Jewish Journey", "Section 3: Worship & Programs", "Section 4: Social Engagement & Interests"],
+        user_agent: "Mozilla/5.0", referrer: "",
+        device_type: "desktop", browser: "Firefox", os: "Linux",
+        screen_size: "1920x1080", viewport_size: "1280x720", started_at: twoDaysAgo,
+        answers: {
+          q_nps: 10,
+          q25_service_comments: "Wonderful experience.",
+          q28_final_comments: "No notes.",
+        },
+      },
+    ],
+  };
+}
+
+async function setupAdminPage(page) {
+  const errors = [];
+  page.on("pageerror", error => errors.push(error.message));
+  page.on("console", message => {
+    if (message.type() === "error" && !message.text().startsWith("Failed to load resource:")) {
+      errors.push(message.text());
+    }
+  });
+
+  // Mock /results and /export
+  await page.route("**/temple-shalom-survey.jeffstein.workers.dev/results**", async route => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.get("key") !== MOCK_KEY) {
+      return route.fulfill({ status: 401, json: { error: "Unauthorized" } });
+    }
+    return route.fulfill({ status: 200, json: mockResponses() });
+  });
+  await page.route("**/temple-shalom-survey.jeffstein.workers.dev/export**", async route => {
+    return route.fulfill({ status: 200, body: "id,timestamp\r\n1,2026-01-01\r\n", headers: { "Content-Type": "text/csv" } });
+  });
+
+  return errors;
+}
+
+test("admin page renders all tabs without JS errors", async ({ page }) => {
+  const errors = await setupAdminPage(page);
+
+  await page.goto(`/admin.html?key=${MOCK_KEY}`);
+  await expect(page.locator("#dashboard")).toBeVisible({ timeout: 10000 });
+
+  // Stats row should have cards
+  await expect(page.locator(".stat-card").first()).toBeVisible();
+
+  // Dashboard tab is active by default
+  await expect(page.locator("#tab-dashboard")).toHaveClass(/active/);
+
+  // Switch through each tab and verify content renders
+  const tabs = [
+    { name: "trends", contentId: "trendsContent" },
+    { name: "comments", contentId: "commentsContent" },
+    { name: "followup", contentId: "followupContent" },
+    { name: "responses", contentId: "respBody" },
+  ];
+
+  for (const tab of tabs) {
+    const btn = page.locator(".tab-bar button", { hasText: new RegExp(tab.name === "trends" ? "Trends" : tab.name === "comments" ? "Comments" : tab.name === "followup" ? "Follow-up" : "Individual") });
+    await btn.scrollIntoViewIfNeeded();
+    await btn.click({ force: true });
+    await expect(page.locator(`#tab-${tab.name}`)).toHaveClass(/active/);
+    await expect(page.locator(`#${tab.contentId}`)).not.toBeEmpty();
+    await page.waitForTimeout(200);
+  }
+
+  // Back to dashboard — charts should have rendered
+  const dashBtn = page.locator(".tab-bar button", { hasText: "Dashboard" });
+  await dashBtn.scrollIntoViewIfNeeded();
+  await dashBtn.click({ force: true });
+  await expect(page.locator("#tab-dashboard")).toHaveClass(/active/);
+
+  expect(errors).toEqual([]);
+});
+
+test("admin CSV export button is wired up after auth", async ({ page }) => {
+  await setupAdminPage(page);
+
+  await page.goto(`/admin.html?key=${MOCK_KEY}`);
+  await expect(page.locator("#dashboard")).toBeVisible({ timeout: 10000 });
+
+  // Header export button should be visible and have a valid href
+  await expect(page.locator("#hdrExport")).toBeVisible();
+  const href = await page.locator("#hdrCsvBtn").getAttribute("href");
+  expect(href).toContain("/export?key=");
+  expect(href).toContain(MOCK_KEY);
+});
+
+test("admin comments tab shows comments and copy button", async ({ page }) => {
+  await setupAdminPage(page);
+
+  await page.goto(`/admin.html?key=${MOCK_KEY}`);
+  await expect(page.locator("#dashboard")).toBeVisible({ timeout: 10000 });
+
+  // Go to Comments tab
+  await page.locator(".tab-bar button", { hasText: "Comments" }).click();
+  await expect(page.locator("#tab-comments")).toHaveClass(/active/);
+
+  // Copy all button should be present
+  await expect(page.locator("button", { hasText: "Copy all comments for LLM" })).toBeVisible();
+
+  // Comment groups should be rendered (we have 3 comment questions with data)
+  const groupCount = await page.locator(".comment-group").count();
+  expect(groupCount).toBeGreaterThan(0);
+
+  // At least one comment item should be visible
+  await expect(page.locator(".comment-item").first()).toBeVisible();
 });

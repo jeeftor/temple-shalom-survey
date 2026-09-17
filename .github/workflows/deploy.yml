@@ -36,6 +36,7 @@ jobs:
               - '.github/workflows/deploy.yml'
             schema:
               - 'schema.sql'
+              - 'migrate.sql'
 
   # ── 2. Migrate D1 schema (if schema.sql changed) ───────────────────────────
   migrate:

@@ -35,7 +35,7 @@
           "columns": [
             {
               "value": "less_1yr",
-              "text": "Less than 1 year"
+              "text": "Less than 1 Year"
             },
             {
               "value": "1_5yr",
@@ -110,11 +110,11 @@
           "columns": [
             {
               "value": "no_participation",
-              "text": "No participation"
+              "text": "None"
             },
             {
               "value": "some",
-              "text": "Some participation"
+              "text": "Some"
             },
             {
               "value": "monthly",
@@ -125,7 +125,7 @@
         {
           "type": "radiogroup",
           "name": "q3_ada",
-          "title": "Do you have household members that require ADA accessibility?",
+          "title": "Do you have household members who require ADA accessibility?",
           "description": "Understanding mobility needs helps us plan for our future facility.",
           "choices": [
             {
@@ -312,7 +312,7 @@
             },
             {
               "value": "dont_recall",
-              "text": "I don't recall"
+              "text": "I Don't Recall"
             }
           ],
           "hasOther": true,
@@ -422,7 +422,7 @@
             },
             {
               "value": "board_member",
-              "text": "Serve as Member of Board of Directors"
+              "text": "Serve on the Board of Directors"
             },
             {
               "value": "board_meeting",
@@ -434,11 +434,11 @@
             },
             {
               "value": "congregational_mtg",
-              "text": "Attend Congregational Meeting"
+              "text": "Attend a Congregational Meeting"
             },
             {
               "value": "chavurah",
-              "text": "A Temple Chavurah"
+              "text": "Participate in a Temple Chavurah"
             }
           ],
           "columns": [
@@ -483,13 +483,13 @@
         {
           "type": "matrix",
           "name": "q13_children_activities",
-          "title": "In the past year or in the coming year, has or do you expect your child(ren) under 18 to take advantage of the following?",
+          "title": "In the past year or in the coming year, have your child(ren) under 18 taken advantage of the following, or do you expect them to?",
           "visibleIf": "{q12_children} = 'yes'",
           "alternateRows": true,
           "rows": [
             {
               "value": "nevatim",
-              "text": "Nevatim (Infants to age 5)"
+              "text": "Nevatim (Infants to Age 5)"
             },
             {
               "value": "preschool",
@@ -508,8 +508,8 @@
               "text": "PJ Library (birth to 6th grade)"
             },
             {
-              "value": "marichim",
-              "text": "Marichim (post B'nai Mitzvah teaching assistants)"
+              "value": "madrichim",
+              "text": "Madrichim (post B'nai Mitzvah teaching assistants)"
             },
             {
               "value": "bbyo",
@@ -788,7 +788,7 @@
           "rows": [
             {
               "value": "beit_tfillah",
-              "text": "House of Prayer (Worship) — Beit T'Fillah"
+              "text": "House of Prayer (Worship) — Beit T'filah"
             },
             {
               "value": "beit_midrash",
@@ -926,7 +926,7 @@
         {
           "type": "matrix",
           "name": "q27_strengths_weaknesses",
-          "title": "What do you believe are Temple Shalom's greatest Strengths and Weaknesses?",
+          "title": "What do you believe are Temple Shalom's greatest strengths and weaknesses?",
           "alternateRows": true,
           "rows": [
             {
@@ -1034,7 +1034,7 @@
           "choices": [
             {
               "value": "very_satisfied",
-              "text": "Very satisfied"
+              "text": "Very Satisfied"
             },
             {
               "value": "satisfied",
@@ -1050,7 +1050,7 @@
             },
             {
               "value": "very_dissatisfied",
-              "text": "Very dissatisfied"
+              "text": "Very Dissatisfied"
             },
             {
               "value": "na",
@@ -1084,7 +1084,7 @@
         {
           "type": "matrix",
           "name": "q17_financial_familiarity",
-          "title": "Rate your familiarity with:",
+          "title": "How familiar are you with each of the following?",
           "alternateRows": true,
           "rows": [
             {
@@ -1107,11 +1107,11 @@
           "columns": [
             {
               "value": "not_familiar",
-              "text": "Not Familiar"
+              "text": "Not at all"
             },
             {
               "value": "slightly",
-              "text": "Slightly Familiar"
+              "text": "Slightly"
             },
             {
               "value": "reasonably",
@@ -1119,7 +1119,7 @@
             },
             {
               "value": "very_familiar",
-              "text": "Very Familiar"
+              "text": "Very"
             },
             {
               "value": "na",
@@ -1287,7 +1287,7 @@
             },
             {
               "value": "direct_mail",
-              "text": "Other direct mail to my home"
+              "text": "Other Direct Mail to My Home"
             },
             {
               "value": "board_announcements",
@@ -1350,7 +1350,7 @@
           "choices": [
             {
               "value": "very_dissatisfied",
-              "text": "Very dissatisfied"
+              "text": "Very Dissatisfied"
             },
             {
               "value": "dissatisfied",
@@ -1366,7 +1366,7 @@
             },
             {
               "value": "very_satisfied",
-              "text": "Very satisfied"
+              "text": "Very Satisfied"
             },
             {
               "value": "not_familiar",
@@ -1396,7 +1396,7 @@
             },
             {
               "value": "text_messages",
-              "text": "Text messages"
+              "text": "Text Messages"
             },
             {
               "value": "social_media",
@@ -1476,7 +1476,7 @@
           "type": "radiogroup",
           "name": "q_babka",
           "title": "Chocolate Babka or Cinnamon Babka?",
-          "description": "In Seinfeld S5E13 \"The Dinner Party\", Jerry and Elaine miss out on the last chocolate babka and settle for cinnamon. Elaine calls it \"a lesser babka\" — Jerry disagrees. Where do you stand?",
+          "description": "In Seinfeld S5E13 \"The Dinner Party,\" Jerry and Elaine miss out on the last chocolate babka and settle for cinnamon. Elaine calls it \"a lesser babka\" — Jerry disagrees. Where do you stand?",
           "choices": [
             {
               "value": "chocolate",

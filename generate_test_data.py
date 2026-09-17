@@ -85,14 +85,14 @@ HAS_CHILDREN = ["no", "yes"]
 HAS_CHILDREN_W = [18, 12]
 
 # Q13 children activities (only if yes)
-CHILD_ROWS = ["nevatim","preschool","ha_merkaz","sichot","pj_library","marichim","bbyo","summer_camp","venture_crew"]
+CHILD_ROWS = ["nevatim","preschool","ha_merkaz","sichot","pj_library","madrichim","bbyo","summer_camp","venture_crew"]
 CHILD_PROFILES = {
     "nevatim": [8, 2, 3, 2],
     "preschool": [6, 2, 2, 5],
     "ha_merkaz": [4, 3, 4, 6],
     "sichot": [8, 3, 3, 2],
     "pj_library": [10, 2, 2, 1],
-    "marichim": [12, 2, 1, 1],
+    "madrichim": [12, 2, 1, 1],
     "bbyo": [14, 1, 1, 1],
     "summer_camp": [8, 4, 2, 2],
     "venture_crew": [16, 1, 1, 1],

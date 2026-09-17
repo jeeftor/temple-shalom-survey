@@ -23,6 +23,9 @@ ALTER TABLE responses ADD COLUMN started_at          TEXT;
 -- Backfill response_id for any existing rows
 UPDATE responses SET response_id = hex(randomblob(16)) WHERE response_id IS NULL;
 
+-- Rename q13 children-activity key: marichim -> madrichim (matches survey.json)
+UPDATE responses SET payload = REPLACE(payload, '"marichim"', '"madrichim"') WHERE payload LIKE '%"marichim"%';
+
 -- Indexes
 CREATE UNIQUE INDEX IF NOT EXISTS idx_responses_response_id ON responses(response_id);
 CREATE        INDEX IF NOT EXISTS idx_responses_session     ON responses(session_id);

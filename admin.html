@@ -192,6 +192,15 @@
     .chart-toggle button:hover { border-color: var(--blue); color: var(--blue); }
     .chart-toggle button.active { background: var(--blue); color: white; border-color: var(--blue); }
 
+    .pct-mode-toggle { display: inline-flex; gap: 0.25rem; margin-left: 0.5rem; }
+    .pct-mode-toggle button {
+      padding: 0.15rem 0.4rem; border: 1.5px solid var(--border); border-radius: var(--radius);
+      background: white; cursor: pointer; font-size: 8pt; line-height: 1; color: #777;
+      transition: all 0.15s; min-width: 24px; text-align: center;
+    }
+    .pct-mode-toggle button:hover { border-color: var(--blue); color: var(--blue); }
+    .pct-mode-toggle button.active { background: var(--blue); color: white; border-color: var(--blue); }
+
     /* Section filter */
     .section-filter { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 1rem; }
     .section-filter button {
@@ -648,6 +657,14 @@ function chartToggleHTML(prefix, qName, current) {
   </div>`;
 }
 
+function pctModeToggleHTML(qName, current) {
+  const a = (m) => current === m ? "active" : "";
+  return `<span class="pct-mode-toggle">
+    <button class="${a('all')}" onclick="setPctMode('${qName}','all')" title="Percentages of all respondents">All</button>
+    <button class="${a('answered')}" onclick="setPctMode('${qName}','answered')" title="Percentages of respondents who answered (excludes N/A & no answer)">Ans</button>
+  </span>`;
+}
+
 function switchTab(name, btn) {
   document.querySelectorAll(".tab-bar button").forEach(b => b.classList.remove("active"));
   document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
@@ -1023,6 +1040,17 @@ const PIE_COLORS = ["#0038b8","#1a5fd4","#4d8ae6","#80b5f0","#b3d5f5","#e6c300",
 // ── Data Explorer ─────────────────────────────────────────────────────────────
 
 let chartTypeState = {};
+let chartPctModeState = {};   // "all" | "answered"
+
+function pctModeLabel(mode) {
+  return mode === "answered" ? "% of answered" : "% of all";
+}
+
+function setPctMode(qName, mode) {
+  chartPctModeState[qName] = mode;
+  renderCharts(currentResponses);
+  explorerUpdate();
+}
 
 function initExplorer() {
   buildQNumberMap();
@@ -1189,10 +1217,10 @@ function sortChoiceCounts(q, counts) {
 function renderChoiceChartHTML(q, responses) {
   const { counts, answered } = countChoiceAnswers(q, responses);
   if (!Object.keys(counts).length) return '<div class="explorer-empty">No data for this question.</div>';
-  const skipped = responses.length - answered;
   const sorted = sortChoiceCounts(q, counts);
   const num = qNumFor(q);
   const chartType = chartTypeState["explorer_" + q.name] || "pie";
+  const pctMode = chartPctModeState["explorer_" + q.name] || "all";
   const labels = choiceMap(q);
   const reverseLabels = Object.fromEntries(Object.entries(labels).map(([k, v]) => [v, k]));
   const classFn = (lbl) => {
@@ -1200,30 +1228,57 @@ function renderChoiceChartHTML(q, responses) {
     return val ? sentimentClass(val) : "";
   };
   const colorFn = (lbl) => SENTIMENT_COLORS[classFn(lbl)];
+  const data = prepareChartData(sorted, responses.length, answered, reverseLabels, pctMode);
   return `<div class="panel-body">
-    <div class="response-rate">${num} · ${answered} of ${responses.length} answered (${Math.round(answered/responses.length*100)}%)</div>
+    <div class="response-rate">${num} · ${answered} of ${responses.length} answered (${Math.round(answered/responses.length*100)}%) ${pctModeToggleHTML("explorer_" + q.name, pctMode)}</div>
     ${chartToggleHTML("setExplorerChartType", q.name, chartType)}
     <div class="${chartType === 'both' ? 'chart-both' : ''}">
-      ${chartType !== 'pie' ? `<div class="chart-half">${barChartHTML(sorted, skipped, responses.length, classFn)}</div>` : ""}
-      ${chartType !== 'bar' ? `<div class="chart-half">${renderPieChartHTML(sorted, skipped, colorFn)}</div>` : ""}
+      ${chartType !== 'pie' ? `<div class="chart-half">${barChartHTML(data.sorted, data.skipped, data.total, classFn, { answeredTotal: data.answeredTotal, isNaFn: data.isNaFn })}</div>` : ""}
+      ${chartType !== 'bar' ? `<div class="chart-half">${renderPieChartHTML(data.sorted, data.skipped, colorFn, { answeredTotal: data.answeredTotal, isNaFn: data.isNaFn })}</div>` : ""}
     </div>
   </div>`;
 }
 
-function barChartHTML(sorted, skipped, total, classFn) {
-  const pct = (c) => Math.round(c / total * 100);
+function prepareChartData(sorted, total, answered, labelToValue, mode) {
+  const isNaFn = (lbl) => {
+    if (lbl === "No answer") return true;
+    const val = labelToValue ? labelToValue[lbl] : null;
+    return val && sentimentClass(val) === "sent-na";
+  };
+  const naCount = sorted.reduce((sum, [lbl, cnt]) => isNaFn(lbl) ? sum + cnt : sum, 0);
+  const skipped = total - answered;
+  const answeredTotal = answered - naCount;
+  if (mode === "answered") {
+    const filtered = sorted.filter(([lbl]) => !isNaFn(lbl));
+    return { sorted: filtered, skipped: 0, total: answeredTotal, answeredTotal, isNaFn };
+  }
+  return { sorted, skipped, total, answeredTotal, isNaFn };
+}
+
+function barChartHTML(sorted, skipped, total, classFn, options = {}) {
+  const { mode = "all", answeredTotal = total, isNaFn = () => false } = options;
+  const pctAll = (c) => Math.round(c / total * 100);
+  const pctText = (cnt, lbl) => {
+    const pAll = pctAll(cnt);
+    const noAns = lbl === "No answer" || isNaFn(lbl);
+    const pAns = (!noAns && answeredTotal && answeredTotal !== total) ? Math.round(cnt / answeredTotal * 100) : null;
+    if (pAns != null && pAns !== pAll) {
+      return `<span class="bar-num">${cnt}</span><span class="bar-pct">(${pAll}% all, ${pAns}% answered)</span>`;
+    }
+    return `<span class="bar-num">${cnt}</span><span class="bar-pct">(${pAll}%)</span>`;
+  };
   const cls = (lbl) => classFn ? classFn(lbl) : "";
   return sorted.map(([lbl, cnt]) => `
     <div class="bar-item">
       <div class="bar-lbl" title="${lbl}">${lbl}</div>
-      <div class="bar-track"><div class="bar-fill ${escapeHtml(cls(lbl))}" style="width:${pct(cnt)}%"></div></div>
-      <div class="bar-count"><span class="bar-num">${cnt}</span><span class="bar-pct">(${pct(cnt)}%)</span></div>
+      <div class="bar-track"><div class="bar-fill ${escapeHtml(cls(lbl))}" style="width:${pctAll(cnt)}%"></div></div>
+      <div class="bar-count">${pctText(cnt, lbl)}</div>
     </div>`).join("") +
     (skipped > 0 ? `
       <div class="bar-item no-answer">
         <div class="bar-lbl">No answer</div>
-        <div class="bar-track"><div class="bar-fill" style="width:${pct(skipped)}%"></div></div>
-        <div class="bar-count"><span class="bar-num">${skipped}</span><span class="bar-pct">(${pct(skipped)}%)</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pctAll(skipped)}%"></div></div>
+        <div class="bar-count">${pctText(skipped, "No answer")}</div>
       </div>` : "");
 }
 
@@ -1243,14 +1298,15 @@ function renderRatingChartHTML(q, responses) {
   for (let i = min; i <= max; i++) counts[i] = 0;
   vals.forEach(v => { counts[v] = (counts[v] || 0) + 1; });
   const avg = (vals.reduce((s, v) => s + v, 0) / vals.length).toFixed(1);
-  const skipped = responses.length - vals.length;
   const num = qNum(q.name);
+  const pctMode = chartPctModeState["explorer_" + q.name] || "all";
+  const sorted = Object.entries(counts);
+  const data = prepareChartData(sorted, responses.length, vals.length, null, pctMode);
   const classFn = (lbl) => ratingSentimentClass(lbl);
-  const colorFn = (lbl) => SENTIMENT_COLORS[classFn(lbl)];
   return `<div class="panel-body">
-    <div class="response-rate">${num} · ${vals.length} of ${responses.length} answered (${Math.round(vals.length/responses.length*100)}%)</div>
+    <div class="response-rate">${num} · ${vals.length} of ${responses.length} answered (${Math.round(vals.length/responses.length*100)}%) ${pctModeToggleHTML("explorer_" + q.name, pctMode)}</div>
     <div style="font-size:10pt;color:#666;margin-bottom:0.5rem;">Average: <strong>${avg}</strong></div>
-    ${barChartHTML(Object.entries(counts), skipped, responses.length, classFn)}
+    ${barChartHTML(data.sorted, data.skipped, data.total, classFn, { answeredTotal: data.answeredTotal, isNaFn: data.isNaFn })}
   </div>`;
 }
 
@@ -1291,7 +1347,8 @@ const SENTIMENT_COLORS = {
   "sent-na": "#78909c"
 };
 
-function renderPieChartHTML(sorted, skipped, colorFn) {
+function renderPieChartHTML(sorted, skipped, colorFn, options = {}) {
+  const { mode = "all", answeredTotal, isNaFn = () => false } = options;
   const data = [...sorted];
   if (skipped > 0) data.push(["No answer", skipped]);
   const sum = data.reduce((s, [, c]) => s + c, 0);
@@ -1302,20 +1359,25 @@ function renderPieChartHTML(sorted, skipped, colorFn) {
   let slices = "", legend = "";
 
   data.forEach(([lbl, cnt], i) => {
-    const pct = cnt / sum;
-    const endAngle = angle + pct * 2 * Math.PI;
+    const pctAll = cnt / sum;
+    const noAns = lbl === "No answer" || isNaFn(lbl);
+    const pctAns = (!noAns && answeredTotal && answeredTotal !== sum) ? cnt / answeredTotal : null;
+    const pctDisplay = pctAns != null && Math.round(pctAns * 100) !== Math.round(pctAll * 100)
+      ? `${Math.round(pctAll * 100)}% all, ${Math.round(pctAns * 100)}% answered`
+      : `${Math.round(pctAll * 100)}%`;
+    const titleText = `${lbl}: ${cnt} (${pctDisplay})`;
+    const endAngle = angle + pctAll * 2 * Math.PI;
     const x1 = cx + r * Math.cos(angle), y1 = cy + r * Math.sin(angle);
     const x2 = cx + r * Math.cos(endAngle), y2 = cy + r * Math.sin(endAngle);
-    const largeArc = pct > 0.5 ? 1 : 0;
+    const largeArc = pctAll > 0.5 ? 1 : 0;
     let color;
     if (lbl === "No answer") color = "#e0e0e0";
     else if (colorFn) color = colorFn(lbl, i) || PIE_COLORS[i % PIE_COLORS.length];
     else color = PIE_COLORS[i % PIE_COLORS.length];
-    const titleText = `${lbl}: ${cnt} (${Math.round(pct*100)}%)`;
-    slices += pct < 1
+    slices += pctAll < 1
       ? `<path d="M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${largeArc} 1 ${x2},${y2} Z" fill="${color}" stroke="white" stroke-width="1"><title>${titleText}</title></path>`
       : `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${color}" stroke="white" stroke-width="1"><title>${titleText}</title></circle>`;
-    legend += `<div class="pie-legend-item"><div class="pie-legend-swatch" style="background:${color}"></div>${lbl}: <strong>${cnt} (${Math.round(pct*100)}%)</strong></div>`;
+    legend += `<div class="pie-legend-item"><div class="pie-legend-swatch" style="background:${color}"></div>${lbl}: <strong>${cnt} (${pctDisplay})</strong></div>`;
     angle = endAngle;
   });
 
@@ -1393,10 +1455,10 @@ function renderCharts(responses) {
 function renderChoiceChart(q, responses) {
   const { counts, answered } = countChoiceAnswers(q, responses);
   if (!Object.keys(counts).length) return null;
-  const skipped = responses.length - answered;
   const sorted = sortChoiceCounts(q, counts);
   const num = qNum(q.name);
   const chartType = chartTypeState[q.name] || "pie";
+  const pctMode = chartPctModeState[q.name] || "all";
 
   const labels = choiceMap(q);
   const reverseLabels = Object.fromEntries(Object.entries(labels).map(([k, v]) => [v, k]));
@@ -1405,6 +1467,7 @@ function renderChoiceChart(q, responses) {
     return val ? sentimentClass(val) : "";
   };
   const colorFn = (lbl) => SENTIMENT_COLORS[classFn(lbl)];
+  const data = prepareChartData(sorted, responses.length, answered, reverseLabels, pctMode);
 
   const panel = document.createElement("div");
   panel.className = "panel";
@@ -1415,13 +1478,14 @@ function renderChoiceChart(q, responses) {
         <button class="${chartType === 'both' ? 'active' : ''}" onclick="setChartType('${q.name}','both')" title="Both charts">${SVG_BOTH}</button>
         <button class="${chartType === 'bar' ? 'active' : ''}" onclick="setChartType('${q.name}','bar')" title="Bar chart">${SVG_BAR}</button>
         <button class="${chartType === 'pie' ? 'active' : ''}" onclick="setChartType('${q.name}','pie')" title="Pie chart">${SVG_PIE}</button>
+        ${pctModeToggleHTML(q.name, pctMode)}
       </div>
     </div>
     <div class="panel-body">
       <div class="response-rate">${answered} of ${responses.length} answered (${Math.round(answered/responses.length*100)}%)</div>
       <div class="${chartType === 'both' ? 'chart-both' : ''}">
-        ${chartType !== 'pie' ? `<div class="chart-half">${barChartHTML(sorted, skipped, responses.length, classFn)}</div>` : ""}
-        ${chartType !== 'bar' ? `<div class="chart-half">${renderPieChartHTML(sorted, skipped, colorFn)}</div>` : ""}
+        ${chartType !== 'pie' ? `<div class="chart-half">${barChartHTML(data.sorted, data.skipped, data.total, classFn, { answeredTotal: data.answeredTotal, isNaFn: data.isNaFn })}</div>` : ""}
+        ${chartType !== 'bar' ? `<div class="chart-half">${renderPieChartHTML(data.sorted, data.skipped, colorFn, { answeredTotal: data.answeredTotal, isNaFn: data.isNaFn })}</div>` : ""}
       </div>
     </div>`;
   return panel;
@@ -1435,19 +1499,23 @@ function renderRatingChart(q, responses) {
   for (let i = min; i <= max; i++) counts[i] = 0;
   vals.forEach(v => { counts[v] = (counts[v] || 0) + 1; });
   const avg = (vals.reduce((s, v) => s + v, 0) / vals.length).toFixed(1);
-  const skipped = responses.length - vals.length;
   const num = qNum(q.name);
+  const pctMode = chartPctModeState[q.name] || "all";
+  const sorted = Object.entries(counts);
+  const data = prepareChartData(sorted, responses.length, vals.length, null, pctMode);
 
   const classFn = (lbl) => ratingSentimentClass(lbl);
-  const colorFn = (lbl) => SENTIMENT_COLORS[classFn(lbl)];
 
   const panel = document.createElement("div");
   panel.className = "panel";
   panel.innerHTML = `
-    <div class="panel-hdr">${num ? `<span class="q-num">${num}</span>` : ""}${q.title || q.name} <span style="font-weight:400;color:#888;font-size:9pt">(avg: ${avg})</span></div>
+    <div class="panel-hdr">
+      <span>${num ? `<span class="q-num">${num}</span>` : ""}${q.title || q.name} <span style="font-weight:400;color:#888;font-size:9pt">(avg: ${avg})</span></span>
+      <div class="chart-toggle" data-q="${q.name}">${pctModeToggleHTML(q.name, pctMode)}</div>
+    </div>
     <div class="panel-body">
       <div class="response-rate">${vals.length} of ${responses.length} answered (${Math.round(vals.length/responses.length*100)}%)</div>
-      ${barChartHTML(Object.entries(counts), skipped, responses.length, classFn)}
+      ${barChartHTML(data.sorted, data.skipped, data.total, classFn, { answeredTotal: data.answeredTotal, isNaFn: data.isNaFn })}
     </div>`;
   return panel;
 }
@@ -1462,6 +1530,7 @@ function renderMatrixChart(q, responses) {
 
   const num = qNum(q.name);
   const chartType = chartTypeState[q.name] || "pie";
+  const pctMode = chartPctModeState[q.name] || "all";
   const panel = document.createElement("div");
   panel.className = "panel";
   panel.style.gridColumn = "span 2";
@@ -1474,6 +1543,7 @@ function renderMatrixChart(q, responses) {
     <div class="chart-toggle" data-q="${q.name}">
       <button class="${chartType === 'pie' ? 'active' : ''}" onclick="setChartType('${q.name}','pie')" title="Pie chart">${SVG_PIE}</button>
       <button class="${chartType === 'bar' ? 'active' : ''}" onclick="setChartType('${q.name}','bar')" title="Bar chart">${SVG_BAR}</button>
+      ${pctModeToggleHTML(q.name, pctMode)}
     </div>
   </div>
   <div class="panel-body">
@@ -1507,20 +1577,18 @@ function renderMatrixChart(q, responses) {
       .map(colVal => [cols[colVal] || colVal, counts[cols[colVal] || colVal] || 0])
       .filter(([, c]) => c > 0);
 
+    const data = prepareChartData(sorted, responses.length, total, labelToColVal, pctMode);
+    const rowClassFn = (lbl) => sentimentClass(labelToColVal[lbl]);
+
     if (chartType === "pie") {
       html += `<div class="matrix-pie-cell">
         <div class="matrix-pie-title">${rowNum} · ${rowLabel} <span class="matrix-pie-count">${total}/${responses.length}</span></div>
-        ${renderPieChartHTML(sorted, skipped, colorFn)}
+        ${renderPieChartHTML(data.sorted, data.skipped, colorFn, { answeredTotal: data.answeredTotal, isNaFn: data.isNaFn })}
       </div>`;
     } else {
       html += `<div class="matrix-pie-cell">
         <div class="matrix-pie-title">${rowNum} · ${rowLabel} <span class="matrix-pie-count">${total}/${responses.length}</span></div>
-        ${sorted.map(([lbl, cnt]) => {
-          const colVal = colOrder.find(cv => (cols[cv] || cv) === lbl);
-          const pct = Math.round(cnt / responses.length * 100);
-          return `<div class="bar-item"><div class="bar-lbl" title="${lbl}">${lbl}</div><div class="bar-track"><div class="bar-fill ${sentimentClass(colVal)}" style="width:${pct}%"></div></div><div class="bar-count"><span class="bar-num">${cnt}</span><span class="bar-pct">(${pct}%)</span></div></div>`;
-        }).join("")}
-        ${skipped > 0 ? `<div class="bar-item no-answer"><div class="bar-lbl">No answer</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(skipped/responses.length*100)}%"></div></div><div class="bar-count"><span class="bar-num">${skipped}</span><span class="bar-pct">(${Math.round(skipped/responses.length*100)}%)</span></div></div>` : ""}
+        ${barChartHTML(data.sorted, data.skipped, data.total, rowClassFn, { answeredTotal: data.answeredTotal, isNaFn: data.isNaFn })}
       </div>`;
     }
   }

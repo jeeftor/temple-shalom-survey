@@ -161,7 +161,9 @@
     .bar-item .bar-lbl { width: 200px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .bar-item .bar-track { flex: 1; background: var(--blue-pale); border-radius: 4px; height: 16px; position: relative; }
     .bar-item .bar-fill  { background: var(--blue); border-radius: 4px; height: 100%; transition: width 0.4s; }
-    .bar-item .bar-count { width: 50px; text-align: right; color: #555; flex-shrink: 0; }
+    .bar-item .bar-count { flex-shrink: 0; white-space: nowrap; color: #555; }
+    .bar-item .bar-num { font-weight: bold; }
+    .bar-item .bar-pct { font-weight: bold; margin-left: 0.3rem; }
     .bar-item.no-answer .bar-fill { background: #ccc; }
     .bar-item.no-answer .bar-lbl { color: #999; font-style: italic; }
     .response-rate { font-size: 8pt; color: #888; margin-bottom: 0.4rem; }
@@ -1206,13 +1208,13 @@ function barChartHTML(sorted, skipped, total) {
     <div class="bar-item">
       <div class="bar-lbl" title="${lbl}">${lbl}</div>
       <div class="bar-track"><div class="bar-fill" style="width:${pct(cnt)}%"></div></div>
-      <div class="bar-count">${cnt} (${pct(cnt)}%)</div>
+      <div class="bar-count"><span class="bar-num">${cnt}</span><span class="bar-pct">(${pct(cnt)}%)</span></div>
     </div>`).join("") +
     (skipped > 0 ? `
       <div class="bar-item no-answer">
         <div class="bar-lbl">No answer</div>
         <div class="bar-track"><div class="bar-fill" style="width:${pct(skipped)}%"></div></div>
-        <div class="bar-count">${skipped} (${pct(skipped)}%)</div>
+        <div class="bar-count"><span class="bar-num">${skipped}</span><span class="bar-pct">(${pct(skipped)}%)</span></div>
       </div>` : "");
 }
 
@@ -1469,9 +1471,10 @@ function renderMatrixChart(q, responses) {
         <div class="matrix-pie-title">${rowNum} · ${rowLabel} <span class="matrix-pie-count">${total}/${responses.length}</span></div>
         ${sorted.map(([lbl, cnt]) => {
           const colVal = colOrder.find(cv => (cols[cv] || cv) === lbl);
-          return `<div class="bar-item"><div class="bar-lbl" title="${lbl}">${lbl}</div><div class="bar-track"><div class="bar-fill ${sentimentClass(colVal)}" style="width:${Math.round(cnt/responses.length*100)}%"></div></div><div class="bar-count">${cnt}</div></div>`;
+          const pct = Math.round(cnt / responses.length * 100);
+          return `<div class="bar-item"><div class="bar-lbl" title="${lbl}">${lbl}</div><div class="bar-track"><div class="bar-fill ${sentimentClass(colVal)}" style="width:${pct}%"></div></div><div class="bar-count"><span class="bar-num">${cnt}</span><span class="bar-pct">(${pct}%)</span></div></div>`;
         }).join("")}
-        ${skipped > 0 ? `<div class="bar-item no-answer"><div class="bar-lbl">No answer</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(skipped/responses.length*100)}%"></div></div><div class="bar-count">${skipped}</div></div>` : ""}
+        ${skipped > 0 ? `<div class="bar-item no-answer"><div class="bar-lbl">No answer</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(skipped/responses.length*100)}%"></div></div><div class="bar-count"><span class="bar-num">${skipped}</span><span class="bar-pct">(${Math.round(skipped/responses.length*100)}%)</span></div></div>` : ""}
       </div>`;
     }
   }
@@ -2111,9 +2114,9 @@ function renderFollowUp() {
   const wrap = document.getElementById("followupContent");
   const responses = getDisplayResponses();
 
-  const contactable = responses.filter(x =>
-    x.answers?.q_contact_name || x.answers?.q_contact_email || x.answers?.q_contact_phone
-  );
+  const contactable = responses
+    .map((r, idx) => ({ r, idx }))
+    .filter(({ r }) => r.answers?.q_contact_name || r.answers?.q_contact_email || r.answers?.q_contact_phone);
 
   if (!contactable.length) {
     wrap.innerHTML = '<div class="empty">No respondents have left contact information yet.</div>';
@@ -2122,16 +2125,16 @@ function renderFollowUp() {
 
   // Sort: those who explicitly requested contact first, then by date
   contactable.sort((a, b) => {
-    const aReq = a.answers?.q_contact_request === "yes" ? 0 : 1;
-    const bReq = b.answers?.q_contact_request === "yes" ? 0 : 1;
+    const aReq = a.r.answers?.q_contact_request === "yes" ? 0 : 1;
+    const bReq = b.r.answers?.q_contact_request === "yes" ? 0 : 1;
     if (aReq !== bReq) return aReq - bReq;
-    return new Date(b.timestamp) - new Date(a.timestamp);
+    return new Date(b.r.timestamp) - new Date(a.r.timestamp);
   });
 
-  const wantContact = contactable.filter(x => x.answers?.q_contact_request === "yes").length;
+  const wantContact = contactable.filter(({ r }) => r.answers?.q_contact_request === "yes").length;
   let html = `<div class="explorer-subtitle">${contactable.length} respondent${contactable.length !== 1 ? "s" : ""} left contact info · ${wantContact} explicitly requested follow-up</div>`;
 
-  contactable.forEach((r, idx) => {
+  contactable.forEach(({ r, idx }) => {
     const name = r.answers?.q_contact_name || "(no name)";
     const email = r.answers?.q_contact_email;
     const phone = r.answers?.q_contact_phone;
@@ -2149,14 +2152,16 @@ function renderFollowUp() {
       ? '<span class="badge badge-ok">Requested</span>'
       : '<span class="badge" style="background:#eee;color:#888;">Info only</span>';
 
-    const detailHtml = renderReadableDetail(r) || '<em>No other answers recorded.</em>';
-
     html += `<div class="followup-card" style="border-left-color:${borderColor}">
       <div class="followup-name">${escapeHtml(name)} ${badge}</div>
       <div class="followup-contact">${contactLines.join(" · ")}</div>
-      <div class="followup-meta">Submitted ${date}${sub > 1 ? " · resubmission #" + sub : ""}${r.ip_country ? " · " + r.ip_country : ""}</div>
-      <button class="followup-toggle" onclick="this.nextElementSibling.classList.toggle('show');this.textContent=this.nextElementSibling.classList.contains('show')?'▼ Hide answers':'▶ Show answers'">▶ Show answers</button>
-      <div class="followup-detail">${detailHtml}</div>
+      <div class="followup-meta">Submitted ${date}${sub > 1 ? " · resubmission #" + sub : ""}${r.ip_country ? " · " + r.ip_country : ""}
+        <span style="margin-left:0.6rem">
+          <button class="expand-btn" onclick="jumpToResponse(${idx})">View response</button>
+          <span style="color:#ccc;margin:0 0.2rem">|</span>
+          <button class="expand-btn" onclick="printResponse(${idx})">Print</button>
+        </span>
+      </div>
     </div>`;
   });
 

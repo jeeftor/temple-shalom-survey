@@ -1502,12 +1502,15 @@ function renderTable(rows) {
       const subBadge = subNum > 1
         ? `<span class="badge" style="background:#fff3cd;color:#856404;border:1px solid #ffc107;">#${subNum}</span>`
         : `<span style="color:#aaa;">1</span>`;
+      const followupBadge = r.answers?.q_contact_request === "yes"
+        ? `<span class="badge badge-ok" style="margin-left:0.35rem">Follow-up</span>`
+        : "";
 
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td style="color:#888">${r.id}</td>
         <td>${date}</td>
-        <td><span class="badge badge-us">${country}</span></td>
+        <td><span class="badge badge-us">${country}</span>${followupBadge}</td>
         <td>${subBadge}</td>
         <td>${mins}</td>
         <td>${secs}</td>
@@ -1966,7 +1969,13 @@ function renderComments() {
   let html = '';
   commentQs.forEach(q => {
     const comments = responses
-      .map((r, idx) => ({ text: r.answers?.[q.name], date: r.timestamp, sub: r.submission_number, idx }))
+      .map((r, idx) => ({
+        text: r.answers?.[q.name],
+        date: r.timestamp,
+        sub: r.submission_number,
+        idx,
+        requested: r.answers?.q_contact_request === "yes"
+      }))
       .filter(a => a.text && a.text.trim())
       .sort((a, b) => new Date(b.date) - new Date(a.date));
 
@@ -1982,7 +1991,7 @@ function renderComments() {
         ${comments.length ? comments.map(a => `
           <div class="comment-item">
             ${escapeHtml(a.text)}
-            <div class="comment-meta">${new Date(a.date).toLocaleDateString()}${a.sub > 1 ? " · resubmission #" + a.sub : ""}
+            <div class="comment-meta">${new Date(a.date).toLocaleDateString()}${a.sub > 1 ? " · resubmission #" + a.sub : ""}${a.requested ? ' <span class="badge badge-ok" style="margin-left:0.35rem">Follow-up</span>' : ""}
               <span style="margin-left:0.6rem">
                 <button class="expand-btn" onclick="jumpToResponse(${a.idx})">View response</button>
                 <span style="color:#ccc;margin:0 0.2rem">|</span>

@@ -1192,22 +1192,29 @@ function renderChoiceChartHTML(q, responses) {
   const sorted = sortChoiceCounts(q, counts);
   const num = qNumFor(q);
   const chartType = chartTypeState["explorer_" + q.name] || "pie";
+  const labels = choiceMap(q);
+  const reverseLabels = Object.fromEntries(Object.entries(labels).map(([k, v]) => [v, k]));
+  const classFn = (lbl) => {
+    const val = reverseLabels[lbl];
+    return val ? sentimentClass(val) : "";
+  };
   return `<div class="panel-body">
     <div class="response-rate">${num} · ${answered} of ${responses.length} answered (${Math.round(answered/responses.length*100)}%)</div>
     ${chartToggleHTML("setExplorerChartType", q.name, chartType)}
     <div class="${chartType === 'both' ? 'chart-both' : ''}">
-      ${chartType !== 'pie' ? `<div class="chart-half">${barChartHTML(sorted, skipped, responses.length)}</div>` : ""}
+      ${chartType !== 'pie' ? `<div class="chart-half">${barChartHTML(sorted, skipped, responses.length, classFn)}</div>` : ""}
       ${chartType !== 'bar' ? `<div class="chart-half">${renderPieChartHTML(sorted, skipped)}</div>` : ""}
     </div>
   </div>`;
 }
 
-function barChartHTML(sorted, skipped, total) {
+function barChartHTML(sorted, skipped, total, classFn) {
   const pct = (c) => Math.round(c / total * 100);
+  const cls = (lbl) => classFn ? classFn(lbl) : "";
   return sorted.map(([lbl, cnt]) => `
     <div class="bar-item">
       <div class="bar-lbl" title="${lbl}">${lbl}</div>
-      <div class="bar-track"><div class="bar-fill" style="width:${pct(cnt)}%"></div></div>
+      <div class="bar-track"><div class="bar-fill ${escapeHtml(cls(lbl))}" style="width:${pct(cnt)}%"></div></div>
       <div class="bar-count"><span class="bar-num">${cnt}</span><span class="bar-pct">(${pct(cnt)}%)</span></div>
     </div>`).join("") +
     (skipped > 0 ? `
@@ -1216,6 +1223,14 @@ function barChartHTML(sorted, skipped, total) {
         <div class="bar-track"><div class="bar-fill" style="width:${pct(skipped)}%"></div></div>
         <div class="bar-count"><span class="bar-num">${skipped}</span><span class="bar-pct">(${pct(skipped)}%)</span></div>
       </div>` : "");
+}
+
+function ratingSentimentClass(value) {
+  const n = Number(value);
+  if (Number.isNaN(n)) return "";
+  if (n <= 6) return "sent-1";      // detractor / negative
+  if (n <= 8) return "sent-3";      // passive / neutral
+  return "sent-5";                  // promoter / positive
 }
 
 function renderRatingChartHTML(q, responses) {
@@ -1228,10 +1243,11 @@ function renderRatingChartHTML(q, responses) {
   const avg = (vals.reduce((s, v) => s + v, 0) / vals.length).toFixed(1);
   const skipped = responses.length - vals.length;
   const num = qNum(q.name);
+  const classFn = (lbl) => ratingSentimentClass(lbl);
   return `<div class="panel-body">
     <div class="response-rate">${num} · ${vals.length} of ${responses.length} answered (${Math.round(vals.length/responses.length*100)}%)</div>
     <div style="font-size:10pt;color:#666;margin-bottom:0.5rem;">Average: <strong>${avg}</strong></div>
-    ${barChartHTML(Object.entries(counts), skipped, responses.length)}
+    ${barChartHTML(Object.entries(counts), skipped, responses.length, classFn)}
   </div>`;
 }
 
@@ -1366,6 +1382,13 @@ function renderChoiceChart(q, responses) {
   const num = qNum(q.name);
   const chartType = chartTypeState[q.name] || "pie";
 
+  const labels = choiceMap(q);
+  const reverseLabels = Object.fromEntries(Object.entries(labels).map(([k, v]) => [v, k]));
+  const classFn = (lbl) => {
+    const val = reverseLabels[lbl];
+    return val ? sentimentClass(val) : "";
+  };
+
   const panel = document.createElement("div");
   panel.className = "panel";
   panel.innerHTML = `
@@ -1380,7 +1403,7 @@ function renderChoiceChart(q, responses) {
     <div class="panel-body">
       <div class="response-rate">${answered} of ${responses.length} answered (${Math.round(answered/responses.length*100)}%)</div>
       <div class="${chartType === 'both' ? 'chart-both' : ''}">
-        ${chartType !== 'pie' ? `<div class="chart-half">${barChartHTML(sorted, skipped, responses.length)}</div>` : ""}
+        ${chartType !== 'pie' ? `<div class="chart-half">${barChartHTML(sorted, skipped, responses.length, classFn)}</div>` : ""}
         ${chartType !== 'bar' ? `<div class="chart-half">${renderPieChartHTML(sorted, skipped)}</div>` : ""}
       </div>
     </div>`;
@@ -1398,13 +1421,15 @@ function renderRatingChart(q, responses) {
   const skipped = responses.length - vals.length;
   const num = qNum(q.name);
 
+  const classFn = (lbl) => ratingSentimentClass(lbl);
+
   const panel = document.createElement("div");
   panel.className = "panel";
   panel.innerHTML = `
     <div class="panel-hdr">${num ? `<span class="q-num">${num}</span>` : ""}${q.title || q.name} <span style="font-weight:400;color:#888;font-size:9pt">(avg: ${avg})</span></div>
     <div class="panel-body">
       <div class="response-rate">${vals.length} of ${responses.length} answered (${Math.round(vals.length/responses.length*100)}%)</div>
-      ${barChartHTML(Object.entries(counts), skipped, responses.length)}
+      ${barChartHTML(Object.entries(counts), skipped, responses.length, classFn)}
     </div>`;
   return panel;
 }

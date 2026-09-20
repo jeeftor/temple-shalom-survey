@@ -1932,8 +1932,6 @@ function renderAnonDonutHTML(responses) {
 
 // ── Comments tab ───────────────────────────────────────────────────────────────
 
-const CONTACT_FIELDS = ["q_contact_name", "q_contact_email", "q_contact_phone", "q_contact_request"];
-
 function getCommentQuestions() {
   return getAllQuestions().filter(q => q.type === "comment");
 }
@@ -2123,29 +2121,14 @@ function renderFollowUp() {
       ? '<span class="badge badge-ok">Requested</span>'
       : '<span class="badge" style="background:#eee;color:#888;">Info only</span>';
 
-    // Collect non-contact, non-empty answers for the detail view
-    const answerPairs = Object.entries(r.answers || {})
-      .filter(([k, v]) => !CONTACT_FIELDS.includes(k) && v != null && v !== "" &&
-        !(typeof v === "object" && Object.keys(v).length === 0));
-
-    const detailHtml = answerPairs.length
-      ? answerPairs.map(([k, v]) => {
-        const q = findQuestion(k);
-        const label = q ? (qNum(k) ? qNum(k) + " · " : "") + (q.title || k) : k;
-        let valStr;
-        if (Array.isArray(v)) valStr = v.join(", ");
-        else if (typeof v === "object") valStr = Object.entries(v).map(([rk, rv]) => `${rk}: ${rv}`).join("; ");
-        else valStr = String(v);
-        return `<div><span class="dk">${escapeHtml(label)}</span><br/><span class="dv">${escapeHtml(valStr)}</span></div>`;
-      }).join("")
-      : '<em>No other answers recorded.</em>';
+    const detailHtml = renderReadableDetail(r) || '<em>No other answers recorded.</em>';
 
     html += `<div class="followup-card" style="border-left-color:${borderColor}">
       <div class="followup-name">${escapeHtml(name)} ${badge}</div>
       <div class="followup-contact">${contactLines.join(" · ")}</div>
       <div class="followup-meta">Submitted ${date}${sub > 1 ? " · resubmission #" + sub : ""}${r.ip_country ? " · " + r.ip_country : ""}</div>
       <button class="followup-toggle" onclick="this.nextElementSibling.classList.toggle('show');this.textContent=this.nextElementSibling.classList.contains('show')?'▼ Hide answers':'▶ Show answers'">▶ Show answers</button>
-      <div class="followup-detail"><div class="detail-grid">${detailHtml}</div></div>
+      <div class="followup-detail">${detailHtml}</div>
     </div>`;
   });
 

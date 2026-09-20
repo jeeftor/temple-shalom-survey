@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>Temple Shalom Survey — Admin</title>
   <style>
     :root {
@@ -57,6 +60,13 @@
       gap: 0.4rem;
     }
     header .hdr-export button:hover { background: var(--blue-pale); border-color: var(--blue-pale); }
+    header .hdr-export .btn-refresh {
+      background: transparent;
+      color: white;
+      border-color: white;
+      margin-right: 0.5rem;
+    }
+    header .hdr-export .btn-refresh:hover { background: rgba(255,255,255,0.15); }
 
     /* ── Auth screen ── */
     #authScreen {
@@ -486,6 +496,7 @@
     <h1>Temple Shalom Survey — Admin</h1>
     <p id="hdrSub">Loading…</p>
     <div class="hdr-export" id="hdrExport">
+      <button type="button" class="btn-refresh" onclick="refreshData()" title="Reload results from server">Refresh</button>
       <a id="hdrCsvBtn" href="#" download="responses.csv">
         <button type="button">Download CSV</button>
       </a>
@@ -664,8 +675,9 @@ document.getElementById("keyInput").addEventListener("keydown", e => {
 
 async function loadData(key) {
   try {
+    const cacheBuster = Date.now();
     const [res] = await Promise.all([
-      fetch(`${WORKER}/results?key=${encodeURIComponent(key)}`),
+      fetch(`${WORKER}/results?key=${encodeURIComponent(key)}&_=${cacheBuster}`),
       loadSurveyDef(),
     ]);
     if (res.status === 401) {
@@ -685,10 +697,10 @@ async function loadData(key) {
     document.getElementById("hdrSub").textContent =
       `${uniqueRespondentCount()} respondent${uniqueRespondentCount() !== 1 ? "s" : ""} · ${allResponses.length} total submission${allResponses.length !== 1 ? "s" : ""} · as of ${new Date().toLocaleString()}`;
 
-    document.getElementById("csvLink").href = `${WORKER}/export?key=${encodeURIComponent(key)}`;
+    document.getElementById("csvLink").href = `${WORKER}/export?key=${encodeURIComponent(key)}&_=${cacheBuster}`;
     document.getElementById("csvLink").download = "responses.csv";
 
-    document.getElementById("hdrCsvBtn").href = `${WORKER}/export?key=${encodeURIComponent(key)}`;
+    document.getElementById("hdrCsvBtn").href = `${WORKER}/export?key=${encodeURIComponent(key)}&_=${cacheBuster}`;
     document.getElementById("hdrExport").style.display = "block";
 
     renderStats(displayResponses);
@@ -730,6 +742,20 @@ function getDisplayResponses() {
 
 function uniqueRespondentCount() {
   return new Set(allResponses.map(x => x.session_id).filter(Boolean)).size;
+}
+
+function refreshData() {
+  const btn = document.querySelector(".btn-refresh");
+  if (btn) {
+    btn.textContent = "Loading…";
+    btn.disabled = true;
+  }
+  loadData(exportKey).finally(() => {
+    if (btn) {
+      btn.textContent = "Refresh";
+      btn.disabled = false;
+    }
+  });
 }
 
 function toggleLatestOnly() {

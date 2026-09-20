@@ -292,7 +292,7 @@ test("print view renders every section", async ({ page }, testInfo) => {
 
   // Key content is present
   await expect(page.getByText("Does the lack of ADA accessibility limit", { exact: false })).toBeVisible();
-  await expect(page.getByText("has or do you expect your child(ren) under 18", { exact: false })).toBeVisible();
+  await expect(page.getByText("In the past year or in the coming year, have your child(ren) under 18", { exact: false })).toBeVisible();
   await expect(page.getByText("Contact information (optional)", { exact: false })).toBeVisible();
   await expect(page.getByText("Would you like someone from Temple Shalom to contact you", { exact: false })).toBeVisible();
 

@@ -613,9 +613,7 @@
 </div>
 
 <script>
-const WORKER = (location.hostname === "localhost" || location.hostname === "127.0.0.1")
-  ? ""  // use same-origin endpoints when testing locally
-  : "https://temple-shalom-survey.jeffstein.workers.dev";
+const WORKER = "https://temple-shalom-survey.jeffstein.workers.dev";
 let allResponses = [];
 let exportKey    = "";
 let latestOnly   = true;

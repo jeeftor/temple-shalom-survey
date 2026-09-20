@@ -522,11 +522,11 @@
 
   <!-- Tab bar -->
   <div class="tab-bar">
-    <button class="active" onclick="switchTab('dashboard', this)">Dashboard</button>
-    <button onclick="switchTab('trends', this)">Trends</button>
-    <button onclick="switchTab('comments', this)">Comments</button>
-    <button onclick="switchTab('followup', this)">Follow-up Queue</button>
-    <button onclick="switchTab('responses', this)">Individual Responses</button>
+    <button class="active" data-tab="dashboard" onclick="switchTab('dashboard', this)">Dashboard</button>
+    <button data-tab="trends" onclick="switchTab('trends', this)">Trends</button>
+    <button data-tab="comments" onclick="switchTab('comments', this)">Comments</button>
+    <button data-tab="followup" onclick="switchTab('followup', this)">Follow-up Queue</button>
+    <button data-tab="responses" onclick="switchTab('responses', this)">Individual Responses</button>
   </div>
 
   <!-- Dashboard tab -->
@@ -649,6 +649,24 @@ function switchTab(name, btn) {
   document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
   document.getElementById("tab-" + name).classList.add("active");
   if (btn) btn.classList.add("active");
+
+  const params = new URLSearchParams(location.search);
+  if (params.get("tab") !== name) {
+    params.set("tab", name);
+    history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
+  }
+}
+
+function getInitialTab() {
+  const tab = new URLSearchParams(location.search).get("tab");
+  const valid = ["dashboard", "trends", "comments", "followup", "responses"];
+  return valid.includes(tab) ? tab : "dashboard";
+}
+
+function activateTabFromURL() {
+  const tab = getInitialTab();
+  const btn = document.querySelector(`.tab-bar button[data-tab="${tab}"]`);
+  switchTab(tab, btn);
 }
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
@@ -710,6 +728,7 @@ async function loadData(key) {
     renderTrends();
     renderComments();
     renderFollowUp();
+    activateTabFromURL();
   } catch (e) {
     document.getElementById("authError").textContent = "Error: " + e.message;
   }

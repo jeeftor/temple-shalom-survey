@@ -1554,12 +1554,13 @@ function renderReadableDetail(r) {
     return '<div class="detail-empty">Survey definition not loaded.</div>';
   }
 
-  const knownNames = new Set(qs.map(q => q.name));
+  const knownNames = new Set(qs.filter(Boolean).map(q => q.name));
   const leftover = Object.entries(answers).filter(([k]) => !knownNames.has(k));
 
   let html = "";
   let currentSection = null;
   qs.forEach(q => {
+    if (!q || !q.name) return;
     const val = answers[q.name];
     if (val === undefined || val === null || val === "") return;
 

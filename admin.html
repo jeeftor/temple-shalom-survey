@@ -338,9 +338,52 @@
     /* Expandable row */
     .expand-btn { cursor: pointer; color: var(--blue); font-size: 9pt; background: none; border: none; padding: 0; }
     .detail-row td { background: #f8faff; padding: 0.5rem 1rem; font-size: 9pt; }
-    .detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.3rem 1rem; }
-    .detail-grid .dk { color: #888; }
-    .detail-grid .dv { font-weight: 500; word-break: break-word; }
+    .detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.3rem 1rem; }
+    .detail-grid .dk { color: var(--blue-dark); font-weight: bold; font-size: 9pt; }
+    .detail-grid .dv { font-weight: 500; word-break: break-word; color: #111; margin-top: 0.1rem; }
+    .detail-section { margin-bottom: 0.8rem; }
+    .detail-section-hdr { font-size: 10pt; font-weight: bold; color: var(--blue-dark); margin-bottom: 0.3rem; padding-bottom: 0.15rem; border-bottom: 1px solid var(--border); }
+    .detail-empty { color: #888; font-style: italic; font-size: 9pt; }
+    .detail-meta { background: #eef3fb; border-radius: 4px; padding: 0.4rem 0.6rem; margin-bottom: 0.6rem; font-size: 8.5pt; color: #555; }
+    .detail-actions { margin: 0.5rem 0 0.7rem; }
+
+    /* Matrix detail toggle */
+    .matrix-detail-pills, .matrix-detail-table { display: none !important; margin-top: 0.2rem; }
+    .show-pills .matrix-detail-pills,
+    .show-table .matrix-detail-table { display: block !important; }
+    table.detail-matrix { width: 100%; border-collapse: collapse; font-size: 8.5pt; margin: 0.2rem 0; }
+    table.detail-matrix th { background: var(--blue); color: white; text-align: left; padding: 0.2rem 0.4rem; font-weight: 600; }
+    table.detail-matrix td { border: 1px solid #d0d8e8; padding: 0.25rem 0.4rem; vertical-align: top; }
+    table.detail-matrix td:first-child { width: 60%; color: #333; }
+    table.detail-matrix tr:nth-child(even) td { background: #f8faff; }
+    .matrix-toggle {
+      display: inline-flex;
+      gap: 0.2rem;
+      margin-left: 0.5rem;
+    }
+    .matrix-toggle button {
+      padding: 0.15rem 0.4rem;
+      font-size: 8pt;
+      border: 1px solid #b0c4de;
+      background: white;
+      color: #555;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .matrix-toggle button.active {
+      background: var(--blue);
+      color: white;
+      border-color: var(--blue);
+    }
+    .pill { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.15rem 0.5rem; border-radius: 12px; font-size: 8.5pt; background: #f0f5ff; color: var(--blue-dark); border: 1px solid #c9d6e8; }
+    .pill .pill-row { font-weight: 500; color: #333; }
+    .pill .pill-val { font-weight: bold; }
+    .pill.sent-1 { background: #ffebee; color: #c62828; border-color: #ef9a9a; }
+    .pill.sent-2 { background: #fff3e0; color: #ef6c00; border-color: #ffcc80; }
+    .pill.sent-3 { background: #fffde7; color: #f9a825; border-color: #fff59d; }
+    .pill.sent-4 { background: #e8f5e9; color: #2e7d32; border-color: #a5d6a7; }
+    .pill.sent-5 { background: #e8f5e9; color: #1b5e20; border-color: #81c784; }
+    .pill.sent-na { background: #f5f5f5; color: #757575; border-color: #bdbdbd; }
 
     /* Toolbar */
     .toolbar { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; }
@@ -570,7 +613,9 @@
 </div>
 
 <script>
-const WORKER = "https://temple-shalom-survey.jeffstein.workers.dev";
+const WORKER = (location.hostname === "localhost" || location.hostname === "127.0.0.1")
+  ? ""  // use same-origin endpoints when testing locally
+  : "https://temple-shalom-survey.jeffstein.workers.dev";
 let allResponses = [];
 let exportKey    = "";
 let latestOnly   = true;
@@ -1422,36 +1467,178 @@ function renderTable(rows) {
       <td>${mins}</td>
       <td>${secs}</td>
       <td>${nps !== "—" ? nps + "/10" : "—"}</td>
-      <td><button class="expand-btn" data-idx="${idx}" onclick="toggleDetail(this)">▶ Details</button></td>`;
+      <td>
+        <button class="expand-btn" data-idx="${idx}" onclick="toggleDetail(this)">▶ Details</button>
+        <span style="color:#ccc;margin:0 0.2rem">|</span>
+        <button class="expand-btn" onclick="printResponse(${idx})">Print</button>
+      </td>`;
     tbody.appendChild(tr);
 
+    const defaultMatrixMode = (() => { try { return localStorage.getItem("matrixDetailMode") || "pills"; } catch { return "pills"; } })();
     const det = document.createElement("tr");
-    det.className = "detail-row";
+    det.className = `detail-row show-${defaultMatrixMode}`;
     det.style.display = "none";
     det.dataset.for = idx;
 
-    const answers = r.answers || {};
-    const pairs = Object.entries(answers);
     const meta = [
-      ["session_id", r.session_id],
-      ["submission_number", r.submission_number],
-      ["previous_response_id", r.previous_response_id],
-      ["referrer", r.referrer],
-      ["survey_version", r.survey_version],
-    ].filter(([, v]) => v);
+      ["Response ID", r.response_id],
+      ["Session", r.session_id],
+      ["Submission #", r.submission_number],
+      ["Previous Response", r.previous_response_id],
+      ["Survey version", r.survey_version],
+      ["IP country", r.ip_country],
+      ["CF Ray", r.cf_ray],
+      ["Completion", r.completion_seconds ? (r.completion_seconds / 60).toFixed(1) + " min" : "—"],
+      ["Sections", Array.isArray(r.sections_answered) ? r.sections_answered.join(", ") : "—"],
+      ["Referrer", r.referrer],
+      ["User agent", r.user_agent],
+    ].filter(([, v]) => v && v !== "—" && String(v).trim() !== "");
+
+    const detailHtml = renderReadableDetail(r);
 
     det.innerHTML = `<td colspan="8">
-      <div class="detail-grid">
-        ${meta.length ? meta.map(([k, v]) => `
-          <div><span class="dk">${k}</span><br/><span class="dv" style="font-size:8pt;color:#666;">${v}</span></div>
-        `).join("") : ""}
-        ${pairs.length ? pairs.map(([k, v]) => `
-          <div><span class="dk">${k}</span><br/><span class="dv">${Array.isArray(v) ? v.join(", ") : (typeof v === "object" ? Object.entries(v).map(([rk, rv]) => `${rk}: ${rv}`).join("; ") : v)}</span></div>
-        `).join("") : "<em>No answers recorded.</em>"}
-      </div>
+      <div class="detail-meta">${meta.map(([k, v]) => `<strong>${k}:</strong> ${escapeHtml(String(v))}`).join(" · ")}</div>
+      <div class="detail-actions"><button class="expand-btn" onclick="printResponse(${idx})">Print this response</button></div>
+      ${detailHtml}
     </td>`;
     tbody.appendChild(det);
   });
+}
+
+function setMatrixDetailMode(btn, mode) {
+  const row = btn.closest(".detail-row");
+  if (!row) return;
+  row.classList.remove("show-pills", "show-table");
+  row.classList.add("show-" + mode);
+  try { localStorage.setItem("matrixDetailMode", mode); } catch {}
+  row.querySelectorAll(".matrix-toggle button").forEach(b => {
+    b.classList.toggle("active", b.dataset.mode === mode);
+  });
+}
+
+function renderReadableDetail(r) {
+  const answers = r.answers || {};
+  const qs = getAllQuestions();
+  if (!qs.length) {
+    return '<div class="detail-empty">Survey definition not loaded.</div>';
+  }
+
+  const knownNames = new Set(qs.map(q => q.name));
+  const leftover = Object.entries(answers).filter(([k]) => !knownNames.has(k));
+
+  let html = "";
+  let currentSection = null;
+  qs.forEach(q => {
+    const val = answers[q.name];
+    if (val === undefined || val === null || val === "") return;
+
+    if (q.sectionTitle !== currentSection) {
+      if (currentSection) html += "</div></div>";
+      currentSection = q.sectionTitle;
+      html += `<div class="detail-section"><div class="detail-section-hdr">${escapeHtml(currentSection)}</div><div class="detail-grid">`;
+    }
+
+    const qLabel = `${qNumFor(q)}. ${q.title || q.name}`;
+
+    if (q.type === "matrix" && typeof val === "object") {
+      html += `<div style="grid-column:1/-1;"><span class="dk">${escapeHtml(qLabel)}</span>`;
+      html += renderMatrixDetail(q, val);
+      html += "</div>";
+    } else {
+      html += `<div><span class="dk">${escapeHtml(qLabel)}</span><br/><span class="dv">${escapeHtml(formatAnswerValue(q, val))}</span></div>`;
+    }
+  });
+  if (currentSection) html += "</div></div>";
+
+  if (leftover.length) {
+    html += `<div class="detail-section"><div class="detail-section-hdr">Additional fields</div><div class="detail-grid">`;
+    for (const [k, v] of leftover) {
+      html += `<div><span class="dk">${escapeHtml(k)}</span><br/><span class="dv">${escapeHtml(formatAnswerValue(null, v))}</span></div>`;
+    }
+    html += "</div></div>";
+  }
+
+  return html || '<div class="detail-empty">No answers recorded.</div>';
+}
+
+function renderMatrixDetail(q, val) {
+  const mode = localStorage.getItem("matrixDetailMode") || "pills";
+  return `
+    <span class="matrix-toggle">
+      <button type="button" class="${mode === "pills" ? "active" : ""}" data-mode="pills" onclick="setMatrixDetailMode(this, 'pills')">Pills</button>
+      <button type="button" class="${mode === "table" ? "active" : ""}" data-mode="table" onclick="setMatrixDetailMode(this, 'table')">Table</button>
+    </span>
+    <div class="matrix-detail-pills">${renderMatrixDetailPills(q, val)}</div>
+    <div class="matrix-detail-table">${renderMatrixDetailTable(q, val)}</div>
+  `;
+}
+
+function renderMatrixDetailTable(q, val) {
+  const { rows, cols } = matrixLookups(q);
+  let html = '<table class="detail-matrix"><thead><tr><th>Statement</th><th>Response</th></tr></thead><tbody>';
+  (q.rows || []).forEach(row => {
+    const rVal = row.value || row;
+    const rowText = rows[rVal] || rVal;
+    const colVal = val[rVal];
+    if (!colVal) return;
+    const colText = cols[colVal] || colVal;
+    const sent = sentimentClass(colVal).replace("bar-fill ", "");
+    html += `<tr><td>${escapeHtml(rowText)}</td><td class="${sent}">${escapeHtml(colText)}</td></tr>`;
+  });
+  html += '</tbody></table>';
+  return html;
+}
+
+function renderMatrixDetailPills(q, val) {
+  const { rows, cols } = matrixLookups(q);
+  let html = '<div class="pill-list">';
+  (q.rows || []).forEach(row => {
+    const rVal = row.value || row;
+    const rowText = rows[rVal] || rVal;
+    const colVal = val[rVal];
+    if (!colVal) return;
+    const colText = cols[colVal] || colVal;
+    const sent = sentimentClass(colVal).replace("bar-fill ", "");
+    html += `<span class="pill ${sent}"><span class="pill-row">${escapeHtml(rowText)}</span> <span class="pill-val">${escapeHtml(colText)}</span></span>`;
+  });
+  html += '</div></div>';
+  return html;
+}
+
+function formatAnswerValue(q, val) {
+  if (val === undefined || val === null || val === "") return "—";
+
+  if (q.type === "matrix" && typeof val === "object") {
+    const { rows, cols } = matrixLookups(q);
+    return Object.entries(val)
+      .map(([row, col]) => `${rows[row] || row}: ${cols[col] || col}`)
+      .join("; ");
+  }
+
+  if (q.type === "checkbox" || (Array.isArray(val) && q.choices)) {
+    const labels = choiceMap(q);
+    return (Array.isArray(val) ? val : [val])
+      .map(v => labels[v] || v)
+      .join(", ");
+  }
+
+  if (q.type === "radiogroup" || q.type === "dropdown") {
+    const labels = choiceMap(q);
+    return labels[val] || val;
+  }
+
+  return String(val);
+}
+
+function printResponse(idx) {
+  const r = getDisplayResponses()[idx];
+  if (!r) return;
+  try {
+    localStorage.setItem("printResponse", JSON.stringify(r));
+    window.open("print.html", "_blank");
+  } catch (e) {
+    alert("Could not prepare print view: " + e.message);
+  }
 }
 
 function toggleDetail(btn) {

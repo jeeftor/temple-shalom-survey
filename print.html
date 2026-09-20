@@ -37,6 +37,17 @@
     header h1 { font-size: 16pt; margin: 0; color: #00277d; }
     header p  { font-size: 8.5pt; color: #555; margin: 0.2rem 0 0; }
 
+    .response-meta {
+      background: #f0f5ff;
+      border: 1.5px solid #0038b8;
+      border-radius: 6px;
+      padding: 0.5rem 0.8rem;
+      margin-bottom: 0.6rem;
+      font-size: 9pt;
+      color: #00277d;
+    }
+    .response-meta strong { color: #0038b8; }
+
     .section {
       margin: 0.4rem 0;
     }
@@ -201,6 +212,43 @@
       gap: 0.4rem;
     }
 
+    /* Filled response indicators */
+    .box.selected {
+      background: #0038b8;
+      box-shadow: inset 0 0 0 2px white;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .choices li.selected-choice {
+      font-weight: bold;
+      color: #0038b8;
+    }
+    tr.selected-row td.row-label {
+      font-weight: bold;
+      color: #0038b8;
+    }
+    .text-box.filled {
+      border: 1px solid #333;
+      background: #fff;
+      padding: 0.3rem 0.5rem;
+      white-space: pre-wrap;
+      font-size: 9.5pt;
+      color: #111;
+      min-height: auto;
+    }
+    .text-line.filled {
+      border-bottom: 1px solid #333;
+      color: #111;
+      font-size: 10pt;
+      min-height: 1.2em;
+      padding: 0 0.2rem;
+    }
+    td.radio-cell.selected { background: #b3d5f5; }
+    td.radio-cell.selected .box {
+      background: #0038b8;
+      box-shadow: inset 0 0 0 2px white;
+    }
+
     /* Print button */
     #printBtn {
       position: fixed;
@@ -228,6 +276,16 @@
         print-color-adjust: exact;
       }
       #printBtn { display: none; }
+      .response-meta {
+        background: #fff;
+        border: 1.5px solid #0038b8;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .box.selected, td.radio-cell.selected, tr.selected-row td.row-label, .choices li.selected-choice {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
       /* Sections can break freely */
       .section { page-break-inside: auto; }
       /* Non-matrix questions stay together (avoid orphaned question text) */
@@ -266,6 +324,7 @@
   <img src="logo.webp" alt="Temple Shalom" height="50" />
 </header>
 
+<div id="responseMeta"></div>
 <div id="surveyPrint">Loading survey…</div>
 
 <script>
@@ -273,20 +332,52 @@
 // then replace the container in one shot. Safari's PDF engine doesn't
 // always capture DOM built incrementally via appendChild.
 let surveyData = null;
+let responseData = null;
+
+try {
+  const stored = localStorage.getItem("printResponse");
+  if (stored) {
+    responseData = JSON.parse(stored);
+  }
+} catch {}
+
+// Also support ?data=base64url for direct links / testing
+if (!responseData) {
+  try {
+    const params = new URLSearchParams(location.search);
+    const data = params.get("data");
+    if (data) {
+      responseData = JSON.parse(atob(data.replace(/-/g, "+").replace(/_/g, "/")));
+    }
+  } catch {}
+}
+
 fetch("survey.json")
   .then(r => r.json())
   .then(survey => {
     surveyData = survey;
     const html = buildPrintHTML(survey);
     document.getElementById("surveyPrint").innerHTML = html;
+    renderResponseMeta();
     const btn = document.getElementById("printBtn");
     btn.disabled = false;
     btn.style.opacity = "1";
-    btn.textContent = "Print / Save PDF";
+    btn.textContent = responseData ? "Print / Save Filled Response" : "Print / Save PDF";
   })
   .catch(err => {
     document.getElementById("surveyPrint").textContent = "Error loading survey: " + err.message;
   });
+
+function renderResponseMeta() {
+  if (!responseData) return;
+  const wrap = document.getElementById("responseMeta");
+  const ts = responseData.timestamp ? new Date(responseData.timestamp).toLocaleString() : "Unknown";
+  const rid = responseData.response_id || "";
+  const session = responseData.session_id || "";
+  const country = responseData.ip_country || "";
+  const sub = responseData.submission_number || 1;
+  wrap.innerHTML = `<div class="response-meta"><strong>Individual response</strong> &mdash; Submitted ${ts}${country ? " &middot; " + country : ""}${rid ? " &middot; Response ID: " + rid.slice(0, 8) : ""}${sub > 1 ? " &middot; resubmission #" + sub : ""}</div>`;
+}
 
 // Conditional questions that get letter suffixes instead of their own number
 const SUB_QUESTIONS = {
@@ -320,6 +411,7 @@ function buildPrintHTML(survey) {
 
   // Contact fields to collapse into a single compact block
   const CONTACT_FIELDS = ['q_contact_name', 'q_contact_email', 'q_contact_phone', 'q_contact_request'];
+  const answers = responseData?.answers || {};
 
   let html = "";
   survey.pages.forEach((page, pageIdx) => {
@@ -332,7 +424,7 @@ function buildPrintHTML(survey) {
     html += '<div class="section-body">';
     (page.elements || []).forEach(el => {
       if (CONTACT_FIELDS.includes(el.name)) return; // skip — rendered as a block at the end
-      html += renderQuestionHTML(el);
+      html += renderQuestionHTML(el, answers[el.name]);
     });
     html += '</div></div>';
   });
@@ -347,13 +439,14 @@ function buildPrintHTML(survey) {
     html += '<div class="contact-block">';
     html += '<div class="contact-title">Contact information (optional)</div>';
     html += '<div class="contact-lines">';
-    html += '<span class="contact-line"><span class="contact-label">Name:</span> <span class="contact-blank"></span></span>';
-    html += '<span class="contact-line"><span class="contact-label">Email:</span> <span class="contact-blank"></span></span>';
-    html += '<span class="contact-line"><span class="contact-label">Phone:</span> <span class="contact-blank"></span></span>';
+    html += renderContactLine('Name:', answers.q_contact_name || '');
+    html += renderContactLine('Email:', answers.q_contact_email || '');
+    html += renderContactLine('Phone:', answers.q_contact_phone || '');
     html += '</div>';
     if (contactQs.q_contact_request) {
+      const selected = answers.q_contact_request;
       const choices = (contactQs.q_contact_request.choices || []).map(c =>
-        `<span class="contact-choice"><span class="box"></span> ${esc(c.text || c.value)}</span>`
+        `<span class="contact-choice"><span class="box ${c.value === selected ? 'selected' : ''}"></span> ${esc(c.text || c.value)}</span>`
       ).join(' ');
       html += `<div class="contact-request-text">${esc(contactQs.q_contact_request.title || '')}</div>`;
       html += `<div class="contact-choices">${choices}</div>`;
@@ -364,11 +457,18 @@ function buildPrintHTML(survey) {
   return html;
 }
 
+function renderContactLine(label, value) {
+  if (value) {
+    return `<span class="contact-line"><span class="contact-label">${esc(label)}</span> <span class="text-line filled">${esc(value)}</span></span>`;
+  }
+  return `<span class="contact-line"><span class="contact-label">${esc(label)}</span> <span class="contact-blank"></span></span>`;
+}
+
 function esc(s) {
   return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 }
 
-function renderQuestionHTML(el) {
+function renderQuestionHTML(el, ans) {
   const num = qNumberMap[el.name] || "?";
   const cls = el.type === "matrix" ? "question has-matrix" : "question";
   let html = `<div class="${cls}">`;
@@ -377,28 +477,33 @@ function renderQuestionHTML(el) {
     html += `<div class="question-desc">${esc(el.description)}</div>`;
   }
   switch (el.type) {
-    case "matrix":    html += renderMatrixHTML(el); break;
-    case "checkbox":  html += renderChoicesHTML(el, "square"); break;
-    case "radiogroup":html += renderChoicesHTML(el, "circle"); break;
-    case "comment":   html += renderTextAreaHTML(el); break;
-    case "text":      html += renderTextLineHTML(); break;
-    case "rating":    html += renderRatingHTML(el); break;
-    default:          html += renderTextLineHTML();
+    case "matrix":    html += renderMatrixHTML(el, ans); break;
+    case "checkbox":  html += renderChoicesHTML(el, "square", ans); break;
+    case "radiogroup":html += renderChoicesHTML(el, "circle", ans); break;
+    case "comment":   html += renderTextAreaHTML(el, ans); break;
+    case "text":      html += renderTextLineHTML(ans); break;
+    case "rating":    html += renderRatingHTML(el, ans); break;
+    default:          html += renderTextLineHTML(ans);
   }
   html += '</div>';
   return html;
 }
 
-function renderMatrixHTML(el) {
+function renderMatrixHTML(el, ans) {
+  const ansObj = (ans && typeof ans === "object") ? ans : {};
   let html = '<table><thead><tr><th style="width:35%"></th>';
   (el.columns || []).forEach(col => {
     html += `<th>${esc(col.text || col.value)}</th>`;
   });
   html += '</tr></thead><tbody>';
   (el.rows || []).forEach(row => {
-    html += `<tr><td class="row-label">${esc(row.text || row.value)}</td>`;
-    (el.columns || []).forEach(() => {
-      html += '<td class="radio-cell"><span class="box"></span></td>';
+    const rVal = row.value || row;
+    const selected = ansObj[rVal];
+    const rowSelected = !!selected;
+    html += `<tr class="${rowSelected ? 'selected-row' : ''}"><td class="row-label">${esc(row.text || row.value)}</td>`;
+    (el.columns || []).forEach(col => {
+      const isSelected = selected && selected === col.value;
+      html += `<td class="radio-cell ${isSelected ? 'selected' : ''}"><span class="box ${isSelected ? 'selected' : ''}"></span></td>`;
     });
     html += '</tr>';
   });
@@ -406,32 +511,41 @@ function renderMatrixHTML(el) {
   return html;
 }
 
-function renderChoicesHTML(el, shape) {
+function renderChoicesHTML(el, shape, ans) {
   const choices = [...(el.choices || [])];
   if (el.hasOther) choices.push({ value: "other", text: "Other: ___________________" });
+  const selected = new Set(Array.isArray(ans) ? ans : (ans ? [ans] : []));
   let html = '<ul class="choices">';
   choices.forEach(c => {
-    html += `<li><span class="box ${shape === 'square' ? 'square' : ''}"></span> ${esc(c.text || c.value)}</li>`;
+    const isSelected = selected.has(c.value);
+    html += `<li class="${isSelected ? 'selected-choice' : ''}"><span class="box ${shape === 'square' ? 'square' : ''} ${isSelected ? 'selected' : ''}"></span> ${esc(c.text || c.value)}</li>`;
   });
   html += '</ul>';
   return html;
 }
 
-function renderTextAreaHTML(el) {
+function renderTextAreaHTML(el, ans) {
+  if (ans) {
+    return `<div class="text-box filled">${esc(String(ans))}</div>`;
+  }
   const lines = el.rows || 6;
   return `<div class="text-box" style="min-height:${lines * 1.6}rem"></div>`;
 }
 
-function renderTextLineHTML() {
+function renderTextLineHTML(ans) {
+  if (ans) {
+    return `<span class="text-line filled">${esc(String(ans))}</span>`;
+  }
   return '<span class="text-line">&nbsp;</span>';
 }
 
-function renderRatingHTML(el) {
+function renderRatingHTML(el, ans) {
   const min = el.rateMin ?? 0;
   const max = el.rateMax ?? 10;
   let html = '<ul class="choices" style="flex-direction:row;display:flex;flex-wrap:wrap;gap:0.5rem">';
   for (let i = min; i <= max; i++) {
-    html += `<li><span class="box"></span> ${i}</li>`;
+    const isSelected = String(ans) === String(i);
+    html += `<li><span class="box ${isSelected ? 'selected' : ''}"></span> ${i}</li>`;
   }
   html += `</ul><div style="font-size:9pt;color:#555">${min} = ${esc(el.minRateDescription || "Low")}  ·  ${max} = ${esc(el.maxRateDescription || "High")}</div>`;
   return html;

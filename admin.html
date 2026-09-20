@@ -1446,60 +1446,67 @@ function renderTable(rows) {
   }
 
   rows.forEach((r, idx) => {
-    const date = r.timestamp ? new Date(r.timestamp).toLocaleString() : "—";
-    const mins = r.completion_seconds ? (r.completion_seconds / 60).toFixed(1) + " min" : "—";
-    const secs = Array.isArray(r.sections_answered) ? r.sections_answered.length : "—";
-    const nps = r.answers?.q_nps ?? "—";
-    const country = r.ip_country || "—";
-    const subNum = r.submission_number || 1;
-    const subBadge = subNum > 1
-      ? `<span class="badge" style="background:#fff3cd;color:#856404;border:1px solid #ffc107;">#${subNum}</span>`
-      : `<span style="color:#aaa;">1</span>`;
+    try {
+      const date = r.timestamp ? new Date(r.timestamp).toLocaleString() : "—";
+      const mins = r.completion_seconds ? (r.completion_seconds / 60).toFixed(1) + " min" : "—";
+      const secs = Array.isArray(r.sections_answered) ? r.sections_answered.length : "—";
+      const nps = r.answers?.q_nps ?? "—";
+      const country = r.ip_country || "—";
+      const subNum = r.submission_number || 1;
+      const subBadge = subNum > 1
+        ? `<span class="badge" style="background:#fff3cd;color:#856404;border:1px solid #ffc107;">#${subNum}</span>`
+        : `<span style="color:#aaa;">1</span>`;
 
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td style="color:#888">${r.id}</td>
-      <td>${date}</td>
-      <td><span class="badge badge-us">${country}</span></td>
-      <td>${subBadge}</td>
-      <td>${mins}</td>
-      <td>${secs}</td>
-      <td>${nps !== "—" ? nps + "/10" : "—"}</td>
-      <td>
-        <button class="expand-btn" data-idx="${idx}" onclick="toggleDetail(this)">▶ Details</button>
-        <span style="color:#ccc;margin:0 0.2rem">|</span>
-        <button class="expand-btn" onclick="printResponse(${idx})">Print</button>
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td style="color:#888">${r.id}</td>
+        <td>${date}</td>
+        <td><span class="badge badge-us">${country}</span></td>
+        <td>${subBadge}</td>
+        <td>${mins}</td>
+        <td>${secs}</td>
+        <td>${nps !== "—" ? nps + "/10" : "—"}</td>
+        <td>
+          <button class="expand-btn" data-idx="${idx}" onclick="toggleDetail(this)">▶ Details</button>
+          <span style="color:#ccc;margin:0 0.2rem">|</span>
+          <button class="expand-btn" onclick="printResponse(${idx})">Print</button>
+        </td>`;
+      tbody.appendChild(tr);
+
+      const defaultMatrixMode = (() => { try { return localStorage.getItem("matrixDetailMode") || "pills"; } catch { return "pills"; } })();
+      const det = document.createElement("tr");
+      det.className = `detail-row show-${defaultMatrixMode}`;
+      det.style.display = "none";
+      det.dataset.for = idx;
+
+      const meta = [
+        ["Response ID", r.response_id],
+        ["Session", r.session_id],
+        ["Submission #", r.submission_number],
+        ["Previous Response", r.previous_response_id],
+        ["Survey version", r.survey_version],
+        ["IP country", r.ip_country],
+        ["CF Ray", r.cf_ray],
+        ["Completion", r.completion_seconds ? (r.completion_seconds / 60).toFixed(1) + " min" : "—"],
+        ["Sections", Array.isArray(r.sections_answered) ? r.sections_answered.join(", ") : "—"],
+        ["Referrer", r.referrer],
+        ["User agent", r.user_agent],
+      ].filter(([, v]) => v && v !== "—" && String(v).trim() !== "");
+
+      const detailHtml = renderReadableDetail(r);
+
+      det.innerHTML = `<td colspan="8">
+        <div class="detail-meta">${meta.map(([k, v]) => `<strong>${k}:</strong> ${escapeHtml(String(v))}`).join(" · ")}</div>
+        <div class="detail-actions"><button class="expand-btn" onclick="printResponse(${idx})">Print this response</button></div>
+        ${detailHtml}
       </td>`;
-    tbody.appendChild(tr);
-
-    const defaultMatrixMode = (() => { try { return localStorage.getItem("matrixDetailMode") || "pills"; } catch { return "pills"; } })();
-    const det = document.createElement("tr");
-    det.className = `detail-row show-${defaultMatrixMode}`;
-    det.style.display = "none";
-    det.dataset.for = idx;
-
-    const meta = [
-      ["Response ID", r.response_id],
-      ["Session", r.session_id],
-      ["Submission #", r.submission_number],
-      ["Previous Response", r.previous_response_id],
-      ["Survey version", r.survey_version],
-      ["IP country", r.ip_country],
-      ["CF Ray", r.cf_ray],
-      ["Completion", r.completion_seconds ? (r.completion_seconds / 60).toFixed(1) + " min" : "—"],
-      ["Sections", Array.isArray(r.sections_answered) ? r.sections_answered.join(", ") : "—"],
-      ["Referrer", r.referrer],
-      ["User agent", r.user_agent],
-    ].filter(([, v]) => v && v !== "—" && String(v).trim() !== "");
-
-    const detailHtml = renderReadableDetail(r);
-
-    det.innerHTML = `<td colspan="8">
-      <div class="detail-meta">${meta.map(([k, v]) => `<strong>${k}:</strong> ${escapeHtml(String(v))}`).join(" · ")}</div>
-      <div class="detail-actions"><button class="expand-btn" onclick="printResponse(${idx})">Print this response</button></div>
-      ${detailHtml}
-    </td>`;
-    tbody.appendChild(det);
+      tbody.appendChild(det);
+    } catch (err) {
+      console.error("Failed to render response row", idx, r, err);
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td colspan="8" style="color:var(--red)">Error rendering response ${idx}: ${escapeHtml(String(err.message || err))}</td>`;
+      tbody.appendChild(tr);
+    }
   });
 }
 

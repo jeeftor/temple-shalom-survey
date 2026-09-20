@@ -1199,12 +1199,13 @@ function renderChoiceChartHTML(q, responses) {
     const val = reverseLabels[lbl];
     return val ? sentimentClass(val) : "";
   };
+  const colorFn = (lbl) => SENTIMENT_COLORS[classFn(lbl)];
   return `<div class="panel-body">
     <div class="response-rate">${num} · ${answered} of ${responses.length} answered (${Math.round(answered/responses.length*100)}%)</div>
     ${chartToggleHTML("setExplorerChartType", q.name, chartType)}
     <div class="${chartType === 'both' ? 'chart-both' : ''}">
       ${chartType !== 'pie' ? `<div class="chart-half">${barChartHTML(sorted, skipped, responses.length, classFn)}</div>` : ""}
-      ${chartType !== 'bar' ? `<div class="chart-half">${renderPieChartHTML(sorted, skipped)}</div>` : ""}
+      ${chartType !== 'bar' ? `<div class="chart-half">${renderPieChartHTML(sorted, skipped, colorFn)}</div>` : ""}
     </div>
   </div>`;
 }
@@ -1245,6 +1246,7 @@ function renderRatingChartHTML(q, responses) {
   const skipped = responses.length - vals.length;
   const num = qNum(q.name);
   const classFn = (lbl) => ratingSentimentClass(lbl);
+  const colorFn = (lbl) => SENTIMENT_COLORS[classFn(lbl)];
   return `<div class="panel-body">
     <div class="response-rate">${num} · ${vals.length} of ${responses.length} answered (${Math.round(vals.length/responses.length*100)}%)</div>
     <div style="font-size:10pt;color:#666;margin-bottom:0.5rem;">Average: <strong>${avg}</strong></div>
@@ -1280,7 +1282,16 @@ function escapeHtml(s) {
 
 // ── Pie chart (SVG) ───────────────────────────────────────────────────────────
 
-function renderPieChartHTML(sorted, skipped) {
+const SENTIMENT_COLORS = {
+  "sent-1": "#c62828",
+  "sent-2": "#ef6c00",
+  "sent-3": "#f9a825",
+  "sent-4": "#558b2f",
+  "sent-5": "#2e7d32",
+  "sent-na": "#78909c"
+};
+
+function renderPieChartHTML(sorted, skipped, colorFn) {
   const data = [...sorted];
   if (skipped > 0) data.push(["No answer", skipped]);
   const sum = data.reduce((s, [, c]) => s + c, 0);
@@ -1296,7 +1307,10 @@ function renderPieChartHTML(sorted, skipped) {
     const x1 = cx + r * Math.cos(angle), y1 = cy + r * Math.sin(angle);
     const x2 = cx + r * Math.cos(endAngle), y2 = cy + r * Math.sin(endAngle);
     const largeArc = pct > 0.5 ? 1 : 0;
-    const color = lbl === "No answer" ? "#ccc" : PIE_COLORS[i % PIE_COLORS.length];
+    let color;
+    if (lbl === "No answer") color = "#e0e0e0";
+    else if (colorFn) color = colorFn(lbl, i) || PIE_COLORS[i % PIE_COLORS.length];
+    else color = PIE_COLORS[i % PIE_COLORS.length];
     slices += pct < 1
       ? `<path d="M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${largeArc} 1 ${x2},${y2} Z" fill="${color}" stroke="white" stroke-width="1"/>`
       : `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${color}" stroke="white" stroke-width="1"/>`;
@@ -1389,6 +1403,7 @@ function renderChoiceChart(q, responses) {
     const val = reverseLabels[lbl];
     return val ? sentimentClass(val) : "";
   };
+  const colorFn = (lbl) => SENTIMENT_COLORS[classFn(lbl)];
 
   const panel = document.createElement("div");
   panel.className = "panel";
@@ -1405,7 +1420,7 @@ function renderChoiceChart(q, responses) {
       <div class="response-rate">${answered} of ${responses.length} answered (${Math.round(answered/responses.length*100)}%)</div>
       <div class="${chartType === 'both' ? 'chart-both' : ''}">
         ${chartType !== 'pie' ? `<div class="chart-half">${barChartHTML(sorted, skipped, responses.length, classFn)}</div>` : ""}
-        ${chartType !== 'bar' ? `<div class="chart-half">${renderPieChartHTML(sorted, skipped)}</div>` : ""}
+        ${chartType !== 'bar' ? `<div class="chart-half">${renderPieChartHTML(sorted, skipped, colorFn)}</div>` : ""}
       </div>
     </div>`;
   return panel;
@@ -1423,6 +1438,7 @@ function renderRatingChart(q, responses) {
   const num = qNum(q.name);
 
   const classFn = (lbl) => ratingSentimentClass(lbl);
+  const colorFn = (lbl) => SENTIMENT_COLORS[classFn(lbl)];
 
   const panel = document.createElement("div");
   panel.className = "panel";
@@ -1448,6 +1464,9 @@ function renderMatrixChart(q, responses) {
   const panel = document.createElement("div");
   panel.className = "panel";
   panel.style.gridColumn = "span 2";
+
+  const labelToColVal = Object.fromEntries(Object.entries(cols).map(([k, v]) => [v, k]));
+  const colorFn = (lbl) => SENTIMENT_COLORS[sentimentClass(labelToColVal[lbl])];
 
   let html = `<div class="panel-hdr">
     <span>${num ? `<span class="q-num">${num}</span>` : ""}${q.title || q.name}</span>
@@ -1490,7 +1509,7 @@ function renderMatrixChart(q, responses) {
     if (chartType === "pie") {
       html += `<div class="matrix-pie-cell">
         <div class="matrix-pie-title">${rowNum} · ${rowLabel} <span class="matrix-pie-count">${total}/${responses.length}</span></div>
-        ${renderPieChartHTML(sorted, skipped)}
+        ${renderPieChartHTML(sorted, skipped, colorFn)}
       </div>`;
     } else {
       html += `<div class="matrix-pie-cell">

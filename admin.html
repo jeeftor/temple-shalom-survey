@@ -1612,6 +1612,7 @@ function renderMatrixDetailPills(q, val) {
 
 function formatAnswerValue(q, val) {
   if (val === undefined || val === null || val === "") return "—";
+  if (!q) return String(val);
 
   if (q.type === "matrix" && typeof val === "object") {
     const { rows, cols } = matrixLookups(q);

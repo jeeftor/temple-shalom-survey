@@ -1682,6 +1682,18 @@ function formatAnswerValue(q, val) {
   return String(val);
 }
 
+function jumpToResponse(idx) {
+  const tabBtn = document.querySelector(`.tab-bar button[data-tab="responses"]`);
+  switchTab('responses', tabBtn);
+  const detailBtn = document.querySelector(`button.expand-btn[data-idx="${idx}"]`);
+  const detRow = document.querySelector(`.detail-row[data-for="${idx}"]`);
+  if (detailBtn && detRow) {
+    detRow.style.display = "table-row";
+    detailBtn.textContent = "▼ Hide";
+    detRow.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+
 function printResponse(idx) {
   const r = getDisplayResponses()[idx];
   if (!r) return;
@@ -1953,7 +1965,7 @@ function renderComments() {
   let html = '';
   commentQs.forEach(q => {
     const comments = responses
-      .map(r => ({ text: r.answers?.[q.name], date: r.timestamp, sub: r.submission_number }))
+      .map((r, idx) => ({ text: r.answers?.[q.name], date: r.timestamp, sub: r.submission_number, idx }))
       .filter(a => a.text && a.text.trim())
       .sort((a, b) => new Date(b.date) - new Date(a.date));
 
@@ -1969,7 +1981,13 @@ function renderComments() {
         ${comments.length ? comments.map(a => `
           <div class="comment-item">
             ${escapeHtml(a.text)}
-            <div class="comment-meta">${new Date(a.date).toLocaleDateString()}${a.sub > 1 ? " · resubmission #" + a.sub : ""}</div>
+            <div class="comment-meta">${new Date(a.date).toLocaleDateString()}${a.sub > 1 ? " · resubmission #" + a.sub : ""}
+              <span style="margin-left:0.6rem">
+                <button class="expand-btn" onclick="jumpToResponse(${a.idx})">View response</button>
+                <span style="color:#ccc;margin:0 0.2rem">|</span>
+                <button class="expand-btn" onclick="printResponse(${a.idx})">Print</button>
+              </span>
+            </div>
           </div>`).join("") : '<div class="explorer-empty" style="padding:0.5rem;">No comments for this question.</div>'}
       </div>
     </div>`;

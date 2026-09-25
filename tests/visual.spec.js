@@ -609,6 +609,7 @@ test("admin page renders all tabs without JS errors", async ({ page }) => {
 
   await page.goto(`/admin.html?key=${MOCK_KEY}`);
   await expect(page.locator("#dashboard")).toBeVisible({ timeout: 10000 });
+  await expect(page.locator("#loadingOverlay")).toBeHidden();
 
   // Stats row should have cards
   await expect(page.locator(".stat-card").first()).toBeVisible();
@@ -647,6 +648,7 @@ test("admin CSV export button is wired up after auth", async ({ page }) => {
 
   await page.goto(`/admin.html?key=${MOCK_KEY}`);
   await expect(page.locator("#dashboard")).toBeVisible({ timeout: 10000 });
+  await expect(page.locator("#loadingOverlay")).toBeHidden();
 
   // Header export button should be visible and have a valid href
   await expect(page.locator("#hdrExport")).toBeVisible();
@@ -660,6 +662,7 @@ test("admin comments tab shows comments and copy button", async ({ page }) => {
 
   await page.goto(`/admin.html?key=${MOCK_KEY}`);
   await expect(page.locator("#dashboard")).toBeVisible({ timeout: 10000 });
+  await expect(page.locator("#loadingOverlay")).toBeHidden();
 
   // Go to Comments tab
   await page.locator(".tab-bar button", { hasText: "Comments" }).click();

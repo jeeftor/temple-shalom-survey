@@ -253,6 +253,7 @@
 
     /* ApexCharts hosts */
     .apx-host { min-height: 60px; }
+    .apexcharts-canvas path[data\:realIndex], .apexcharts-pie-area, .apexcharts-bar-area { cursor: pointer; }
     .matrix-pie-cell .apx-host { min-height: 40px; }
     .apx-pie { display: flex; flex-direction: column; align-items: stretch; min-width: 0; }
     .apx-legend {
@@ -2008,7 +2009,8 @@ window.addEventListener("scroll", () => {
 
 const APEX_BASE = {
   chart: { fontFamily: '-apple-system,"Segoe UI",sans-serif', toolbar: { show: false }, animations: { enabled: false } },
-  tooltip: { style: { fontSize: "11px" } }
+  states: { hover: { filter: { type: "darken", value: 0.25 } }, active: { filter: { type: "none" } } },
+  tooltip: { style: { fontSize: "11px" }, followCursor: true }
 };
 
 const SENTIMENT_COLORS = {
@@ -2062,7 +2064,7 @@ function renderPieChartHTML(sorted, skipped, colorFn, options = {}) {
     series, labels, colors,
     legend: { show: false },
     dataLabels: { enabled: !compact, formatter: (v) => v >= 6 ? Math.round(v) + "%" : "", style: { fontSize: "10px", fontWeight: 700 } },
-    plotOptions: { pie: { donut: { size: compact ? "58%" : "62%" } } },
+    plotOptions: { pie: { donut: { size: compact ? "54%" : "56%" } } },
     tooltip: { y: { formatter: (v, { seriesIndex }) => `${v} (${pctText(v, labels[seriesIndex])})` } }
   }), height)}${legendHtml}</div>`;
 }

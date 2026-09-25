@@ -1302,8 +1302,7 @@ function derivedDimensions() {
       derived: true,
       groups: [
         { value: "families_with_kids", text: "Families with kids (≤18 marked)" },
-        { value: "adults_only", text: "Adults only" },
-        { value: "q2_skipped", text: "Q2 not answered" }
+        { value: "adults_only", text: "Adults only" }
       ],
       membership: derivedHouseholdHasKids
     },
@@ -1325,8 +1324,7 @@ function derivedDimensions() {
         { value: "multigen", text: "Multi-gen (child + 51+)" },
         { value: "adult", text: "Adults 19–50" },
         { value: "mixed_adult", text: "Adults + 51+" },
-        { value: "older", text: "Older adults (51+ only)" },
-        { value: "q2_skipped", text: "Q2 not answered" }
+        { value: "older", text: "Older adults (51+ only)" }
       ],
       membership: derivedHouseholdShape
     },
@@ -1350,15 +1348,14 @@ function dimFromId(id) {
 }
 
 function responseGroupKeys(dim, r) {
+  const valid = new Set(dim.groups.map(g => String(g.value)));
   const raw = dim.membership(r);
-  if (raw == null || raw === "") return [];
-  if (Array.isArray(raw)) return raw;
-  if (typeof raw === "object") {
-    return Object.entries(raw)
-      .filter(([, v]) => v != null && v !== "")
-      .map(([k, v]) => (dim.multi ? k : v));
-  }
-  return [raw];
+  const keys = raw == null || raw === "" ? []
+    : Array.isArray(raw) ? raw
+    : typeof raw === "object"
+      ? Object.entries(raw).filter(([, v]) => v != null && v !== "").map(([k, v]) => (dim.multi ? k : v))
+      : [raw];
+  return keys.filter(k => valid.has(String(k)));
 }
 
 function groupedCounts(q, responses, dim) {
@@ -1495,7 +1492,7 @@ function renderGroupedSmallMultiples(q, responses, dim) {
     const data = prepareChartData(sorted, subset.length, answered, labelToValue, "all", "survey");
     html += `<div class="compare-cell">
       <div class="compare-cell-title">${escapeHtml(g.text)} <span class="matrix-pie-count">${answered}/${subset.length}</span></div>
-      ${renderPieChartHTML(data.sorted, data.skipped, colorFn, { answeredTotal: data.answeredTotal, isNaFn: data.isNaFn, compact: true })}
+      ${renderPieChartHTML(data.sorted, 0, colorFn, { answeredTotal: data.answeredTotal, isNaFn: data.isNaFn, compact: true })}
     </div>`;
   });
   html += `</div>`;
@@ -1818,8 +1815,8 @@ function renderChoiceChartHTML(q, responses) {
     <div class="response-rate">${num} · ${answered} of ${responses.length} answered (${Math.round(answered/responses.length*100)}%) ${pctModeToggleHTML("explorer_" + q.name, pctMode)} ${sortToggleHTML("explorer_" + q.name, sortMode)}</div>
     ${chartToggleHTML("setExplorerChartType", q.name, chartType)}
     <div class="${chartType === 'both' ? 'chart-both' : ''}">
-      ${chartType !== 'pie' ? `<div class="chart-half">${barChartHTML(data.sorted, data.skipped, data.total, classFn, { answeredTotal: data.answeredTotal, isNaFn: data.isNaFn })}</div>` : ""}
-      ${chartType !== 'bar' ? `<div class="chart-half">${renderPieChartHTML(data.sorted, data.skipped, colorFn, { answeredTotal: data.answeredTotal, isNaFn: data.isNaFn })}</div>` : ""}
+      ${chartType !== 'pie' ? `<div class="chart-half">${barChartHTML(data.sorted, 0, data.total, classFn, { answeredTotal: data.answeredTotal, isNaFn: data.isNaFn })}</div>` : ""}
+      ${chartType !== 'bar' ? `<div class="chart-half">${renderPieChartHTML(data.sorted, 0, colorFn, { answeredTotal: data.answeredTotal, isNaFn: data.isNaFn })}</div>` : ""}
     </div>
   </div>`;
 }
@@ -1866,7 +1863,7 @@ function renderRatingChartHTML(q, responses) {
   return `<div class="panel-body">
     <div class="response-rate">${num} · ${vals.length} of ${responses.length} answered (${Math.round(vals.length/responses.length*100)}%) ${pctModeToggleHTML("explorer_" + q.name, pctMode)} ${sortToggleHTML("explorer_" + q.name, sortMode)}</div>
     <div style="font-size:10pt;color:#666;margin-bottom:0.5rem;">Average: <strong>${avg}</strong></div>
-    ${barChartHTML(data.sorted, data.skipped, data.total, classFn, { answeredTotal: data.answeredTotal, isNaFn: data.isNaFn })}
+    ${barChartHTML(data.sorted, 0, data.total, classFn, { answeredTotal: data.answeredTotal, isNaFn: data.isNaFn })}
   </div>`;
 }
 

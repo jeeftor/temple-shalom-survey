@@ -6,7 +6,8 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Temple Shalom Survey — Admin</title>
+  <title>Temple Shalom Survey — Admin (Apex prototype)</title>
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.54.0/dist/apexcharts.min.js"></script>
   <style>
     :root {
       --blue:      #0038b8;
@@ -100,6 +101,28 @@
     #authScreen button:hover { background: var(--blue-dark); }
     #authError { color: var(--red); font-size: 9pt; margin-top: 0.5rem; }
 
+    /* ── Loading overlay ── */
+    #loadingOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(255,255,255,0.92);
+      z-index: 9999;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+    }
+    #loadingOverlay .spinner {
+      width: 48px; height: 48px;
+      border: 5px solid #e0e4f0;
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loadingOverlay .msg { color: var(--blue-dark); font-size: 11pt; font-weight: bold; }
+
     /* ── Dashboard ── */
     #dashboard { display: none; padding: 1.5rem 2rem; max-width: 1200px; margin: 0 auto; }
 
@@ -135,7 +158,7 @@
       border-radius: 8px;
       margin-bottom: 1.5rem;
       box-shadow: 0 1px 6px rgba(0,0,0,0.08);
-      overflow: hidden;
+      overflow: visible;
     }
     .panel-hdr {
       background: var(--blue);
@@ -178,28 +201,34 @@
     }
     .chart-toggle button {
       padding: 0.25rem 0.55rem;
-      border: 1.5px solid var(--border);
+      border: 1.5px solid rgba(255,255,255,0.45);
       border-radius: var(--radius);
-      background: white;
+      background: transparent;
       cursor: pointer;
       font-size: 13pt;
       line-height: 1;
-      color: #999;
+      color: rgba(255,255,255,0.7);
       transition: all 0.15s;
       min-width: 28px;
       text-align: center;
     }
-    .chart-toggle button:hover { border-color: var(--blue); color: var(--blue); }
-    .chart-toggle button.active { background: var(--blue); color: white; border-color: var(--blue); }
+    .chart-toggle button:hover { border-color: white; color: white; background: rgba(255,255,255,0.12); }
+    .chart-toggle button.active { background: white; color: var(--blue); border-color: white; }
 
-    .pct-mode-toggle { display: inline-flex; gap: 0.25rem; margin-left: 0.5rem; }
+    .pct-mode-toggle { display: inline-flex; gap: 0; margin-left: 0.5rem; background: rgba(0,0,0,0.18); border-radius: 6px; padding: 2px; }
     .pct-mode-toggle button {
-      padding: 0.15rem 0.4rem; border: 1.5px solid var(--border); border-radius: var(--radius);
-      background: white; cursor: pointer; font-size: 8pt; line-height: 1; color: #777;
-      transition: all 0.15s; min-width: 24px; text-align: center;
+      padding: 0.22rem 0.55rem; border: 0; border-radius: 4px;
+      background: transparent; cursor: pointer; font-size: 8.5pt; font-weight: 700;
+      line-height: 1.2; color: rgba(255,255,255,0.75);
+      transition: all 0.15s; min-width: 36px; text-align: center;
     }
-    .pct-mode-toggle button:hover { border-color: var(--blue); color: var(--blue); }
-    .pct-mode-toggle button.active { background: var(--blue); color: white; border-color: var(--blue); }
+    .pct-mode-toggle button:hover { color: white; }
+    .pct-mode-toggle button.active { background: white; color: var(--blue); }
+
+    .explorer-bar .pct-mode-toggle { background: #e8eef8; }
+    .explorer-bar .pct-mode-toggle button { color: #5a6a80; }
+    .explorer-bar .pct-mode-toggle button:hover { color: var(--blue-dark); }
+    .explorer-bar .pct-mode-toggle button.active { background: var(--blue); color: white; }
 
     /* Section filter */
     .section-filter { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 1rem; }
@@ -222,6 +251,26 @@
     .chart-half { flex: 1; min-width: 280px; }
     .chart-half .bar-lbl { width: 160px; }
 
+    /* ApexCharts hosts */
+    .apx-host { min-height: 60px; }
+    .matrix-pie-cell .apx-host { min-height: 40px; }
+    .apx-pie { display: flex; flex-direction: column; align-items: stretch; min-width: 0; }
+    .apx-legend {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.12rem;
+      padding: 0.4rem 0.5rem 0.15rem;
+      font-size: 8.5pt;
+      line-height: 1.35;
+    }
+    .apx-legend-item { display: flex; align-items: flex-start; gap: 0.35rem; max-width: 100%; }
+    .apx-legend-swatch {
+      width: 10px; height: 10px; border-radius: 50%;
+      flex-shrink: 0; margin-top: 4px;
+    }
+    .matrix-pie-cell .apx-legend { font-size: 8pt; gap: 0.1rem 0.55rem; }
+
     /* Pie chart */
     .pie-wrap { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
     .pie-svg { flex-shrink: 0; }
@@ -239,14 +288,17 @@
     .matrix-pie-cell .pie-legend { font-size: 8pt; }
     .matrix-pie-cell .bar-item { font-size: 9pt; }
     .matrix-pie-cell .bar-lbl { width: 110px; }
+    .compare-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.75rem; }
+    .compare-cell { background: #f8f9fc; border: 1px solid var(--border); border-radius: var(--radius); padding: 0.6rem; }
+    .compare-cell-title { font-size: 9pt; font-weight: 600; color: #333; margin-bottom: 0.3rem; }
 
     /* Matrix sentiment colors */
-    .bar-fill.sent-1 { background: #c62828; }  /* very negative - red */
-    .bar-fill.sent-2 { background: #ef6c00; }  /* negative - orange */
-    .bar-fill.sent-3 { background: #f9a825; }  /* neutral - yellow */
-    .bar-fill.sent-4 { background: #558b2f; }  /* positive - light green */
-    .bar-fill.sent-5 { background: #2e7d32; }  /* very positive - green */
-    .bar-fill.sent-na { background: #78909c; } /* N/A - blue-grey */
+    .bar-fill.sent-1 { background: #b71c1c; }
+    .bar-fill.sent-2 { background: #e53935; }
+    .bar-fill.sent-3 { background: #f9a825; }
+    .bar-fill.sent-4 { background: #7cb342; }
+    .bar-fill.sent-5 { background: #1b5e20; }
+    .bar-fill.sent-na { background: #78909c; }
 
     /* Data explorer */
     .explorer-panel { background: #f4f7fc; border: 1.5px solid #c9d6e8; }
@@ -260,8 +312,28 @@
       background: white;
       border-bottom: 1px solid #e0e7f0;
     }
+    .explorer-help {
+      font-size: 9pt; color: #4a6a8a; padding: 0.7rem 1rem 0;
+      line-height: 1.45;
+    }
+    .explorer-help strong { color: var(--blue-dark); }
+    .explorer-presets { display: flex; flex-wrap: wrap; gap: 0.35rem; padding: 0.55rem 1rem 0; align-items: center; }
+    .explorer-presets-label { font-size: 8pt; font-weight: 700; color: #4a6a8a; text-transform: uppercase; letter-spacing: 0.4px; margin-right: 0.2rem; }
+    .explorer-preset {
+      border: 1.5px solid #b0c4de; background: white; color: var(--blue-dark);
+      border-radius: 999px; padding: 0.22rem 0.7rem; font-size: 8.5pt; font-weight: 600;
+      cursor: pointer;
+    }
+    .explorer-preset:hover { border-color: var(--blue); background: var(--blue-pale); }
+    .explorer-preset.active { background: var(--blue); color: white; border-color: var(--blue); }
+    .explorer-step {
+      display: flex; align-items: center; justify-content: center;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: var(--blue); color: white; font-size: 8pt; font-weight: 700;
+      flex-shrink: 0;
+    }
     .explorer-field { display: flex; flex-direction: column; gap: 0.2rem; }
-    .explorer-field label { font-size: 8pt; font-weight: 600; color: #4a6a8a; text-transform: uppercase; letter-spacing: 0.5px; }
+    .explorer-field label { font-size: 8pt; font-weight: 600; color: #4a6a8a; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 0.4rem; }
     .explorer-field select {
       padding: 0.4rem 0.6rem;
       border: 1.5px solid #b0c4de;
@@ -527,6 +599,12 @@
   <div id="authError"></div>
 </div>
 
+<!-- Loading overlay -->
+<div id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="msg" id="loadingMsg">Loading survey data…</div>
+</div>
+
 <!-- Dashboard -->
 <div id="dashboard">
 
@@ -547,24 +625,44 @@
 
   <!-- Data explorer -->
   <div class="panel explorer-panel">
-    <div class="panel-hdr">Data Explorer</div>
+    <div class="panel-hdr">Compare answers</div>
+    <div class="explorer-help">
+      <strong>1.</strong> Pick the question you want to understand (slices / colors).
+      &nbsp;<strong>2.</strong> Optionally split into groups with a second question (one bar per group).
+      Example: NPS split by “Adults only vs families with kids.” Derived Q2 makeup is in all three dropdowns.
+      Use <strong>Separate</strong> for one mini-chart per group instead of stacked bars.
+    </div>
+    <div class="explorer-presets" id="explorerPresets">
+      <span class="explorer-presets-label">Presets</span>
+    </div>
     <div class="explorer-bar">
       <div class="explorer-field">
-        <label for="explorerQ">Question</label>
+        <label for="explorerQ"><span class="explorer-step">1</span> Chart this</label>
         <select id="explorerQ" onchange="explorerUpdate()"></select>
       </div>
       <div class="explorer-field">
-        <label for="explorerFilterQ">Cross-tab filter (optional)</label>
+        <label for="explorerGroupQ"><span class="explorer-step">2</span> Split by <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
+        <select id="explorerGroupQ" onchange="explorerUpdate()"></select>
+      </div>
+      <div class="explorer-field" id="explorerLayoutWrap" style="display:none;">
+        <label>Compare as</label>
+        <span class="pct-mode-toggle" style="margin-top:0.15rem">
+          <button id="explorerLayoutStacked" class="active" onclick="setExplorerLayout('stacked')" title="One stacked bar per group">Stacked</button>
+          <button id="explorerLayoutSeparate" onclick="setExplorerLayout('separate')" title="One mini chart per group">Separate</button>
+        </span>
+      </div>
+      <div class="explorer-field">
+        <label for="explorerFilterQ">Only include <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional filter)</span></label>
         <select id="explorerFilterQ" onchange="explorerUpdateFilter()"></select>
       </div>
       <div class="explorer-field" id="explorerFilterValWrap" style="display:none;">
-        <label for="explorerFilterVal">Filter value</label>
+        <label for="explorerFilterVal">Whose answer is</label>
         <select id="explorerFilterVal" onchange="explorerUpdate()"></select>
       </div>
       <button class="explorer-clear" onclick="explorerClear()">Clear</button>
     </div>
     <div class="explorer-result" id="explorerResult">
-      <div class="explorer-empty">Pick a question above to explore the data.</div>
+      <div class="explorer-empty">Start with step 1 — pick a question. Leave step 2 blank for a single pie/bar, or pick a second question to compare groups.</div>
     </div>
   </div>
 
@@ -665,11 +763,39 @@ function pctModeToggleHTML(qName, current) {
   </span>`;
 }
 
+function sortToggleHTML(qName, current) {
+  const a = (m) => current === m ? "active" : "";
+  return `<span class="pct-mode-toggle">
+    <button class="${a('survey')}" onclick="setSortMode('${qName}','survey')" title="Keep survey / scale order">Order</button>
+    <button class="${a('count')}" onclick="setSortMode('${qName}','count')" title="Sort by count (largest first)">Count</button>
+  </span>`;
+}
+
+const renderedTabs = new Set();
+let currentTab = "dashboard";
+
+const TAB_RENDERERS = {
+  dashboard: () => { const dr = getDisplayResponses(); renderStats(dr); renderCharts(dr); },
+  trends:    () => renderTrends(),
+  comments:  () => renderComments(),
+  followup:  () => renderFollowUp(),
+  responses: () => renderTable(getDisplayResponses()),
+};
+
+function renderTab(name) {
+  if (renderedTabs.has(name)) return;
+  renderedTabs.add(name);
+  TAB_RENDERERS[name]?.();
+}
+
 function switchTab(name, btn) {
   document.querySelectorAll(".tab-bar button").forEach(b => b.classList.remove("active"));
   document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
   document.getElementById("tab-" + name).classList.add("active");
   if (btn) btn.classList.add("active");
+  currentTab = name;
+  renderTab(name);
+  if (name === "dashboard" || name === "trends") mountApexCharts();
 
   const params = new URLSearchParams(location.search);
   if (params.get("tab") !== name) {
@@ -713,13 +839,21 @@ document.getElementById("keyInput").addEventListener("keydown", e => {
 // ── Load data ─────────────────────────────────────────────────────────────────
 
 async function loadData(key) {
+  const overlay = document.getElementById("loadingOverlay");
+  const showLoading = msg => {
+    document.getElementById("loadingMsg").textContent = msg;
+    overlay.style.display = "flex";
+  };
+  const hideLoading = () => { overlay.style.display = "none"; };
   try {
+    showLoading("Loading survey data…");
     const cacheBuster = Date.now();
     const [res] = await Promise.all([
       fetch(`${WORKER}/results?key=${encodeURIComponent(key)}&_=${cacheBuster}`),
       loadSurveyDef(),
     ]);
     if (res.status === 401) {
+      hideLoading();
       document.getElementById("authError").textContent = "Invalid key. Try again.";
       return;
     }
@@ -731,7 +865,6 @@ async function loadData(key) {
 
     latestOnly = document.getElementById("latestOnly").checked;
     invalidateLatestCache();
-    const displayResponses = getDisplayResponses();
 
     document.getElementById("hdrSub").textContent =
       `${uniqueRespondentCount()} respondent${uniqueRespondentCount() !== 1 ? "s" : ""} · ${allResponses.length} total submission${allResponses.length !== 1 ? "s" : ""} · as of ${new Date().toLocaleString()}`;
@@ -742,15 +875,16 @@ async function loadData(key) {
     document.getElementById("hdrCsvBtn").href = `${WORKER}/export?key=${encodeURIComponent(key)}&_=${cacheBuster}`;
     document.getElementById("hdrExport").style.display = "block";
 
-    renderStats(displayResponses);
+    showLoading("Rendering charts…");
+    await new Promise(r => requestAnimationFrame(r));
+
     initExplorer();
-    renderCharts(displayResponses);
-    renderTable(displayResponses);
-    renderTrends();
-    renderComments();
-    renderFollowUp();
+    renderedTabs.clear();
     activateTabFromURL();
+
+    setTimeout(hideLoading, 300);
   } catch (e) {
+    hideLoading();
     document.getElementById("authError").textContent = "Error: " + e.message;
   }
 }
@@ -801,18 +935,15 @@ function refreshData() {
 function toggleLatestOnly() {
   latestOnly = document.getElementById("latestOnly").checked;
   invalidateLatestCache();
-  const dr = getDisplayResponses();
-  renderStats(dr);
-  renderCharts(dr);
-  renderTable(dr);
-  renderTrends();
-  renderComments();
-  renderFollowUp();
+  renderedTabs.clear();
+  renderTab(currentTab);
 }
 
 // ── Stats cards ───────────────────────────────────────────────────────────────
 
 function renderStats(responses) {
+  const MEMBER_COUNT = 375;
+  const respPct = responses.length ? Math.round(responses.length / MEMBER_COUNT * 100) : 0;
   const npsVals = responses.map(x => x.answers?.q_nps).filter(v => v != null);
   const nps = calcNPS(npsVals);
   const avgMin = responses.filter(x => x.completion_seconds)
@@ -825,7 +956,7 @@ function renderStats(responses) {
   const anonPct = responses.length ? Math.round(anonCount / responses.length * 100) : 0;
 
   const cards = [
-    { val: responses.length, lbl: latestOnly ? "Unique Respondents" : "Total Responses" },
+    { val: responses.length, lbl: latestOnly ? "Unique Respondents" : "Total Responses", extra: `<div style="font-size:8pt;color:#888;margin-top:2px">${respPct}% of ${MEMBER_COUNT} members</div>` },
     { val: nps != null ? nps : "—", lbl: "NPS Score", extra: npsBar(npsVals) },
     { val: avgMin ? avgMin.toFixed(1) + "m" : "—", lbl: "Avg Completion" },
     { val: resubmits, lbl: "Re-submissions" },
@@ -947,6 +1078,7 @@ function resolveQuestion(qName) {
 
 // Extract a question's answer value from a response (handles matrix rows)
 function getAnswerValue(q, r) {
+  if (q._derived) return q._derived.membership(r);
   if (q._matrixParent && q._matrixRow) {
     const ma = r.answers?.[q._matrixParent];
     return ma && typeof ma === "object" ? ma[q._matrixRow] : null;
@@ -1021,7 +1153,9 @@ const SENTIMENT_MAP = {
   "very_satisfied": 5, "satisfied": 4, "neutral": 3, "dissatisfied": 2, "very_dissatisfied": 1,
   "meets_needs": 5, "does_not_meet": 1, "no_opinion": 3,
   "strongly_agree": 5, "agree": 4, "disagree": 2, "strongly_disagree": 1,
-  "strength": 5, "meeting_expectations": 3, "weakness": 1, "needs_improvement": 1,
+  "strength": 5, "meeting_expectations": 4, "weakness": 1, "needs_improvement": 1,
+  "not_at_all": 1, "moderately": 3, "very": 4, "extremely": 5,
+  "very_fair": 5, "somewhat_fair": 4, "somewhat_unfair": 2, "very_unfair": 1,
   "very_familiar": 5, "reasonably": 4, "slightly": 2, "not_familiar": 1,
   "regularly": 5, "occasionally": 4, "want_to": 3, "no": 1,
   "monthly": 4, "some": 3, "no_participation": 1,
@@ -1035,12 +1169,13 @@ function sentimentClass(colValue) {
   return `sent-${s}`;
 }
 
-const PIE_COLORS = ["#0038b8","#1a5fd4","#4d8ae6","#80b5f0","#b3d5f5","#e6c300","#f9a825","#ef6c00","#c62828","#2e7d32","#558b2f","#7e57c2","#5c6bc0","#8d6e63","#78909c","#26a69a","#ec407a","#ab47bc"];
+const PIE_COLORS = ["#0038b8","#1565c0","#1e88e5","#42a5f5","#90caf9","#5e35b1","#00897b","#546e7a","#3949ab","#26c6da","#6d4c41","#455a64"];
 
 // ── Data Explorer ─────────────────────────────────────────────────────────────
 
 let chartTypeState = {};
 let chartPctModeState = {};   // "all" | "answered"
+let chartSortState = {};      // "survey" | "count"
 
 function pctModeLabel(mode) {
   return mode === "answered" ? "% of answered" : "% of all";
@@ -1048,8 +1183,389 @@ function pctModeLabel(mode) {
 
 function setPctMode(qName, mode) {
   chartPctModeState[qName] = mode;
-  renderCharts(currentResponses);
+  if (String(qName).startsWith("explorer_")) explorerUpdate();
+  else rerenderQuestion(qName);
+}
+
+function setSortMode(qName, mode) {
+  chartSortState[qName] = mode;
+  if (String(qName).startsWith("explorer_")) explorerUpdate();
+  else rerenderQuestion(qName);
+}
+
+function sortChartItems(items, sortMode) {
+  const noAns = [];
+  const rest = [];
+  items.forEach(it => (it[0] === "No answer" ? noAns : rest).push(it));
+  if (sortMode === "count") rest.sort((a, b) => b[1] - a[1] || String(a[0]).localeCompare(String(b[0])));
+  return rest.concat(noAns);
+}
+
+function groupChoicesForQuestion(gq) {
+  if (gq.type === "rating") {
+    const min = gq.rateMin || 0, max = gq.rateMax || 10;
+    const out = [];
+    for (let i = min; i <= max; i++) out.push({ value: i, text: String(i) });
+    return out;
+  }
+  if (gq.choices && gq.choices.length) {
+    const labels = choiceMap(gq);
+    return gq.choices.map(c => ({ value: c.value, text: labels[c.value] || c.text || String(c.value) }));
+  }
+  if (gq.columns && gq.columns.length) {
+    return gq.columns.map(c => ({ value: c.value, text: c.text || String(c.value) }));
+  }
+  return [];
+}
+
+function dimFromQuestion(gq) {
+  if (!gq) return null;
+  const groups = groupChoicesForQuestion(gq);
+  if (!groups.length) return null;
+  return {
+    id: gq.name,
+    label: `${qNumFor(gq)} · ${gq.title || gq.name}`,
+    groups,
+    multi: gq.type === "checkbox",
+    membership: (r) => getAnswerValue(gq, r)
+  };
+}
+
+function getGroupDimensions() {
+  return getAllExplorerQuestions()
+    .map(dimFromQuestion)
+    .filter(Boolean);
+}
+
+const LITTLE_KID_ROWS = new Set(["age_0_5","age_6_9","age_10_13"]);
+const YOUTH_ROWS = new Set(["age_14_18"]);
+const CHILD_AGE_ROWS = new Set(["age_0_5","age_6_9","age_10_13","age_14_18"]);
+const YOUNG_ADULT_ROWS = new Set(["age_19_25","age_26_50"]);
+const OLDER_AGE_ROWS = new Set(["age_51_65","age_66_80","age_over_80"]);
+
+function q2Bands(r) {
+  const m = r.answers?.q2_household_ages;
+  if (!m || typeof m !== "object") return [];
+  return Object.entries(m).filter(([, v]) => v != null && v !== "").map(([k, v]) => ({ row: k, part: v }));
+}
+
+function derivedHouseholdHasKids(r) {
+  const bands = q2Bands(r);
+  if (!bands.length) return "q2_skipped";
+  return bands.some(b => CHILD_AGE_ROWS.has(b.row)) ? "families_with_kids" : "adults_only";
+}
+
+function derivedAgeBandPresence(r) {
+  const bands = q2Bands(r);
+  if (!bands.length) return [];
+  return [...new Set(bands.map(b => b.row))];
+}
+
+function derivedHouseholdShape(r) {
+  const bands = q2Bands(r);
+  if (!bands.length) return "q2_skipped";
+  const rows = new Set(bands.map(b => b.row));
+  const hasLittle = [...rows].some(x => LITTLE_KID_ROWS.has(x));
+  const hasYouth = [...rows].some(x => YOUTH_ROWS.has(x));
+  const hasChild = hasLittle || hasYouth;
+  const hasAdult = [...rows].some(x => YOUNG_ADULT_ROWS.has(x));
+  const hasOlder = [...rows].some(x => OLDER_AGE_ROWS.has(x));
+  if (hasChild && hasOlder) return "multigen";
+  if (hasLittle) return "young_kids";
+  if (hasYouth) return "youth";
+  if (hasOlder && !hasAdult) return "older";
+  if (hasAdult && hasOlder) return "mixed_adult";
+  if (hasAdult) return "adult";
+  return "adult";
+}
+
+function derivedParticipatingKids(r) {
+  const child = q2Bands(r).filter(b => CHILD_AGE_ROWS.has(b.row));
+  if (!child.length) return null;
+  if (child.some(b => b.part === "monthly" || b.part === "some")) return "kids_participate";
+  return "kids_none";
+}
+
+const Q2_AGE_BANDS = [
+  { value: "age_0_5", text: "0–5" },
+  { value: "age_6_9", text: "6–9" },
+  { value: "age_10_13", text: "10–13" },
+  { value: "age_14_18", text: "14–18" },
+  { value: "age_19_25", text: "19–25" },
+  { value: "age_26_50", text: "26–50" },
+  { value: "age_51_65", text: "51–65" },
+  { value: "age_66_80", text: "66–80" },
+  { value: "age_over_80", text: "Over 80" }
+];
+
+function derivedDimensions() {
+  return [
+    {
+      id: "_derived.has_kids",
+      label: "Derived · Adults only vs families with kids (Q2)",
+      derived: true,
+      groups: [
+        { value: "families_with_kids", text: "Families with kids (≤18 marked)" },
+        { value: "adults_only", text: "Adults only" },
+        { value: "q2_skipped", text: "Q2 not answered" }
+      ],
+      membership: derivedHouseholdHasKids
+    },
+    {
+      id: "_derived.age_bands",
+      label: "Derived · Age bands present (Q2, multi)",
+      derived: true,
+      multi: true,
+      groups: Q2_AGE_BANDS,
+      membership: derivedAgeBandPresence
+    },
+    {
+      id: "_derived.shape",
+      label: "Derived · Household generation (Q2)",
+      derived: true,
+      groups: [
+        { value: "young_kids", text: "Young kids (≤13)" },
+        { value: "youth", text: "Youth (14–18 only)" },
+        { value: "multigen", text: "Multi-gen (child + 51+)" },
+        { value: "adult", text: "Adults 19–50" },
+        { value: "mixed_adult", text: "Adults + 51+" },
+        { value: "older", text: "Older adults (51+ only)" },
+        { value: "q2_skipped", text: "Q2 not answered" }
+      ],
+      membership: derivedHouseholdShape
+    },
+    {
+      id: "_derived.kids_part",
+      label: "Derived · Kids engaged at Temple (Q2 families)",
+      derived: true,
+      groups: [
+        { value: "kids_participate", text: "Kids Some or Regular" },
+        { value: "kids_none", text: "Kids marked None" }
+      ],
+      membership: derivedParticipatingKids
+    }
+  ];
+}
+
+function dimFromId(id) {
+  if (!id) return null;
+  if (id.startsWith("_derived.")) return derivedDimensions().find(d => d.id === id) || null;
+  return dimFromQuestion(resolveQuestion(id));
+}
+
+function responseGroupKeys(dim, r) {
+  const raw = dim.membership(r);
+  if (raw == null || raw === "") return [];
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === "object") {
+    return Object.entries(raw)
+      .filter(([, v]) => v != null && v !== "")
+      .map(([k, v]) => (dim.multi ? k : v));
+  }
+  return [raw];
+}
+
+function groupedCounts(q, responses, dim) {
+  const labels = choiceMap(q);
+  const answerKeys = [];
+  const seenA = new Set();
+  const addAnswer = (x) => {
+    const lbl = labels[x] || x;
+    if (!seenA.has(lbl)) { seenA.add(lbl); answerKeys.push({ value: x, label: lbl }); }
+  };
+  if (q.choices) q.choices.forEach(c => addAnswer(c.value));
+  else if (q.type === "rating") {
+    const min = q.rateMin || 0, max = q.rateMax || 10;
+    for (let i = min; i <= max; i++) addAnswer(i);
+  }
+
+  const series = dim.groups.map(g => ({
+    name: g.text,
+    data: answerKeys.map(() => 0)
+  }));
+  const nByGroup = dim.groups.map(() => 0);
+  const groupIndex = Object.fromEntries(dim.groups.map((g, i) => [g.value, i]));
+
+  responses.forEach(r => {
+    const v = getAnswerValue(q, r);
+    if (v == null || v === "") return;
+    const keys = responseGroupKeys(dim, r);
+    if (!keys.length) return;
+    const answers = Array.isArray(v) ? v : [v];
+    const used = new Set();
+    keys.forEach(k => {
+      const gi = groupIndex[k];
+      if (gi == null || used.has(gi)) return;
+      used.add(gi);
+      nByGroup[gi]++;
+      answers.forEach(a => {
+        const lbl = labels[a] || a;
+        const ai = answerKeys.findIndex(x => x.label === lbl);
+        if (ai >= 0) series[gi].data[ai]++;
+      });
+    });
+  });
+
+  const present = nByGroup.map((n, i) => n > 0 ? i : -1).filter(i => i >= 0);
+  const classFn = (lbl) => {
+    const key = answerKeys.find(a => a.label === lbl);
+    if (!key) return "";
+    return q.type === "rating" ? ratingSentimentClass(key.value) : sentimentClass(key.value);
+  };
+  return {
+    categories: present.map(i => dim.groups[i].text),
+    series: answerKeys.map((a, ai) => ({
+      name: a.label,
+      data: present.map(gi => series[gi].data[ai])
+    })).filter(s => s.data.some(n => n > 0)),
+    nByGroup: present.map(i => nByGroup[i]),
+    classFn
+  };
+}
+
+function renderGroupedBars(q, responses, dim) {
+  const g = groupedCounts(q, responses, dim);
+  if (!g.categories.length || !g.series.length) {
+    return '<div class="explorer-empty">Not enough overlapping answers to compare groups.</div>';
+  }
+  const colors = g.series.map((s, i) => classToColor(g.classFn(s.name)) || PIE_COLORS[i % PIE_COLORS.length]);
+  const height = Math.max(240, g.categories.length * 42 + 80);
+  const nNote = g.categories.map((l, i) => `${l} n=${g.nByGroup[i]}`).join(" · ");
+  const note = dim.multi
+    ? `<div class="explorer-crosstab-note">Split by a multi-select: a response can appear in more than one bar. Each bar is 100% of that group. ${nNote}</div>`
+    : `<div class="explorer-crosstab-note">${dim.derived ? "Inferred from Q2 age bands, not a survey question. " : ""}One stacked bar per group, 100% of that group. ${nNote}</div>`;
+  return note + queueApexChart(() => ({
+    ...APEX_BASE,
+    chart: { ...APEX_BASE.chart, type: "bar", height, stacked: true, stackType: "100%" },
+    series: g.series,
+    colors,
+    plotOptions: { bar: { horizontal: true, barHeight: "62%", borderRadius: 2 } },
+    xaxis: { categories: g.categories, max: 100, labels: { formatter: v => Math.round(v) + "%" } },
+    yaxis: { labels: { style: { fontSize: "10px" }, maxWidth: 200 } },
+    dataLabels: { enabled: false },
+    legend: { show: false },
+    tooltip: { y: { formatter: (v, opts) => {
+      const n = g.series[opts.seriesIndex].data[opts.dataPointIndex];
+      const den = g.nByGroup[opts.dataPointIndex] || 1;
+      return `${n} of ${den} (${Math.round(n / den * 100)}%)`;
+    } } }
+  }), height) + `<div class="apx-legend">${g.series.map((s, i) =>
+    `<span class="apx-legend-item"><span class="apx-legend-swatch" style="background:${colors[i]}"></span><span>${escapeHtml(s.name)}</span></span>`
+  ).join("")}</div>`;
+}
+
+let explorerLayout = "stacked";
+
+function setExplorerLayout(mode) {
+  explorerLayout = mode === "separate" ? "separate" : "stacked";
+  const st = document.getElementById("explorerLayoutStacked");
+  const se = document.getElementById("explorerLayoutSeparate");
+  if (st) st.classList.toggle("active", explorerLayout === "stacked");
+  if (se) se.classList.toggle("active", explorerLayout === "separate");
   explorerUpdate();
+}
+
+function renderGroupedSmallMultiples(q, responses, dim) {
+  const labels = choiceMap(q);
+  const reverseLabels = Object.fromEntries(Object.entries(labels).map(([k, v]) => [v, k]));
+  const classFn = (lbl) => {
+    if (q.type === "rating") return ratingSentimentClass(lbl);
+    const val = reverseLabels[lbl];
+    return val ? sentimentClass(val) : "";
+  };
+  const colorFn = (lbl, i) => classToColor(classFn(lbl)) || PIE_COLORS[i % PIE_COLORS.length];
+
+  let html = `<div class="explorer-crosstab-note"><strong>Reading this:</strong> one mini-chart per answer to <em>${escapeHtml(dim.label)}</em>. Same question in every tile: <em>${escapeHtml(q.title || q.name)}</em>.</div>`;
+  html += `<div class="compare-grid">`;
+  let shown = 0;
+  dim.groups.forEach(g => {
+    const subset = responses.filter(r => responseGroupKeys(dim, r).map(String).includes(String(g.value)));
+    if (!subset.length) return;
+    shown++;
+    let sorted, answered, labelToValue = null;
+    if (q.type === "rating") {
+      const min = q.rateMin || 0, max = q.rateMax || 10;
+      const counts = {};
+      for (let i = min; i <= max; i++) counts[i] = 0;
+      subset.forEach(r => { const v = getAnswerValue(q, r); if (v != null && v !== "") counts[v] = (counts[v] || 0) + 1; });
+      answered = Object.values(counts).reduce((s, n) => s + n, 0);
+      sorted = Object.entries(counts).filter(([, c]) => c > 0);
+    } else {
+      const counted = countChoiceAnswers(q, subset);
+      answered = counted.answered;
+      sorted = sortChoiceCounts(q, counted.counts);
+      labelToValue = reverseLabels;
+    }
+    const data = prepareChartData(sorted, subset.length, answered, labelToValue, "all", "survey");
+    html += `<div class="compare-cell">
+      <div class="compare-cell-title">${escapeHtml(g.text)} <span class="matrix-pie-count">${answered}/${subset.length}</span></div>
+      ${renderPieChartHTML(data.sorted, data.skipped, colorFn, { answeredTotal: data.answeredTotal, isNaFn: data.isNaFn, compact: true })}
+    </div>`;
+  });
+  html += `</div>`;
+  if (!shown) return '<div class="explorer-empty">Not enough overlapping answers to compare groups.</div>';
+  return html;
+}
+
+const EXPLORER_PRESETS = [
+  { label: "NPS × families vs adults", q: "q_nps", group: "_derived.has_kids" },
+  { label: "NPS × generation", q: "q_nps", group: "_derived.shape" },
+  { label: "NPS × tenure", q: "q_nps", group: "q1_tenure|been_member" },
+  { label: "Connection × families vs adults", q: "q_connection", group: "_derived.has_kids" },
+  { label: "Connection × kids engaged", q: "q_connection", group: "_derived.kids_part" },
+  { label: "Worship × generation", q: "q22_big_picture|beit_tfillah", group: "_derived.shape" },
+  { label: "Facility × families vs adults", q: "q_facility", group: "_derived.has_kids" },
+  { label: "Dues fairness × families vs adults", q: "q_dues_fairness", group: "_derived.has_kids" },
+  { label: "Leaders (Rabbi) × tenure", q: "q23_leaders|rabbi", group: "q1_tenure|been_member" },
+  { label: "Age bands present", q: "_derived.age_bands", group: "" }
+];
+
+function applyExplorerPreset(i) {
+  const p = EXPLORER_PRESETS[i];
+  if (!p) return;
+  document.getElementById("explorerQ").value = p.q;
+  document.getElementById("explorerGroupQ").value = p.group || "";
+  document.getElementById("explorerFilterQ").value = "";
+  document.getElementById("explorerFilterValWrap").style.display = "none";
+  document.querySelectorAll(".explorer-preset").forEach((btn, j) => btn.classList.toggle("active", j === i));
+  explorerUpdate();
+}
+
+function renderExplorerPresets() {
+  const wrap = document.getElementById("explorerPresets");
+  if (!wrap) return;
+  const label = wrap.querySelector(".explorer-presets-label");
+  wrap.innerHTML = "";
+  if (label) wrap.appendChild(label);
+  else {
+    const s = document.createElement("span");
+    s.className = "explorer-presets-label";
+    s.textContent = "Presets";
+    wrap.appendChild(s);
+  }
+  EXPLORER_PRESETS.forEach((p, i) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "explorer-preset";
+    btn.textContent = p.label;
+    btn.onclick = () => applyExplorerPreset(i);
+    wrap.appendChild(btn);
+  });
+}
+
+function injectDerivedOptions(selId) {
+  const sel = document.getElementById(selId);
+  if (!sel) return;
+  const og = document.createElement("optgroup");
+  og.label = "Derived from Q2 (inferred household makeup)";
+  derivedDimensions().forEach(d => {
+    const opt = document.createElement("option");
+    opt.value = d.id;
+    opt.textContent = d.label;
+    og.appendChild(opt);
+  });
+  if (sel.firstChild) sel.insertBefore(og, sel.firstChild.nextSibling);
+  else sel.appendChild(og);
 }
 
 function initExplorer() {
@@ -1057,6 +1573,11 @@ function initExplorer() {
   const qs = getAllExplorerQuestions();
   populateExplorerDropdown("explorerQ", qs, "— Pick a question —");
   populateExplorerDropdown("explorerFilterQ", qs, "— No filter —");
+  populateExplorerDropdown("explorerGroupQ", qs.filter(q => groupChoicesForQuestion(q).length), "— No split —");
+  injectDerivedOptions("explorerQ");
+  injectDerivedOptions("explorerFilterQ");
+  injectDerivedOptions("explorerGroupQ");
+  renderExplorerPresets();
 }
 
 function populateExplorerDropdown(id, qs, placeholder) {
@@ -1084,6 +1605,20 @@ function explorerUpdateFilter() {
 
   if (!filterQName) {
     valWrap.style.display = "none";
+    explorerUpdate();
+    return;
+  }
+
+  const derived = filterQName.startsWith("_derived.") ? dimFromId(filterQName) : null;
+  if (derived) {
+    valWrap.style.display = "flex";
+    valSelect.innerHTML = '<option value="">— Any —</option>';
+    derived.groups.forEach(g => {
+      const opt = document.createElement("option");
+      opt.value = g.value;
+      opt.textContent = g.text;
+      valSelect.appendChild(opt);
+    });
     explorerUpdate();
     return;
   }
@@ -1118,16 +1653,19 @@ function explorerUpdateFilter() {
 }
 
 function explorerUpdate() {
+  apexSite = "explorer";
+  destroyApexCharts("explorer");
   const qName = document.getElementById("explorerQ").value;
   const result = document.getElementById("explorerResult");
 
   if (!qName) {
-    result.innerHTML = '<div class="explorer-empty">Pick a question above to explore the data.</div>';
+    result.innerHTML = '<div class="explorer-empty">Start with step 1 — pick a question. Leave step 2 blank for a single pie/bar, or pick a second question to compare groups.</div>';
     return;
   }
 
-  const q = resolveQuestion(qName);
-  if (!q) return;
+  const derivedQ = qName.startsWith("_derived.") ? dimFromId(qName) : null;
+  const q = derivedQ ? null : resolveQuestion(qName);
+  if (!q && !derivedQ) return;
 
   let displayResponses = getDisplayResponses();
 
@@ -1137,17 +1675,27 @@ function explorerUpdate() {
   let filterNote = "";
 
   if (filterQName && filterVal) {
-    const filterQ = resolveQuestion(filterQName);
-    if (filterQ) {
-      const before = displayResponses.length;
-      displayResponses = displayResponses.filter(r => {
-        const v = getAnswerValue(filterQ, r);
-        if (v == null || v === "") return false;
-        if (filterQ.type === "checkbox") return (Array.isArray(v) ? v : [v]).includes(filterVal);
-        return v === filterVal;
-      });
-      const filterLabels = choiceMap(filterQ);
-      filterNote = `Filtered to ${filterQ.title || filterQ.name} = "${filterLabels[filterVal] || filterVal}" — ${displayResponses.length} of ${before} responses`;
+    const before = displayResponses.length;
+    if (filterQName.startsWith("_derived.")) {
+      const fDim = dimFromId(filterQName);
+      if (fDim) {
+        displayResponses = displayResponses.filter(r =>
+          responseGroupKeys(fDim, r).map(String).includes(String(filterVal)));
+        const gl = (fDim.groups.find(g => String(g.value) === String(filterVal)) || {}).text || filterVal;
+        filterNote = `Filtered to ${fDim.label} = "${gl}" — ${displayResponses.length} of ${before} responses`;
+      }
+    } else {
+      const filterQ = resolveQuestion(filterQName);
+      if (filterQ) {
+        displayResponses = displayResponses.filter(r => {
+          const v = getAnswerValue(filterQ, r);
+          if (v == null || v === "") return false;
+          if (filterQ.type === "checkbox") return (Array.isArray(v) ? v : [v]).includes(filterVal);
+          return v === filterVal;
+        });
+        const filterLabels = choiceMap(filterQ);
+        filterNote = `Filtered to ${filterQ.title || filterQ.name} = "${filterLabels[filterVal] || filterVal}" — ${displayResponses.length} of ${before} responses`;
+      }
     }
   }
 
@@ -1156,19 +1704,43 @@ function explorerUpdate() {
     return;
   }
 
+  const groupId = document.getElementById("explorerGroupQ").value;
+  const dim = groupId && groupId !== qName ? dimFromId(groupId) : null;
+
   let html = "";
   if (filterNote) html += `<div class="explorer-crosstab-note">${filterNote}</div>`;
   html += `<div class="explorer-subtitle">${displayResponses.length} response${displayResponses.length !== 1 ? "s" : ""}</div>`;
 
-  if (q.type === "radiogroup" || q.type === "checkbox") {
-    html += renderChoiceChartHTML(q, displayResponses);
-  } else if (q.type === "rating") {
-    html += renderRatingChartHTML(q, displayResponses);
-  } else if (q.type === "comment" || q.type === "text") {
-    html += renderCommentList(q, displayResponses);
+  const layoutWrap = document.getElementById("explorerLayoutWrap");
+  if (layoutWrap) layoutWrap.style.display = dim ? "flex" : "none";
+
+  const qForChart = derivedQ ? {
+    name: derivedQ.id,
+    title: derivedQ.label,
+    type: derivedQ.multi ? "checkbox" : "radiogroup",
+    choices: derivedQ.groups.map(g => ({ value: g.value, text: g.text })),
+    _derived: derivedQ
+  } : q;
+
+  if (dim && (qForChart.type === "radiogroup" || qForChart.type === "checkbox" || qForChart.type === "rating")) {
+    if (explorerLayout === "separate") {
+      html += renderGroupedSmallMultiples(qForChart, displayResponses, dim);
+    } else {
+      html += `<div class="explorer-crosstab-note"><strong>Reading this chart:</strong> each bar is one answer to <em>${escapeHtml(dim.label)}</em>. Colors inside the bar are answers to <em>${escapeHtml(qForChart.title || qForChart.name)}</em>. Bar = 100% of that group.</div>`;
+      html += renderGroupedBars(qForChart, displayResponses, dim);
+    }
+  } else if (dim) {
+    html += '<div class="explorer-empty">Compare groups works on choice and rating questions. Pick NPS, satisfaction, or a multiple-choice question.</div>';
+  } else if (qForChart.type === "radiogroup" || qForChart.type === "checkbox") {
+    html += renderChoiceChartHTML(qForChart, displayResponses);
+  } else if (qForChart.type === "rating") {
+    html += renderRatingChartHTML(qForChart, displayResponses);
+  } else if (qForChart.type === "comment" || qForChart.type === "text") {
+    html += renderCommentList(qForChart, displayResponses);
   }
 
   result.innerHTML = html;
+  mountApexCharts();
 }
 
 function setExplorerChartType(qName, type) {
@@ -1179,8 +1751,12 @@ function setExplorerChartType(qName, type) {
 function explorerClear() {
   document.getElementById("explorerQ").value = "";
   document.getElementById("explorerFilterQ").value = "";
+  document.getElementById("explorerGroupQ").value = "";
+  document.querySelectorAll(".explorer-preset").forEach(btn => btn.classList.remove("active"));
   document.getElementById("explorerFilterValWrap").style.display = "none";
-  document.getElementById("explorerResult").innerHTML = '<div class="explorer-empty">Pick a question above to explore the data.</div>';
+  const layoutWrap = document.getElementById("explorerLayoutWrap");
+  if (layoutWrap) layoutWrap.style.display = "none";
+  document.getElementById("explorerResult").innerHTML = '<div class="explorer-empty">Start with step 1 — pick a question. Leave step 2 blank for a single pie/bar, or pick a second question to compare groups.</div>';
 }
 
 // ── Chart rendering (HTML-returning versions for explorer + DOM for dashboard) ─
@@ -1221,16 +1797,17 @@ function renderChoiceChartHTML(q, responses) {
   const num = qNumFor(q);
   const chartType = chartTypeState["explorer_" + q.name] || "pie";
   const pctMode = chartPctModeState["explorer_" + q.name] || "all";
+  const sortMode = chartSortState["explorer_" + q.name] || "survey";
   const labels = choiceMap(q);
   const reverseLabels = Object.fromEntries(Object.entries(labels).map(([k, v]) => [v, k]));
   const classFn = (lbl) => {
     const val = reverseLabels[lbl];
     return val ? sentimentClass(val) : "";
   };
-  const colorFn = (lbl) => SENTIMENT_COLORS[classFn(lbl)];
-  const data = prepareChartData(sorted, responses.length, answered, reverseLabels, pctMode);
+  const colorFn = (lbl, i) => classToColor(classFn(lbl)) || PIE_COLORS[i % PIE_COLORS.length];
+  const data = prepareChartData(sorted, responses.length, answered, reverseLabels, pctMode, sortMode);
   return `<div class="panel-body">
-    <div class="response-rate">${num} · ${answered} of ${responses.length} answered (${Math.round(answered/responses.length*100)}%) ${pctModeToggleHTML("explorer_" + q.name, pctMode)}</div>
+    <div class="response-rate">${num} · ${answered} of ${responses.length} answered (${Math.round(answered/responses.length*100)}%) ${pctModeToggleHTML("explorer_" + q.name, pctMode)} ${sortToggleHTML("explorer_" + q.name, sortMode)}</div>
     ${chartToggleHTML("setExplorerChartType", q.name, chartType)}
     <div class="${chartType === 'both' ? 'chart-both' : ''}">
       ${chartType !== 'pie' ? `<div class="chart-half">${barChartHTML(data.sorted, data.skipped, data.total, classFn, { answeredTotal: data.answeredTotal, isNaFn: data.isNaFn })}</div>` : ""}
@@ -1239,47 +1816,21 @@ function renderChoiceChartHTML(q, responses) {
   </div>`;
 }
 
-function prepareChartData(sorted, total, answered, labelToValue, mode) {
+function prepareChartData(sorted, total, answered, labelToValue, mode, sortMode) {
   const isNaFn = (lbl) => {
-    if (lbl === "No answer") return true;
+    if (lbl === "No answer" || lbl === "Q2 not answered") return true;
     const val = labelToValue ? labelToValue[lbl] : null;
     return val && sentimentClass(val) === "sent-na";
   };
   const naCount = sorted.reduce((sum, [lbl, cnt]) => isNaFn(lbl) ? sum + cnt : sum, 0);
   const skipped = total - answered;
   const answeredTotal = answered - naCount;
+  let items = mode === "answered" ? sorted.filter(([lbl]) => !isNaFn(lbl)) : sorted.slice();
+  items = sortChartItems(items, sortMode || "survey");
   if (mode === "answered") {
-    const filtered = sorted.filter(([lbl]) => !isNaFn(lbl));
-    return { sorted: filtered, skipped: 0, total: answeredTotal, answeredTotal, isNaFn };
+    return { sorted: items, skipped: 0, total: answeredTotal, answeredTotal, isNaFn };
   }
-  return { sorted, skipped, total, answeredTotal, isNaFn };
-}
-
-function barChartHTML(sorted, skipped, total, classFn, options = {}) {
-  const { mode = "all", answeredTotal = total, isNaFn = () => false } = options;
-  const pctAll = (c) => Math.round(c / total * 100);
-  const pctText = (cnt, lbl) => {
-    const pAll = pctAll(cnt);
-    const noAns = lbl === "No answer" || isNaFn(lbl);
-    const pAns = (!noAns && answeredTotal && answeredTotal !== total) ? Math.round(cnt / answeredTotal * 100) : null;
-    if (pAns != null && pAns !== pAll) {
-      return `<span class="bar-num">${cnt}</span><span class="bar-pct">(${pAll}% all, ${pAns}% answered)</span>`;
-    }
-    return `<span class="bar-num">${cnt}</span><span class="bar-pct">(${pAll}%)</span>`;
-  };
-  const cls = (lbl) => classFn ? classFn(lbl) : "";
-  return sorted.map(([lbl, cnt]) => `
-    <div class="bar-item">
-      <div class="bar-lbl" title="${lbl}">${lbl}</div>
-      <div class="bar-track"><div class="bar-fill ${escapeHtml(cls(lbl))}" style="width:${pctAll(cnt)}%"></div></div>
-      <div class="bar-count">${pctText(cnt, lbl)}</div>
-    </div>`).join("") +
-    (skipped > 0 ? `
-      <div class="bar-item no-answer">
-        <div class="bar-lbl">No answer</div>
-        <div class="bar-track"><div class="bar-fill" style="width:${pctAll(skipped)}%"></div></div>
-        <div class="bar-count">${pctText(skipped, "No answer")}</div>
-      </div>` : "");
+  return { sorted: items, skipped, total, answeredTotal, isNaFn };
 }
 
 function ratingSentimentClass(value) {
@@ -1300,11 +1851,12 @@ function renderRatingChartHTML(q, responses) {
   const avg = (vals.reduce((s, v) => s + v, 0) / vals.length).toFixed(1);
   const num = qNum(q.name);
   const pctMode = chartPctModeState["explorer_" + q.name] || "all";
+  const sortMode = chartSortState["explorer_" + q.name] || "survey";
   const sorted = Object.entries(counts);
-  const data = prepareChartData(sorted, responses.length, vals.length, null, pctMode);
+  const data = prepareChartData(sorted, responses.length, vals.length, null, pctMode, sortMode);
   const classFn = (lbl) => ratingSentimentClass(lbl);
   return `<div class="panel-body">
-    <div class="response-rate">${num} · ${vals.length} of ${responses.length} answered (${Math.round(vals.length/responses.length*100)}%) ${pctModeToggleHTML("explorer_" + q.name, pctMode)}</div>
+    <div class="response-rate">${num} · ${vals.length} of ${responses.length} answered (${Math.round(vals.length/responses.length*100)}%) ${pctModeToggleHTML("explorer_" + q.name, pctMode)} ${sortToggleHTML("explorer_" + q.name, sortMode)}</div>
     <div style="font-size:10pt;color:#666;margin-bottom:0.5rem;">Average: <strong>${avg}</strong></div>
     ${barChartHTML(data.sorted, data.skipped, data.total, classFn, { answeredTotal: data.answeredTotal, isNaFn: data.isNaFn })}
   </div>`;
@@ -1336,55 +1888,288 @@ function escapeHtml(s) {
   return div.innerHTML;
 }
 
-// ── Pie chart (SVG) ───────────────────────────────────────────────────────────
+// ── ApexCharts deferred mount ────────────────────────────────────────────────
+// Render functions emit <div id="apx-N"> placeholders and queue chart specs.
+// After innerHTML is injected, mountApexCharts() instantiates each chart.
+
+let pendingApex = new Map();       // id -> { site, optsBuilder }
+let apexSeq = 0;
+const apexInstances = new Map();   // id -> { site, chart }
+let apexSite = "dash";             // render site currently queueing charts
+let idleMountScheduled = false;
+
+const apexObserver = ("IntersectionObserver" in window)
+  ? new IntersectionObserver(entries => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        apexObserver.unobserve(e.target);
+        mountOneApex(e.target.id);
+      }
+    }, { root: null, rootMargin: "800px 0px", threshold: 0.01 })
+  : null;
+
+function queueApexChart(optsBuilder, height) {
+  const id = "apx-" + (++apexSeq);
+  pendingApex.set(id, { site: apexSite, optsBuilder });
+  return `<div id="${id}" class="apx-host" data-site="${apexSite}" style="height:${height}px"></div>`;
+}
+
+function isInActiveTab(el) {
+  const tab = el.closest(".tab-content");
+  return !tab || tab.classList.contains("active");
+}
+
+function mountOneApex(id) {
+  const item = pendingApex.get(id);
+  if (!item) return;
+  pendingApex.delete(id);
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (apexObserver) apexObserver.unobserve(el);
+  try {
+    const chart = new ApexCharts(el, item.optsBuilder());
+    apexInstances.set(id, { site: item.site, chart });
+    chart.render();
+  } catch (e) {
+    el.innerHTML = `<div class="explorer-empty">Chart error: ${escapeHtml(String(e.message || e))}</div>`;
+  }
+}
+
+function destroyApexCharts(site) {
+  for (const [id, inst] of apexInstances) {
+    if (inst.site !== site) continue;
+    try { inst.chart.destroy(); } catch (_) {}
+    apexInstances.delete(id);
+  }
+  for (const [id, item] of pendingApex) {
+    if (item.site !== site) continue;
+    pendingApex.delete(id);
+    const el = document.getElementById(id);
+    if (el && apexObserver) apexObserver.unobserve(el);
+  }
+}
+
+function destroyApexIn(root) {
+  if (!root) return;
+  root.querySelectorAll(".apx-host").forEach(el => {
+    const inst = apexInstances.get(el.id);
+    if (inst) {
+      try { inst.chart.destroy(); } catch (_) {}
+      apexInstances.delete(el.id);
+    }
+    pendingApex.delete(el.id);
+    if (apexObserver) apexObserver.unobserve(el);
+  });
+}
+
+function mountNearbyPending(limit = Infinity) {
+  let n = 0;
+  for (const id of [...pendingApex.keys()]) {
+    const el = document.getElementById(id);
+    if (!el || !isInActiveTab(el)) continue;
+    const rect = el.getBoundingClientRect();
+    if (rect.bottom < -800 || rect.top > window.innerHeight + 800) continue;
+    mountOneApex(id);
+    if (++n >= limit) break;
+  }
+  return n;
+}
+
+function scheduleIdleMount() {
+  if (idleMountScheduled || !pendingApex.size) return;
+  idleMountScheduled = true;
+  const run = () => {
+    idleMountScheduled = false;
+    const n = mountNearbyPending(8);
+    if (n >= 8) scheduleIdleMount();
+  };
+  if ("requestIdleCallback" in window) requestIdleCallback(run, { timeout: 180 });
+  else setTimeout(run, 16);
+}
+
+function mountApexCharts() {
+  for (const id of [...pendingApex.keys()]) {
+    const el = document.getElementById(id);
+    if (!el) { pendingApex.delete(id); continue; }
+    if (apexObserver) apexObserver.observe(el);
+  }
+  mountNearbyPending();
+  scheduleIdleMount();
+}
+
+let scrollMountTimer = 0;
+window.addEventListener("scroll", () => {
+  if (scrollMountTimer) return;
+  scrollMountTimer = setTimeout(() => {
+    scrollMountTimer = 0;
+    mountNearbyPending();
+  }, 80);
+}, { passive: true });
+
+const APEX_BASE = {
+  chart: { fontFamily: '-apple-system,"Segoe UI",sans-serif', toolbar: { show: false }, animations: { enabled: false } },
+  tooltip: { style: { fontSize: "11px" } }
+};
 
 const SENTIMENT_COLORS = {
-  "sent-1": "#c62828",
-  "sent-2": "#ef6c00",
+  "sent-1": "#b71c1c",
+  "sent-2": "#e53935",
   "sent-3": "#f9a825",
-  "sent-4": "#558b2f",
-  "sent-5": "#2e7d32",
+  "sent-4": "#7cb342",
+  "sent-5": "#1b5e20",
   "sent-na": "#78909c"
 };
 
+function classToColor(cls) {
+  return SENTIMENT_COLORS[cls] || "";
+}
+
+function colorForSlice(lbl, i, colorFn) {
+  if (lbl === "No answer") return "#e0e0e0";
+  const fromFn = colorFn && colorFn(lbl, i);
+  if (fromFn) return fromFn;
+  return PIE_COLORS[i % PIE_COLORS.length];
+}
+
+// Emits an ApexCharts donut placeholder. colorFn(label, i) → hex color.
+// options.compact → small donut + bottom legend (for matrix cells).
 function renderPieChartHTML(sorted, skipped, colorFn, options = {}) {
-  const { mode = "all", answeredTotal, isNaFn = () => false } = options;
+  const { answeredTotal, isNaFn = () => false, compact = false } = options;
   const data = [...sorted];
   if (skipped > 0) data.push(["No answer", skipped]);
   const sum = data.reduce((s, [, c]) => s + c, 0);
   if (sum === 0) return '<div class="explorer-empty">No data</div>';
 
-  const r = 60, cx = 70, cy = 70;
-  let angle = -Math.PI / 2;
-  let slices = "", legend = "";
+  const labels = data.map(([l]) => l);
+  const series = data.map(([, c]) => c);
+  const colors = data.map(([l], i) => colorForSlice(l, i, colorFn));
 
-  data.forEach(([lbl, cnt], i) => {
-    const pctAll = cnt / sum;
+  const pctText = (cnt, lbl) => {
+    const pAll = Math.round(cnt / sum * 100);
     const noAns = lbl === "No answer" || isNaFn(lbl);
-    const pctAns = (!noAns && answeredTotal && answeredTotal !== sum) ? cnt / answeredTotal : null;
-    const pctDisplay = pctAns != null && Math.round(pctAns * 100) !== Math.round(pctAll * 100)
-      ? `${Math.round(pctAll * 100)}% all, ${Math.round(pctAns * 100)}% answered`
-      : `${Math.round(pctAll * 100)}%`;
-    const titleText = `${lbl}: ${cnt} (${pctDisplay})`;
-    const endAngle = angle + pctAll * 2 * Math.PI;
-    const x1 = cx + r * Math.cos(angle), y1 = cy + r * Math.sin(angle);
-    const x2 = cx + r * Math.cos(endAngle), y2 = cy + r * Math.sin(endAngle);
-    const largeArc = pctAll > 0.5 ? 1 : 0;
-    let color;
-    if (lbl === "No answer") color = "#e0e0e0";
-    else if (colorFn) color = colorFn(lbl, i) || PIE_COLORS[i % PIE_COLORS.length];
-    else color = PIE_COLORS[i % PIE_COLORS.length];
-    slices += pctAll < 1
-      ? `<path d="M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${largeArc} 1 ${x2},${y2} Z" fill="${color}" stroke="white" stroke-width="1"><title>${titleText}</title></path>`
-      : `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${color}" stroke="white" stroke-width="1"><title>${titleText}</title></circle>`;
-    legend += `<div class="pie-legend-item"><div class="pie-legend-swatch" style="background:${color}"></div>${lbl}: <strong>${cnt} (${pctDisplay})</strong></div>`;
-    angle = endAngle;
+    const pAns = (!noAns && answeredTotal && answeredTotal !== sum) ? Math.round(cnt / answeredTotal * 100) : null;
+    return (pAns != null && pAns !== pAll) ? `${pAll}% all · ${pAns}% answered` : `${pAll}%`;
+  };
+
+  const legendHtml = `<div class="apx-legend">${data.map(([name, cnt], i) =>
+    `<span class="apx-legend-item"><span class="apx-legend-swatch" style="background:${colors[i]}"></span><span>${escapeHtml(name)}: <strong>${cnt} (${pctText(cnt, name)})</strong></span></span>`
+  ).join("")}</div>`;
+
+  const height = compact ? 150 : 210;
+  return `<div class="apx-pie">${queueApexChart(() => ({
+    ...APEX_BASE,
+    chart: { ...APEX_BASE.chart, type: "donut", height },
+    series, labels, colors,
+    legend: { show: false },
+    dataLabels: { enabled: !compact, formatter: (v) => v >= 6 ? Math.round(v) + "%" : "", style: { fontSize: "10px", fontWeight: 700 } },
+    plotOptions: { pie: { donut: { size: compact ? "58%" : "62%" } } },
+    tooltip: { y: { formatter: (v, { seriesIndex }) => `${v} (${pctText(v, labels[seriesIndex])})` } }
+  }), height)}${legendHtml}</div>`;
+}
+
+// Emits an ApexCharts horizontal bar placeholder. classFn(label) → css class name.
+function barChartHTML(sorted, skipped, total, classFn, options = {}) {
+  const { answeredTotal = total, isNaFn = () => false, vertical } = options;
+  const data = [...sorted];
+  if (skipped > 0) data.push(["No answer", skipped]);
+  if (!data.length) return '<div class="explorer-empty">No data</div>';
+
+  const labels = data.map(([l]) => l);
+  const counts = data.map(([, c]) => c);
+  const colors = data.map(([l], i) => {
+    if (l === "No answer") return "#e0e0e0";
+    const sent = classFn ? classToColor(classFn(l)) : "";
+    return sent || PIE_COLORS[i % PIE_COLORS.length];
   });
 
-  return `<div class="pie-wrap">
-    <svg class="pie-svg" width="140" height="140" viewBox="0 0 140 140">${slices}</svg>
-    <div class="pie-legend">${legend}</div>
-  </div>`;
+  const labelText = (cnt, lbl) => {
+    const pAll = Math.round(cnt / total * 100);
+    const noAns = lbl === "No answer" || isNaFn(lbl);
+    const pAns = (!noAns && answeredTotal && answeredTotal !== total) ? Math.round(cnt / answeredTotal * 100) : null;
+    return (pAns != null && pAns !== pAll) ? `${cnt} (${pAll}% all · ${pAns}% answered)` : `${cnt} (${pAll}%)`;
+  };
+
+  const shortEnough = labels.every(l => String(l).length <= 8) && labels.length <= 6;
+  const isVertical = vertical != null ? vertical : shortEnough;
+  const height = isVertical ? 250 : Math.max(160, data.length * 38 + 36);
+
+  return queueApexChart(() => ({
+    ...APEX_BASE,
+    chart: { ...APEX_BASE.chart, type: "bar", height },
+    series: [{ name: "Responses", data: counts }],
+    colors,
+    plotOptions: {
+      bar: {
+        horizontal: !isVertical,
+        distributed: true,
+        barHeight: isVertical ? undefined : "55%",
+        columnWidth: isVertical ? "52%" : undefined,
+        borderRadius: 3,
+        dataLabels: { position: isVertical ? "top" : "top" }
+      }
+    },
+    xaxis: {
+      categories: labels,
+      labels: { style: { fontSize: "10px" }, rotate: 0, hideOverlappingLabels: false, trim: false },
+      max: isVertical ? undefined : Math.max(...counts, 1) * 1.28
+    },
+    yaxis: { labels: { style: { fontSize: "10px" }, maxWidth: isVertical ? 40 : 180 } },
+    dataLabels: {
+      enabled: true,
+      formatter: (val, { dataPointIndex }) => isVertical
+        ? String(counts[dataPointIndex])
+        : labelText(counts[dataPointIndex], labels[dataPointIndex]),
+      style: { fontSize: "10px", fontWeight: 700, colors: ["#222"] },
+      offsetX: isVertical ? 0 : 6,
+      offsetY: isVertical ? -4 : -2
+    },
+    legend: { show: false },
+    tooltip: { y: { formatter: (v, { dataPointIndex }) => labelText(v, labels[dataPointIndex]) } },
+    grid: { padding: { right: isVertical ? 8 : 72, top: isVertical ? 16 : 8, left: 4 } }
+  }), height);
+}
+
+function stackedBarHTML(rowSets, total, colorFn, options = {}) {
+  const { answeredTotal = total, isNaFn = () => false } = options;
+  const cats = rowSets.map(r => r.label);
+  const allKeys = [];
+  const seen = new Set();
+  rowSets.forEach(r => r.sorted.forEach(([lbl]) => {
+    if (lbl === "No answer" || seen.has(lbl)) return;
+    seen.add(lbl);
+    allKeys.push(lbl);
+  }));
+  if (rowSets.some(r => r.sorted.some(([lbl]) => lbl === "No answer"))) allKeys.push("No answer");
+  if (!allKeys.length) return '<div class="explorer-empty">No data</div>';
+  const colors = allKeys.map((lbl, i) => colorForSlice(lbl, i, colorFn));
+  const series = allKeys.map(lbl => ({
+    name: lbl,
+    data: rowSets.map(r => {
+      const hit = r.sorted.find(([n]) => n === lbl);
+      return hit ? hit[1] : 0;
+    })
+  }));
+  const height = Math.max(180, cats.length * 42 + 90);
+  return queueApexChart(() => ({
+    ...APEX_BASE,
+    chart: { ...APEX_BASE.chart, type: "bar", height, stacked: true, stackType: "100%" },
+    series,
+    colors,
+    plotOptions: { bar: { horizontal: true, barHeight: "62%", borderRadius: 2 } },
+    xaxis: { categories: cats, max: 100, labels: { formatter: v => Math.round(v) + "%" } },
+    yaxis: { labels: { style: { fontSize: "10px" }, maxWidth: 220 } },
+    dataLabels: { enabled: false },
+    legend: { show: false },
+    tooltip: {
+      y: { formatter: (v, { seriesIndex, dataPointIndex }) => {
+        const n = series[seriesIndex].data[dataPointIndex];
+        const pAll = total ? Math.round(n / total * 100) : 0;
+        return `${n} (${pAll}%)`;
+      } }
+    }
+  }), height) + `<div class="apx-legend">${allKeys.map((name, i) =>
+    `<span class="apx-legend-item"><span class="apx-legend-swatch" style="background:${colors[i]}"></span><span>${escapeHtml(name)}</span></span>`
+  ).join("")}</div>`;
 }
 
 // ── Aggregate charts (dashboard) ──────────────────────────────────────────────
@@ -1399,11 +2184,38 @@ function setSectionFilter(section) {
 
 function setChartType(qName, type) {
   chartTypeState[qName] = type;
-  renderCharts(getDisplayResponses());
+  rerenderQuestion(qName);
+}
+
+function chartPanelForQuestion(q, responses) {
+  if (q.type === "radiogroup" || q.type === "checkbox") return renderChoiceChart(q, responses);
+  if (q.type === "rating") return renderRatingChart(q, responses);
+  if (q.type === "matrix") return renderMatrixChart(q, responses);
+  return null;
+}
+
+function rerenderQuestion(qName) {
+  const panel = document.querySelector(`.panel[data-q="${qName}"]`);
+  if (!panel) { renderCharts(getDisplayResponses()); return; }
+  apexSite = "dash";
+  destroyApexIn(panel);
+  const responses = currentResponses || getDisplayResponses();
+  let next = null;
+  if (String(qName).startsWith("_derived.")) {
+    const dim = dimFromId(qName);
+    if (dim) next = renderDerivedDimChart(dim, responses);
+  } else {
+    const q = resolveQuestion(qName);
+    if (q) next = chartPanelForQuestion(q, responses);
+  }
+  if (next) panel.replaceWith(next);
+  mountApexCharts();
 }
 
 function renderCharts(responses) {
   currentResponses = responses;
+  apexSite = "dash";
+  destroyApexCharts("dash");
   const wrap = document.getElementById("charts");
   const filterBar = document.getElementById("sectionFilter");
   wrap.innerHTML = "";
@@ -1441,15 +2253,77 @@ function renderCharts(responses) {
     grid.style.cssText = "display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:1rem;margin-bottom:1rem;";
 
     chartable.forEach(q => {
-      let panel = null;
-      if (q.type === "radiogroup" || q.type === "checkbox") panel = renderChoiceChart(q, responses);
-      else if (q.type === "rating") panel = renderRatingChart(q, responses);
-      else if (q.type === "matrix") panel = renderMatrixChart(q, responses);
+      const panel = chartPanelForQuestion(q, responses);
       if (panel) grid.appendChild(panel);
+      if (q.name === "q2_household_ages") {
+        derivedDimensions().forEach(dim => {
+          const dPanel = renderDerivedDimChart(dim, responses);
+          if (dPanel) grid.appendChild(dPanel);
+        });
+      }
     });
 
     if (grid.children.length) wrap.appendChild(grid);
   });
+  mountApexCharts();
+}
+
+function renderDerivedDimChart(dim, responses) {
+  const counts = {};
+  dim.groups.forEach(g => { counts[g.text] = 0; });
+  responses.forEach(r => {
+    const keys = responseGroupKeys(dim, r);
+    keys.forEach(k => {
+      const g = dim.groups.find(x => String(x.value) === String(k));
+      if (g) counts[g.text] = (counts[g.text] || 0) + 1;
+    });
+  });
+  const sorted = dim.groups.map(g => [g.text, counts[g.text] || 0]).filter(([, c]) => c > 0);
+  if (!sorted.length) return null;
+  const qName = dim.id;
+  const chartType = chartTypeState[qName] || (dim.multi ? "bar" : "pie");
+  const pctMode = chartPctModeState[qName] || "answered";
+  const sortMode = chartSortState[qName] || "survey";
+  const classified = responses.filter(r => responseGroupKeys(dim, r).length);
+  const data = prepareChartData(sorted, responses.length, classified.length, null, pctMode, sortMode);
+  const colorFn = (lbl, i) => PIE_COLORS[i % PIE_COLORS.length];
+  let extra = "Inferred from Q2; a marked None still means that age is present.";
+  if (dim.id === "_derived.has_kids") {
+    let q12yes = 0, q2no = 0, q12no = 0, q2yes = 0;
+    responses.forEach(r => {
+      const q12 = r.answers?.q12_children;
+      const k = derivedHouseholdHasKids(r);
+      if (q12 === "yes" && k === "adults_only") q12yes++;
+      if (q12 === "yes" && k === "q2_skipped") q2no++;
+      if (q12 === "no" && k === "families_with_kids") q12no++;
+      if (q12 === "yes" && k === "families_with_kids") q2yes++;
+    });
+    extra += ` Q12 Yes ∩ Q2 child band: ${q2yes}. Q12 Yes but no Q2 child band: ${q12yes}. Q12 No but Q2 child band: ${q12no}.`;
+  }
+  if (dim.id === "_derived.kids_part") extra = "Only households with a child age band on Q2. None = present, not participating.";
+  if (dim.id === "_derived.age_bands") extra = "How many households marked each age band (including None). One household can count in several bands — slices will not add to 100% of households.";
+  if (dim.id === "_derived.has_kids") extra = "Exclusive: families with any child ≤18 band vs adult bands only. " + extra;
+  const panel = document.createElement("div");
+  panel.className = "panel";
+  panel.dataset.q = qName;
+  panel.innerHTML = `
+    <div class="panel-hdr">
+      <span><span class="q-num">Q2+</span> ${escapeHtml(dim.label.replace(/^Derived · /, ""))}</span>
+      <div class="chart-toggle" data-q="${qName}">
+        <button class="${chartType === 'bar' ? 'active' : ''}" onclick="setChartType('${qName}','bar')" title="Bar chart">${SVG_BAR}</button>
+        <button class="${chartType === 'pie' ? 'active' : ''}" onclick="setChartType('${qName}','pie')" title="Pie chart">${SVG_PIE}</button>
+        ${pctModeToggleHTML(qName, pctMode)}
+        ${sortToggleHTML(qName, sortMode)}
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="response-rate">${extra}</div>
+      <div class="${chartType === 'both' ? 'chart-both' : ''}">
+        ${chartType !== 'pie' ? `<div class="chart-half">${barChartHTML(data.sorted, data.skipped, data.total, () => "", { answeredTotal: data.answeredTotal, isNaFn: data.isNaFn, vertical: false })}</div>` : ""}
+        ${chartType !== 'bar' ? `<div class="chart-half">${renderPieChartHTML(data.sorted, data.skipped, colorFn, { answeredTotal: data.answeredTotal, isNaFn: data.isNaFn })}</div>` : ""}
+      </div>
+    </div>`;
+  return panel;
 }
 
 function renderChoiceChart(q, responses) {
@@ -1459,6 +2333,7 @@ function renderChoiceChart(q, responses) {
   const num = qNum(q.name);
   const chartType = chartTypeState[q.name] || "pie";
   const pctMode = chartPctModeState[q.name] || "all";
+  const sortMode = chartSortState[q.name] || "survey";
 
   const labels = choiceMap(q);
   const reverseLabels = Object.fromEntries(Object.entries(labels).map(([k, v]) => [v, k]));
@@ -1466,11 +2341,12 @@ function renderChoiceChart(q, responses) {
     const val = reverseLabels[lbl];
     return val ? sentimentClass(val) : "";
   };
-  const colorFn = (lbl) => SENTIMENT_COLORS[classFn(lbl)];
-  const data = prepareChartData(sorted, responses.length, answered, reverseLabels, pctMode);
+  const colorFn = (lbl, i) => classToColor(classFn(lbl)) || PIE_COLORS[i % PIE_COLORS.length];
+  const data = prepareChartData(sorted, responses.length, answered, reverseLabels, pctMode, sortMode);
 
   const panel = document.createElement("div");
   panel.className = "panel";
+  panel.dataset.q = q.name;
   panel.innerHTML = `
     <div class="panel-hdr">
       <span>${num ? `<span class="q-num">${num}</span>` : ""}${q.title || q.name}${q.type === "checkbox" ? " <span style='font-weight:400;color:#888;font-size:9pt'>(multi-select)</span>" : ""}</span>
@@ -1479,6 +2355,7 @@ function renderChoiceChart(q, responses) {
         <button class="${chartType === 'bar' ? 'active' : ''}" onclick="setChartType('${q.name}','bar')" title="Bar chart">${SVG_BAR}</button>
         <button class="${chartType === 'pie' ? 'active' : ''}" onclick="setChartType('${q.name}','pie')" title="Pie chart">${SVG_PIE}</button>
         ${pctModeToggleHTML(q.name, pctMode)}
+        ${sortToggleHTML(q.name, sortMode)}
       </div>
     </div>
     <div class="panel-body">
@@ -1501,21 +2378,23 @@ function renderRatingChart(q, responses) {
   const avg = (vals.reduce((s, v) => s + v, 0) / vals.length).toFixed(1);
   const num = qNum(q.name);
   const pctMode = chartPctModeState[q.name] || "all";
+  const sortMode = chartSortState[q.name] || "survey";
   const sorted = Object.entries(counts);
-  const data = prepareChartData(sorted, responses.length, vals.length, null, pctMode);
+  const data = prepareChartData(sorted, responses.length, vals.length, null, pctMode, sortMode);
 
   const classFn = (lbl) => ratingSentimentClass(lbl);
 
   const panel = document.createElement("div");
   panel.className = "panel";
+  panel.dataset.q = q.name;
   panel.innerHTML = `
     <div class="panel-hdr">
       <span>${num ? `<span class="q-num">${num}</span>` : ""}${q.title || q.name} <span style="font-weight:400;color:#888;font-size:9pt">(avg: ${avg})</span></span>
-      <div class="chart-toggle" data-q="${q.name}">${pctModeToggleHTML(q.name, pctMode)}</div>
+      <div class="chart-toggle" data-q="${q.name}">${pctModeToggleHTML(q.name, pctMode)} ${sortToggleHTML(q.name, sortMode)}</div>
     </div>
     <div class="panel-body">
       <div class="response-rate">${vals.length} of ${responses.length} answered (${Math.round(vals.length/responses.length*100)}%)</div>
-      ${barChartHTML(data.sorted, data.skipped, data.total, classFn, { answeredTotal: data.answeredTotal, isNaFn: data.isNaFn })}
+      ${barChartHTML(data.sorted, data.skipped, data.total, classFn, { answeredTotal: data.answeredTotal, isNaFn: data.isNaFn, vertical: true })}
     </div>`;
   return panel;
 }
@@ -1531,24 +2410,16 @@ function renderMatrixChart(q, responses) {
   const num = qNum(q.name);
   const chartType = chartTypeState[q.name] || "pie";
   const pctMode = chartPctModeState[q.name] || "all";
+  const sortMode = chartSortState[q.name] || "survey";
   const panel = document.createElement("div");
   panel.className = "panel";
+  panel.dataset.q = q.name;
   panel.style.gridColumn = "span 2";
 
   const labelToColVal = Object.fromEntries(Object.entries(cols).map(([k, v]) => [v, k]));
   const colorFn = (lbl) => SENTIMENT_COLORS[sentimentClass(labelToColVal[lbl])];
 
-  let html = `<div class="panel-hdr">
-    <span>${num ? `<span class="q-num">${num}</span>` : ""}${q.title || q.name}</span>
-    <div class="chart-toggle" data-q="${q.name}">
-      <button class="${chartType === 'pie' ? 'active' : ''}" onclick="setChartType('${q.name}','pie')" title="Pie chart">${SVG_PIE}</button>
-      <button class="${chartType === 'bar' ? 'active' : ''}" onclick="setChartType('${q.name}','bar')" title="Bar chart">${SVG_BAR}</button>
-      ${pctModeToggleHTML(q.name, pctMode)}
-    </div>
-  </div>
-  <div class="panel-body">
-    <div class="matrix-pie-grid">`;
-
+  const rowDatas = [];
   for (const [rowVal, rowLabel] of Object.entries(rows)) {
     const counts = {};
     let total = 0;
@@ -1561,39 +2432,55 @@ function renderMatrixChart(q, responses) {
       counts[lbl] = (counts[lbl] || 0) + 1;
       total++;
     });
-
     const rowNum = qRowNum(q.name, rowVal);
-    const skipped = responses.length - total;
-
-    if (total === 0) {
-      html += `<div class="matrix-pie-cell">
-        <div class="matrix-pie-title">${rowNum} · ${rowLabel} <span class="matrix-pie-count">0/${responses.length}</span></div>
-        <div class="explorer-empty" style="padding:0.5rem;">No answers</div>
-      </div>`;
-      continue;
-    }
-
     const sorted = colOrder
       .map(colVal => [cols[colVal] || colVal, counts[cols[colVal] || colVal] || 0])
       .filter(([, c]) => c > 0);
-
-    const data = prepareChartData(sorted, responses.length, total, labelToColVal, pctMode);
-    const rowClassFn = (lbl) => sentimentClass(labelToColVal[lbl]);
-
-    if (chartType === "pie") {
-      html += `<div class="matrix-pie-cell">
-        <div class="matrix-pie-title">${rowNum} · ${rowLabel} <span class="matrix-pie-count">${total}/${responses.length}</span></div>
-        ${renderPieChartHTML(data.sorted, data.skipped, colorFn, { answeredTotal: data.answeredTotal, isNaFn: data.isNaFn })}
-      </div>`;
-    } else {
-      html += `<div class="matrix-pie-cell">
-        <div class="matrix-pie-title">${rowNum} · ${rowLabel} <span class="matrix-pie-count">${total}/${responses.length}</span></div>
-        ${barChartHTML(data.sorted, data.skipped, data.total, rowClassFn, { answeredTotal: data.answeredTotal, isNaFn: data.isNaFn })}
-      </div>`;
-    }
+    const data = prepareChartData(sorted, responses.length, total, labelToColVal, pctMode, sortMode);
+    rowDatas.push({ rowVal, rowLabel, rowNum, total, data });
   }
 
-  html += `</div></div>`;
+  let html = `<div class="panel-hdr">
+    <span>${num ? `<span class="q-num">${num}</span>` : ""}${q.title || q.name}</span>
+    <div class="chart-toggle" data-q="${q.name}">
+      <button class="${chartType === 'pie' ? 'active' : ''}" onclick="setChartType('${q.name}','pie')" title="Pie chart">${SVG_PIE}</button>
+      <button class="${chartType === 'bar' ? 'active' : ''}" onclick="setChartType('${q.name}','bar')" title="Bar chart">${SVG_BAR}</button>
+      ${pctModeToggleHTML(q.name, pctMode)}
+      ${sortToggleHTML(q.name, sortMode)}
+    </div>
+  </div>
+  <div class="panel-body">`;
+
+  if (chartType === "bar") {
+    const colLabels = colOrder.map(colVal => cols[colVal] || colVal);
+    const rowSets = rowDatas.filter(r => r.total > 0).map(r => {
+      const byLbl = Object.fromEntries(r.data.sorted);
+      const sorted = colLabels
+        .map(lbl => [lbl, byLbl[lbl] || 0])
+        .filter(([, c]) => c > 0);
+      if (r.data.skipped) sorted.push(["No answer", r.data.skipped]);
+      return { label: `${r.rowNum} · ${r.rowLabel}`, sorted };
+    });
+    html += stackedBarHTML(rowSets, responses.length, colorFn);
+  } else {
+    html += `<div class="matrix-pie-grid">`;
+    for (const r of rowDatas) {
+      if (r.total === 0) {
+        html += `<div class="matrix-pie-cell">
+          <div class="matrix-pie-title">${r.rowNum} · ${r.rowLabel} <span class="matrix-pie-count">0/${responses.length}</span></div>
+          <div class="explorer-empty" style="padding:0.5rem;">No answers</div>
+        </div>`;
+        continue;
+      }
+      html += `<div class="matrix-pie-cell">
+        <div class="matrix-pie-title">${r.rowNum} · ${r.rowLabel} <span class="matrix-pie-count">${r.total}/${responses.length}</span></div>
+        ${renderPieChartHTML(r.data.sorted, r.data.skipped, colorFn, { answeredTotal: r.data.answeredTotal, isNaFn: r.data.isNaFn, compact: true })}
+      </div>`;
+    }
+    html += `</div>`;
+  }
+
+  html += `</div>`;
   panel.innerHTML = html;
   return panel;
 }
@@ -1608,6 +2495,7 @@ function renderTable(rows) {
     return;
   }
 
+  const frag = document.createDocumentFragment();
   rows.forEach((r, idx) => {
     try {
       const date = r.timestamp ? new Date(r.timestamp).toLocaleString() : "—";
@@ -1637,43 +2525,49 @@ function renderTable(rows) {
           <span style="color:#ccc;margin:0 0.2rem">|</span>
           <button class="expand-btn" onclick="printResponse(${idx})">Print</button>
         </td>`;
-      tbody.appendChild(tr);
+      frag.appendChild(tr);
 
-      const defaultMatrixMode = (() => { try { return localStorage.getItem("matrixDetailMode") || "pills"; } catch { return "pills"; } })();
       const det = document.createElement("tr");
-      det.className = `detail-row show-${defaultMatrixMode}`;
+      det.className = "detail-row";
       det.style.display = "none";
       det.dataset.for = idx;
-
-      const meta = [
-        ["Response ID", r.response_id],
-        ["Session", r.session_id],
-        ["Submission #", r.submission_number],
-        ["Previous Response", r.previous_response_id],
-        ["Survey version", r.survey_version],
-        ["IP country", r.ip_country],
-        ["CF Ray", r.cf_ray],
-        ["Completion", r.completion_seconds ? (r.completion_seconds / 60).toFixed(1) + " min" : "—"],
-        ["Sections", Array.isArray(r.sections_answered) ? r.sections_answered.join(", ") : "—"],
-        ["Referrer", r.referrer],
-        ["User agent", r.user_agent],
-      ].filter(([, v]) => v && v !== "—" && String(v).trim() !== "");
-
-      const detailHtml = renderReadableDetail(r);
-
-      det.innerHTML = `<td colspan="8">
-        <div class="detail-meta">${meta.map(([k, v]) => `<strong>${k}:</strong> ${escapeHtml(String(v))}`).join(" · ")}</div>
-        <div class="detail-actions"><button class="expand-btn" onclick="printResponse(${idx})">Print this response</button></div>
-        ${detailHtml}
-      </td>`;
-      tbody.appendChild(det);
+      det.innerHTML = `<td colspan="8"></td>`;
+      frag.appendChild(det);
     } catch (err) {
       console.error("Failed to render response row", idx, r, err);
       const tr = document.createElement("tr");
       tr.innerHTML = `<td colspan="8" style="color:var(--red)">Error rendering response ${idx}: ${escapeHtml(String(err.message || err))}</td>`;
-      tbody.appendChild(tr);
+      frag.appendChild(tr);
     }
   });
+  tbody.appendChild(frag);
+}
+
+function fillDetailRow(det, idx) {
+  if (det.dataset.filled === "1") return;
+  const r = getDisplayResponses()[idx];
+  if (!r) return;
+  const defaultMatrixMode = (() => { try { return localStorage.getItem("matrixDetailMode") || "pills"; } catch { return "pills"; } })();
+  det.classList.add("show-" + defaultMatrixMode);
+  const meta = [
+    ["Response ID", r.response_id],
+    ["Session", r.session_id],
+    ["Submission #", r.submission_number],
+    ["Previous Response", r.previous_response_id],
+    ["Survey version", r.survey_version],
+    ["IP country", r.ip_country],
+    ["CF Ray", r.cf_ray],
+    ["Completion", r.completion_seconds ? (r.completion_seconds / 60).toFixed(1) + " min" : "—"],
+    ["Sections", Array.isArray(r.sections_answered) ? r.sections_answered.join(", ") : "—"],
+    ["Referrer", r.referrer],
+    ["User agent", r.user_agent],
+  ].filter(([, v]) => v && v !== "—" && String(v).trim() !== "");
+  det.innerHTML = `<td colspan="8">
+    <div class="detail-meta">${meta.map(([k, v]) => `<strong>${k}:</strong> ${escapeHtml(String(v))}`).join(" · ")}</div>
+    <div class="detail-actions"><button class="expand-btn" onclick="printResponse(${idx})">Print this response</button></div>
+    ${renderReadableDetail(r)}
+  </td>`;
+  det.dataset.filled = "1";
 }
 
 function setMatrixDetailMode(btn, mode) {
@@ -1809,6 +2703,7 @@ function jumpToResponse(idx) {
   const detailBtn = document.querySelector(`button.expand-btn[data-idx="${idx}"]`);
   const detRow = document.querySelector(`.detail-row[data-for="${idx}"]`);
   if (detailBtn && detRow) {
+    fillDetailRow(detRow, idx);
     detRow.style.display = "table-row";
     detailBtn.textContent = "▼ Hide";
     detRow.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1829,6 +2724,7 @@ function printResponse(idx) {
 function toggleDetail(btn) {
   const detRow = document.querySelector(`.detail-row[data-for="${btn.dataset.idx}"]`);
   const open = detRow.style.display !== "none";
+  if (!open) fillDetailRow(detRow, btn.dataset.idx);
   detRow.style.display = open ? "none" : "table-row";
   btn.textContent = open ? "▶ Details" : "▼ Hide";
 }
@@ -1848,6 +2744,8 @@ function clearSearch() {
 // ── Trends tab: submissions over time + completion funnel ──────────────────────
 
 function renderTrends() {
+  apexSite = "trends";
+  destroyApexCharts("trends");
   const wrap = document.getElementById("trendsContent");
   const responses = getDisplayResponses();
   if (!responses.length) {
@@ -1876,6 +2774,7 @@ function renderTrends() {
   </div>`;
 
   wrap.innerHTML = html;
+  mountApexCharts();
 }
 
 function renderTrendChartHTML(responses) {
@@ -1906,64 +2805,22 @@ function renderTrendChartHTML(responses) {
   const peakDay = allDays.reduce((m, d) => d.count > m.count ? d : m, allDays[0]);
   const avgPerDay = (total / allDays.length).toFixed(1);
 
-  // Chart dimensions
-  const W = Math.max(600, allDays.length * 12);
-  const H = 240;
-  const padL = 40, padR = 15, padT = 15, padB = 40;
-  const chartW = W - padL - padR;
-  const chartH = H - padT - padB;
-
-  const xStep = allDays.length > 1 ? chartW / (allDays.length - 1) : chartW;
-  const yScale = (v) => chartH - (v / maxCount) * chartH + padT;
-
-  // Build line path + area path + bars
-  let linePath = "";
-  let areaPath = "";
-  const bars = [];
-  const labels = [];
-
-  allDays.forEach((d, i) => {
-    const x = padL + i * xStep;
-    const y = yScale(d.count);
-    if (i === 0) {
-      linePath += `M${x},${y}`;
-      areaPath += `M${x},${padT + chartH} L${x},${y}`;
-    } else {
-      linePath += ` L${x},${y}`;
-      areaPath += ` L${x},${y}`;
-    }
-    bars.push(`<rect x="${x - 3}" y="${y}" width="6" height="${padT + chartH - y}" fill="var(--blue-pale)" rx="1"/>`);
-    if (d.count > 0) {
-      bars.push(`<circle cx="${x}" cy="${y}" r="3" fill="var(--blue)"/>`);
-    }
-  });
-  areaPath += ` L${padL + (allDays.length - 1) * xStep},${padT + chartH} Z`;
-
-  // Y axis labels (0, max/2, max)
-  const yLabels = [0, Math.round(maxCount / 2), maxCount].map(v => {
-    const y = yScale(v);
-    return `<text x="${padL - 6}" y="${y + 3}" text-anchor="end" font-size="9" fill="#888">${v}</text>
-            <line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="#e8ecf5" stroke-width="1"/>`;
-  }).join("");
-
-  // X axis labels (first, middle, last, peak)
-  const labelDays = new Set([0, Math.floor(allDays.length / 2), allDays.length - 1]);
-  const peakIdx = allDays.indexOf(peakDay);
-  labelDays.add(peakIdx);
-  [...labelDays].forEach(i => {
-    if (i < 0 || i >= allDays.length) return;
-    const x = padL + i * xStep;
-    const label = allDays[i].day;
-    labels.push(`<text x="${x}" y="${H - padB + 15}" text-anchor="middle" font-size="9" fill="#888" transform="rotate(-30 ${x} ${H - padB + 15})">${label}</text>`);
-  });
-
-  const svg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-    <path d="${areaPath}" fill="rgba(0,56,184,0.08)"/>
-    ${bars.join("")}
-    <path d="${linePath}" fill="none" stroke="var(--blue)" stroke-width="2"/>
-    ${yLabels}
-    ${labels.join("")}
-  </svg>`;
+  const chart = queueApexChart(() => ({
+    ...APEX_BASE,
+    chart: { ...APEX_BASE.chart, type: "area", height: 260 },
+    series: [{ name: "Submissions", data: allDays.map(d => d.count) }],
+    colors: ["#0038b8"],
+    xaxis: {
+      categories: allDays.map(d => d.day),
+      labels: { rotate: -30, style: { fontSize: "9px" }, hideOverlappingLabels: true }
+    },
+    yaxis: { min: 0, tickAmount: Math.min(maxCount, 5), labels: { formatter: v => Math.round(v), style: { fontSize: "9px" } } },
+    stroke: { curve: "smooth", width: 2 },
+    fill: { type: "gradient", gradient: { opacityFrom: 0.25, opacityTo: 0.02 } },
+    markers: { size: 3 },
+    dataLabels: { enabled: false },
+    grid: { borderColor: "#e8ecf5" }
+  }), 260);
 
   return `<div class="trend-stats">
       <span>Total: <strong>${total}</strong></span>
@@ -1971,7 +2828,7 @@ function renderTrendChartHTML(responses) {
       <span>Avg/day: <strong>${avgPerDay}</strong></span>
       <span>Span: <strong>${allDays.length}</strong> days</span>
     </div>
-    <div class="trend-chart-wrap">${svg}</div>
+    <div class="trend-chart-wrap">${chart}</div>
     <div class="trend-legend">
       <div class="trend-legend-item"><div class="trend-legend-swatch" style="background:var(--blue)"></div>Submissions per day</div>
     </div>`;
@@ -2025,42 +2882,22 @@ function renderAnonDonutHTML(responses) {
   const total = responses.length;
   if (total === 0) return '<div class="explorer-empty">No data.</div>';
 
-  const r = 60, cx = 70, cy = 70;
-  const anonPct = anon / total;
-  const conPct = contactable / total;
-  let angle = -Math.PI / 2;
-
-  // Anonymous slice
-  const anonEnd = angle + anonPct * 2 * Math.PI;
-  const ax1 = cx + r * Math.cos(angle), ay1 = cy + r * Math.sin(angle);
-  const ax2 = cx + r * Math.cos(anonEnd), ay2 = cy + r * Math.sin(anonEnd);
-  const anonLarge = anonPct > 0.5 ? 1 : 0;
-  const anonSlice = anonPct === 1
-    ? `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#bbb" stroke="white" stroke-width="1"><title>Anonymous: ${anon} (${Math.round(anonPct*100)}%)</title></circle>`
-    : anonPct === 0 ? "" : `<path d="M${cx},${cy} L${ax1},${ay1} A${r},${r} 0 ${anonLarge} 1 ${ax2},${ay2} Z" fill="#bbb" stroke="white" stroke-width="1"><title>Anonymous: ${anon} (${Math.round(anonPct*100)}%)</title></path>`;
-  angle = anonEnd;
-
-  // Contactable slice
-  const conEnd = angle + conPct * 2 * Math.PI;
-  const cx1 = cx + r * Math.cos(angle), cy1 = cy + r * Math.sin(angle);
-  const cx2 = cx + r * Math.cos(conEnd), cy2 = cy + r * Math.sin(conEnd);
-  const conLarge = conPct > 0.5 ? 1 : 0;
-  const conSlice = conPct === 1
-    ? `<circle cx="${cx}" cy="${cy}" r="${r}" fill="var(--green)" stroke="white" stroke-width="1"><title>Contactable: ${contactable} (${Math.round(conPct*100)}%)</title></circle>`
-    : conPct === 0 ? "" : `<path d="M${cx},${cy} L${cx1},${cy1} A${r},${r} 0 ${conLarge} 1 ${cx2},${cy2} Z" fill="#1a7f3c" stroke="white" stroke-width="1"><title>Contactable: ${contactable} (${Math.round(conPct*100)}%)</title></path>`;
-
-  // Donut hole
-  const hole = `<circle cx="${cx}" cy="${cy}" r="32" fill="white"/>`;
-  const centerText = `<text x="${cx}" y="${cy - 2}" text-anchor="middle" class="donut-center">${total}</text>
-    <text x="${cx}" y="${cy + 12}" text-anchor="middle" font-size="8" fill="#888">total</text>`;
-
-  return `<div class="donut-wrap">
-    <svg width="140" height="140" viewBox="0 0 140 140">${anonSlice}${conSlice}${hole}${centerText}</svg>
-    <div class="pie-legend">
-      <div class="pie-legend-item"><div class="pie-legend-swatch" style="background:#bbb"></div>Anonymous: <strong>${anon} (${Math.round(anonPct*100)}%)</strong></div>
-      <div class="pie-legend-item"><div class="pie-legend-swatch" style="background:#1a7f3c"></div>Contactable: <strong>${contactable} (${Math.round(conPct*100)}%)</strong></div>
-    </div>
-  </div>`;
+  return queueApexChart(() => ({
+    ...APEX_BASE,
+    chart: { ...APEX_BASE.chart, type: "donut", height: 200 },
+    series: [anon, contactable],
+    labels: ["Anonymous", "Contactable"],
+    colors: ["#bbb", "#1a7f3c"],
+    legend: {
+      position: "right", fontSize: "11px",
+      formatter: (name, opts) => `${name}: <b>${opts.w.globals.series[opts.seriesIndex]} (${Math.round(opts.w.globals.series[opts.seriesIndex] / total * 100)}%)</b>`
+    },
+    dataLabels: { enabled: true, formatter: (v) => Math.round(v) + "%" },
+    plotOptions: { pie: { donut: { size: "60%", labels: {
+      show: true,
+      total: { show: true, label: "total", fontSize: "9px", color: "#888", formatter: () => total }
+    } } } }
+  }), 200);
 }
 
 // ── Comments tab ───────────────────────────────────────────────────────────────

@@ -319,15 +319,7 @@
       line-height: 1.45;
     }
     .explorer-help strong { color: var(--blue-dark); }
-    .explorer-presets { display: flex; flex-wrap: wrap; gap: 0.35rem; padding: 0.55rem 1rem 0; align-items: center; }
-    .explorer-presets-label { font-size: 8pt; font-weight: 700; color: #4a6a8a; text-transform: uppercase; letter-spacing: 0.4px; margin-right: 0.2rem; }
-    .explorer-preset {
-      border: 1.5px solid #b0c4de; background: white; color: var(--blue-dark);
-      border-radius: 999px; padding: 0.22rem 0.7rem; font-size: 8.5pt; font-weight: 600;
-      cursor: pointer;
-    }
-    .explorer-preset:hover { border-color: var(--blue); background: var(--blue-pale); }
-    .explorer-preset.active { background: var(--blue); color: white; border-color: var(--blue); }
+
     .explorer-step {
       display: flex; align-items: center; justify-content: center;
       width: 20px; height: 20px; border-radius: 50%;
@@ -633,11 +625,13 @@
       &nbsp;<strong>2.</strong> Optionally split into groups with a second question (one bar per group).
       Example: NPS split by “Adults only vs families with kids.” Derived Q2 makeup is in all three dropdowns.
       Use <strong>Separate</strong> for one mini-chart per group instead of stacked bars.
-    </div>
-    <div class="explorer-presets" id="explorerPresets">
-      <span class="explorer-presets-label">Presets</span>
+      Or pick a <strong>Preset</strong> to load a common comparison in one click.
     </div>
     <div class="explorer-bar">
+      <div class="explorer-field">
+        <label for="explorerPresetSel">Preset <span style="font-weight:400;text-transform:none;letter-spacing:0">(shortcut)</span></label>
+        <select id="explorerPresetSel" onchange="applyExplorerPreset(this.value)"></select>
+      </div>
       <div class="explorer-field">
         <label for="explorerQ"><span class="explorer-step">1</span> Chart this</label>
         <select id="explorerQ" onchange="explorerUpdate()"></select>
@@ -1510,16 +1504,28 @@ function renderGroupedSmallMultiples(q, responses, dim) {
 }
 
 const EXPLORER_PRESETS = [
-  { label: "NPS × families vs adults", q: "q_nps", group: "_derived.has_kids" },
-  { label: "NPS × generation", q: "q_nps", group: "_derived.shape" },
-  { label: "NPS × tenure", q: "q_nps", group: "q1_tenure|been_member" },
-  { label: "Connection × families vs adults", q: "q_connection", group: "_derived.has_kids" },
-  { label: "Connection × kids engaged", q: "q_connection", group: "_derived.kids_part" },
-  { label: "Worship × generation", q: "q22_big_picture|beit_tfillah", group: "_derived.shape" },
-  { label: "Facility × families vs adults", q: "q_facility", group: "_derived.has_kids" },
-  { label: "Dues fairness × families vs adults", q: "q_dues_fairness", group: "_derived.has_kids" },
-  { label: "Leaders (Rabbi) × tenure", q: "q23_leaders|rabbi", group: "q1_tenure|been_member" },
-  { label: "Age bands present", q: "_derived.age_bands", group: "" }
+  { cat: "NPS (recommend)", label: "NPS × families vs adults", q: "q_nps", group: "_derived.has_kids" },
+  { cat: "NPS (recommend)", label: "NPS × generation", q: "q_nps", group: "_derived.shape" },
+  { cat: "NPS (recommend)", label: "NPS × tenure", q: "q_nps", group: "q1_tenure|been_member" },
+  { cat: "NPS (recommend)", label: "NPS × kids engaged", q: "q_nps", group: "_derived.kids_part" },
+  { cat: "Connection", label: "Connection × families vs adults", q: "q_connection", group: "_derived.has_kids" },
+  { cat: "Connection", label: "Connection × kids engaged", q: "q_connection", group: "_derived.kids_part" },
+  { cat: "Connection", label: "Connection × tenure", q: "q_connection", group: "q1_tenure|been_member" },
+  { cat: "Connection", label: "Connection × generation", q: "q_connection", group: "_derived.shape" },
+  { cat: "Social life", label: "Social life × generation", q: "q16_social_engagement", group: "_derived.shape" },
+  { cat: "Social life", label: "Social life × families vs adults", q: "q16_social_engagement", group: "_derived.has_kids" },
+  { cat: "Satisfaction", label: "Facility × families vs adults", q: "q_facility", group: "_derived.has_kids" },
+  { cat: "Satisfaction", label: "Facility × tenure", q: "q_facility", group: "q1_tenure|been_member" },
+  { cat: "Satisfaction", label: "Worship × generation", q: "q22_big_picture|beit_tfillah", group: "_derived.shape" },
+  { cat: "Satisfaction", label: "Rabbi × tenure", q: "q23_leaders|rabbi", group: "q1_tenure|been_member" },
+  { cat: "Satisfaction", label: "Rabbi × families vs adults", q: "q23_leaders|rabbi", group: "_derived.has_kids" },
+  { cat: "Satisfaction", label: "Comms satisfaction × tenure", q: "q_comm_satisfaction", group: "q1_tenure|been_member" },
+  { cat: "Money", label: "Dues fairness × families vs adults", q: "q_dues_fairness", group: "_derived.has_kids" },
+  { cat: "Money", label: "Dues fairness × tenure", q: "q_dues_fairness", group: "q1_tenure|been_member" },
+  { cat: "Participation", label: "Barriers × families vs adults", q: "q_barriers", group: "_derived.has_kids" },
+  { cat: "Participation", label: "Barriers × tenure", q: "q_barriers", group: "q1_tenure|been_member" },
+  { cat: "Participation", label: "Priorities × generation", q: "q_priority", group: "_derived.shape" },
+  { cat: "Demographics", label: "Age bands present", q: "_derived.age_bands", group: "" }
 ];
 
 function applyExplorerPreset(i) {
@@ -1529,29 +1535,29 @@ function applyExplorerPreset(i) {
   document.getElementById("explorerGroupQ").value = p.group || "";
   document.getElementById("explorerFilterQ").value = "";
   document.getElementById("explorerFilterValWrap").style.display = "none";
-  document.querySelectorAll(".explorer-preset").forEach((btn, j) => btn.classList.toggle("active", j === i));
   explorerUpdate();
 }
 
 function renderExplorerPresets() {
-  const wrap = document.getElementById("explorerPresets");
-  if (!wrap) return;
-  const label = wrap.querySelector(".explorer-presets-label");
-  wrap.innerHTML = "";
-  if (label) wrap.appendChild(label);
-  else {
-    const s = document.createElement("span");
-    s.className = "explorer-presets-label";
-    s.textContent = "Presets";
-    wrap.appendChild(s);
-  }
+  const sel = document.getElementById("explorerPresetSel");
+  if (!sel) return;
+  sel.innerHTML = "";
+  const ph = document.createElement("option");
+  ph.value = "";
+  ph.textContent = "Choose a preset…";
+  sel.appendChild(ph);
+  let og = null, lastCat = null;
   EXPLORER_PRESETS.forEach((p, i) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "explorer-preset";
-    btn.textContent = p.label;
-    btn.onclick = () => applyExplorerPreset(i);
-    wrap.appendChild(btn);
+    if (p.cat !== lastCat) {
+      og = document.createElement("optgroup");
+      og.label = p.cat;
+      sel.appendChild(og);
+      lastCat = p.cat;
+    }
+    const opt = document.createElement("option");
+    opt.value = i;
+    opt.textContent = p.label;
+    og.appendChild(opt);
   });
 }
 
@@ -1754,7 +1760,7 @@ function explorerClear() {
   document.getElementById("explorerQ").value = "";
   document.getElementById("explorerFilterQ").value = "";
   document.getElementById("explorerGroupQ").value = "";
-  document.querySelectorAll(".explorer-preset").forEach(btn => btn.classList.remove("active"));
+  document.getElementById("explorerPresetSel").value = "";
   document.getElementById("explorerFilterValWrap").style.display = "none";
   const layoutWrap = document.getElementById("explorerLayoutWrap");
   if (layoutWrap) layoutWrap.style.display = "none";
